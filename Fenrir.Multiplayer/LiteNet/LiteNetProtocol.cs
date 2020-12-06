@@ -38,7 +38,7 @@ namespace Fenrir.Multiplayer.LiteNet
 
         public IProtocolConnector CreateConnector()
         {
-            return new LiteNetProtocolConnector(_serializationProvider, _eventReceiver, _responseReceiver, _responseMap, _typeMap);
+            return new LiteNetProtocolConnector(_serializationProvider, _eventReceiver, _responseReceiver, _responseMap, _logger, _typeMap);
         }
 
         public IProtocolListener CreateListener()

@@ -1,21 +1,21 @@
-﻿namespace Fenrir.Multiplayer.Client
+﻿namespace Fenrir.Multiplayer.Network
 {
     /// <summary>
     /// Represents result of the connection attempt
     /// </summary>
-    public class ClientConnectionResult
+    public class ConnectionResponse
     {
         /// <summary>
         /// Factory property, creates new successful connection result
         /// </summary>
-        public static ClientConnectionResult Successful => new ClientConnectionResult(true, null);
+        public static ConnectionResponse Successful => new ConnectionResponse(true, null);
 
         /// <summary>
         /// Factory method, creates new failed connection result with a given reason
         /// </summary>
         /// <param name="reason">Reason of the failure</param>
         /// <returns>New ClientConnectionResult with a given reason</returns>
-        public static ClientConnectionResult Failed(string reason) => new ClientConnectionResult(false, reason);
+        public static ConnectionResponse Failed(string reason) => new ConnectionResponse(false, reason);
 
         /// <summary>
         /// Indicates if connection attempt was successful
@@ -32,7 +32,7 @@
         /// </summary>
         /// <param name="success">Indicates if connection attempt was successful</param>
         /// <param name="reason">Failure reason</param>
-        public ClientConnectionResult(bool success, string reason)
+        public ConnectionResponse(bool success, string reason)
         {
             Success = success;
             Reason = reason;

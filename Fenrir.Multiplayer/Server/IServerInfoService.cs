@@ -10,16 +10,15 @@ namespace Fenrir.Multiplayer.Server
     public interface IServerInfoService
     {
         /// <summary>
-        /// Host name of the http server.
-        /// 0.0.0.0 by default
-        /// </summary>
-        string HostName { get; set; }
-
-        /// <summary>
         /// Port on which HTTP server listens.
         /// 8080 by default
         /// </summary>
         short Port { get; set; }
+
+        /// <summary>
+        /// Indicates if service is running
+        /// </summary>
+        bool IsRunning { get; }
 
         /// <summary>
         /// Starts a web serverr

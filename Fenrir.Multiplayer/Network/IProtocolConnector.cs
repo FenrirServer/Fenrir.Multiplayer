@@ -43,7 +43,7 @@ namespace Fenrir.Multiplayer.Network
         /// </summary>
         /// <param name="connectionRequest">Connection Request</param>
         /// <returns>Result of the connection</returns>
-        Task<ClientConnectionResult> Connect(ClientConnectionRequest connectionRequest);
+        Task<ConnectionResponse> Connect(ClientConnectionRequest connectionRequest);
 
         /// <summary>
         /// Disconnects

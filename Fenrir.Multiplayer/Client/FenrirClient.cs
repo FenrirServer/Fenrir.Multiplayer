@@ -60,7 +60,7 @@ namespace Fenrir.Multiplayer.Client
         }
 
         /// <inheritdoc/>
-        public async Task<ClientConnectionResult> Connect(Uri serverInfoUri, object connectionRequestData = null)
+        public async Task<ConnectionResponse> Connect(Uri serverInfoUri, object connectionRequestData = null)
         {
             var serverInfo = await GetServerInfo(serverInfoUri);
             return await Connect(serverInfo, connectionRequestData);
@@ -90,7 +90,7 @@ namespace Fenrir.Multiplayer.Client
         }
 
         /// <inheritdoc/>
-        public async Task<ClientConnectionResult> Connect(ServerInfo serverInfo, object connectionRequestData = null)
+        public async Task<ConnectionResponse> Connect(ServerInfo serverInfo, object connectionRequestData = null)
         {
             // Find best protocol
             ProtocolInfo selectedProtocolInfo = SelectProtocol(serverInfo);

@@ -1,6 +1,9 @@
-﻿namespace Fenrir.Multiplayer.Network
+﻿using System.Threading.Tasks;
+
+namespace Fenrir.Multiplayer.Network
 {
-    public interface IRequestReceiver
+    interface IRequestReceiver
     {
+        Task<MessageWrapper> OnReceiveRequest(IClientPeer peer, MessageWrapper requestWrapper);
     }
 }

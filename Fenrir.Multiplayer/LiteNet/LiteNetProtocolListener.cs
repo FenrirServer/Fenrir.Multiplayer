@@ -12,10 +12,15 @@ using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.LiteNet
 {
+    /// <summary>
+    /// LiteNet realiable UDP protocol server listener
+    /// </summary>
     class LiteNetProtocolListener : IProtocolListener, INetEventListener, IDisposable
     {
         private const int _minSupportedProtocolVersion = 1;
 
+        #region Dependencies
+        private readonly LiteNetMessageReader _messageReader;
         private readonly ISerializationProvider _serializerProvider;
         private readonly IRequestReceiver _requestReceiver;
         private readonly IFenrirLogger _logger;
@@ -24,8 +29,9 @@ namespace Fenrir.Multiplayer.LiteNet
         private readonly NetDataWriterPool _netDataWriterPool;
         private readonly RecyclableObjectPool<ByteStreamReader> _byteStreamReaderPool;
         private readonly RecyclableObjectPool<ByteStreamWriter> _byteStreamWriterPool;
+        #endregion
 
-        private readonly NetManager _netManager;
+        private NetManager _netManager;
 
         private Action<ConnectionRequest, string> _connectionRequestHandler = null;
         private Action<IHostPeer> _connectHandler = null;
@@ -36,6 +42,15 @@ namespace Fenrir.Multiplayer.LiteNet
         public IProtocolConnectionData ConnectionData { get; private set; }
 
         public bool IsRunning { get; private set; } = false;
+
+        public IPv6ProtocolMode IPv6Mode { get; set; } = IPv6ProtocolMode.Disabled;
+
+        public string HostnameIPv4 { get; set; } = "0.0.0.0";
+
+        public string HostnameIPv6 { get; set; } = "::/0";
+
+
+        public short Port { get; set; } = 27001;
 
         public LiteNetProtocolListener(
             ISerializationProvider serializerProvider,
@@ -48,23 +63,41 @@ namespace Fenrir.Multiplayer.LiteNet
             _logger = logger;
             _typeMap = typeMap;
 
+            _messageReader = new LiteNetMessageReader(serializerProvider, typeMap, new RecyclableObjectPool<ByteStreamReader>());
             _byteStreamReaderPool = new RecyclableObjectPool<ByteStreamReader>();
             _byteStreamWriterPool = new RecyclableObjectPool<ByteStreamWriter>();
-
             _netDataWriterPool = new NetDataWriterPool();
 
-            _netManager = new NetManager(this)
-            {
-                AutoRecycle = true,
-                IPv6Enabled = (IPv6Mode)ipv6Mode
-            };
-
-            _netManager.Start(_hostnameIPv4, _hostnameIPv6, _port);
         }
 
-        public void Dispose()
+        public Task Start()
         {
-            _netManager.Stop();
+            if (!IsRunning)
+            {
+                _netManager = new NetManager(this)
+                {
+                    AutoRecycle = true,
+                    IPv6Enabled = (IPv6Mode)IPv6Mode
+                };
+
+                _netManager.Start(HostnameIPv4, HostnameIPv6, Port);
+
+                IsRunning = true;
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public Task Stop()
+        {
+            if (IsRunning)
+            {
+                _netManager.Stop();
+                _netManager = null;
+                IsRunning = false;
+            }
+
+            return Task.CompletedTask;
         }
 
         private void RejectConnectionRequest(ConnectionRequest connectionRequest, string reason)
@@ -83,7 +116,7 @@ namespace Fenrir.Multiplayer.LiteNet
             }
         }
 
-        public void SetConnectionRequestHandler<TConnectionRequestData>(Func<HostConnectionRequest<TConnectionRequestData>, Task<ClientConnectionResult>> handler)
+        public void SetConnectionRequestHandler<TConnectionRequestData>(Func<ServerConnectionRequest<TConnectionRequestData>, Task<ConnectionResponse>> handler)
             where TConnectionRequestData : class, new()
         {
             if(handler == null)
@@ -136,14 +169,14 @@ namespace Fenrir.Multiplayer.LiteNet
                 }
 
                 // Create connection request object
-                HostConnectionRequest<TConnectionRequestData> hostConnectionRequest = new HostConnectionRequest<TConnectionRequestData>(connectionRequest.RemoteEndPoint, clientId, connectionRequestData);
+                ServerConnectionRequest<TConnectionRequestData> hostConnectionRequest = new ServerConnectionRequest<TConnectionRequestData>(connectionRequest.RemoteEndPoint, clientId, connectionRequestData);
 
                 // Invoke handler
-                ClientConnectionResult result = await handler(hostConnectionRequest);
+                ConnectionResponse response = await handler(hostConnectionRequest);
 
-                if(!result.Success)
+                if(!response.Success)
                 {
-                    RejectConnectionRequest(connectionRequest, result.Reason);
+                    RejectConnectionRequest(connectionRequest, response.Reason);
                 }
                 else
                 {
@@ -173,7 +206,15 @@ namespace Fenrir.Multiplayer.LiteNet
 
             string clientId = netDataReader.GetString(); // Client Id
 
-            _connectionRequestHandler.Invoke(request, clientId);
+            // Invoke custom connection request handler
+            if (_connectionRequestHandler != null)
+            {
+                _connectionRequestHandler.Invoke(request, clientId);
+            }
+            else // No custom connection request handler, simply accept
+            {
+                request.Accept();
+            }
         }
 
 
@@ -183,33 +224,38 @@ namespace Fenrir.Multiplayer.LiteNet
         }
 
 
-        void INetEventListener.OnNetworkReceive(NetPeer peer, NetPacketReader reader, DeliveryMethod deliveryMethod)
+        async void INetEventListener.OnNetworkReceive(NetPeer peer, NetPacketReader reader, DeliveryMethod deliveryMethod)
         {
+            // Get LiteNet peer
+            if(peer.Tag == null)
+            {
+                _logger.Trace("Received message from an uninitialized peer: {0}", peer.EndPoint);
+                return;
+            }
+
+            var netPeer = (LiteNetServerPeer)peer.Tag;
+
             // Get message
             MessageWrapper messageWrapper = _messageReader.ReadMessage(reader);
 
             // Dispatch message
-            if (messageWrapper.MessageType == MessageType.Event)
+            if (messageWrapper.MessageType == MessageType.Request)
             {
-                // Event
-                IEvent evt = messageWrapper.MessageData as IEvent;
-                if (evt == null) // Someone is trying to mess with the protocol
+                // Request
+                IRequest request = messageWrapper.MessageData as IRequest;
+                if (request == null) // Someone is trying to mess with the protocol
                 {
+                    _logger.Trace("Empty request received from {0}", peer.EndPoint);
                     return;
                 }
 
-                _eventReceiver.OnReceiveEvent(messageWrapper);
+                MessageWrapper responseWrapper = await _requestReceiver.OnReceiveRequest(netPeer, messageWrapper);
+
+
             }
-            else if (messageWrapper.MessageType == MessageType.Response)
+            else
             {
-                // Response
-                IResponse response = messageWrapper.MessageData as IResponse;
-                if (response == null) // Someone is trying to mess with the protocol
-                {
-                    return;
-                }
-
-                _responseReceiver.OnReceiveResponse(messageWrapper.RequestId, messageWrapper);
+                _logger.Trace("Unsupported message type {0} received from {1}", messageWrapper.MessageType, peer.EndPoint);
             }
         }
 
@@ -242,15 +288,15 @@ namespace Fenrir.Multiplayer.LiteNet
 
             }
         }
+        #endregion
 
-        public Task Start()
+        #region IDisposable Implementation
+        public void Dispose()
         {
-            IsRunning = true;
-        }
-
-        public Task Stop()
-        {
-            IsRunning = false;
+            if(IsRunning)
+            {
+                Stop();
+            }
         }
         #endregion
     }

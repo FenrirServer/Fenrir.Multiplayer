@@ -1,6 +1,7 @@
 ﻿using Fenrir.Multiplayer.Client;
 using Fenrir.Multiplayer.Events;
 using Fenrir.Multiplayer.Exceptions;
+using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
 using LiteNetLib;
@@ -39,6 +40,7 @@ namespace Fenrir.Multiplayer.LiteNet
         private readonly IEventReceiver _eventReceiver;
         private readonly IResponseReceiver _responseReceiver;
         private readonly IResponseMap _responseMap;
+        private readonly IFenrirLogger _logger;
         private readonly ITypeMap _typeMap;
         #endregion
 
@@ -83,7 +85,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// TaskCompletionSource that represents connection task
         /// </summary>
-        private TaskCompletionSource<ClientConnectionResult> _connectionTcs = null;
+        private TaskCompletionSource<ConnectionResponse> _connectionTcs = null;
 
         /// <summary>
         /// Default constructor
@@ -93,11 +95,13 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <param name="responseReceiver"></param>
         /// <param name="responseMap"></param>
         /// <param name="typeMap"></param>
+        /// <param name="logger"></param>
         public LiteNetProtocolConnector(
             ISerializationProvider serializerProvider, 
             IEventReceiver eventReceiver, 
             IResponseReceiver responseReceiver, 
             IResponseMap responseMap,
+            IFenrirLogger logger,
             ITypeMap typeMap)
         {
             _serializerProvider = serializerProvider;
@@ -105,6 +109,7 @@ namespace Fenrir.Multiplayer.LiteNet
             _responseReceiver = responseReceiver;
             _responseMap = responseMap;
 
+            _logger = logger;
             _typeMap = typeMap;
 
             _messageReader = new LiteNetMessageReader(serializerProvider, typeMap, new RecyclableObjectPool<ByteStreamReader>());
@@ -114,7 +119,7 @@ namespace Fenrir.Multiplayer.LiteNet
         }
 
         ///<inheritdoc/>
-        public Task<ClientConnectionResult> Connect(ClientConnectionRequest connectionRequest)
+        public Task<ConnectionResponse> Connect(ClientConnectionRequest connectionRequest)
         {
             if(State != ConnectorState.Disconnected)
             {
@@ -130,7 +135,7 @@ namespace Fenrir.Multiplayer.LiteNet
             }
 
             // Create task completion source
-            _connectionTcs = new TaskCompletionSource<ClientConnectionResult>();
+            _connectionTcs = new TaskCompletionSource<ConnectionResponse>();
 
             // Create net manager
             _netManager = new NetManager(this)
@@ -188,7 +193,7 @@ namespace Fenrir.Multiplayer.LiteNet
             }
 
             _peer = new LiteNetClientPeer(peer, _messageWriter, _responseMap);
-            _connectionTcs.SetResult(ClientConnectionResult.Successful);
+            _connectionTcs.SetResult(ConnectionResponse.Successful);
         }
 
         void INetEventListener.OnPeerDisconnected(NetPeer peer, DisconnectInfo disconnectInfo)
@@ -235,6 +240,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 IEvent evt = messageWrapper.MessageData as IEvent;
                 if(evt == null) // Someone is trying to mess with the protocol
                 {
+                    _logger.Trace("Empty event received from {0}", peer.EndPoint);
                     return;
                 }
 
@@ -246,10 +252,15 @@ namespace Fenrir.Multiplayer.LiteNet
                 IResponse response = messageWrapper.MessageData as IResponse;
                 if (response == null) // Someone is trying to mess with the protocol
                 {
+                    _logger.Trace("Empty response received from {0}", peer.EndPoint);
                     return;
                 }
 
                 _responseReceiver.OnReceiveResponse(messageWrapper.RequestId, messageWrapper);
+            }
+            else
+            {
+                _logger.Trace("Unsupported message type {0} received from {1}", messageWrapper.MessageType, peer.EndPoint);
             }
         }
 

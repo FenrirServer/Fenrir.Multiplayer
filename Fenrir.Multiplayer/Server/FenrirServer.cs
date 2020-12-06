@@ -43,6 +43,11 @@ namespace Fenrir.Multiplayer.Server
         /// <inheritdoc/>
         public async Task Start()
         {
+            if(Status != ServerStatus.Stopped)
+            {
+                throw new InvalidOperationException("Failed to start server, server is already " + Status);
+            }
+
             // Start all protocol listeners
             await Task.WhenAll(_protocolListeners.Select(listener => listener.Start()));
         }
@@ -50,6 +55,11 @@ namespace Fenrir.Multiplayer.Server
         /// <inheritdoc/>
         public async Task Stop()
         {
+            if (Status != ServerStatus.Running && Status != ServerStatus.Starting)
+            {
+                throw new InvalidOperationException("Failed to stop server, server is already " + Status);
+            }
+
             // Stop all protocol listeners
             await Task.WhenAll(_protocolListeners.Select(listener => listener.Stop()));
         }

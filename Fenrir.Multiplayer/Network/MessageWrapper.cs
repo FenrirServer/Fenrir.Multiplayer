@@ -1,6 +1,6 @@
 ﻿namespace Fenrir.Multiplayer.Network
 {
-    public struct MessageWrapper
+    internal struct MessageWrapper
     {
         public MessageType MessageType;
         public int RequestId;
