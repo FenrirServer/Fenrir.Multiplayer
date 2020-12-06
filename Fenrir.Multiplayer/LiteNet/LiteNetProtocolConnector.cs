@@ -1,4 +1,5 @@
-﻿using Fenrir.Multiplayer.Events;
+﻿using Fenrir.Multiplayer.Client;
+using Fenrir.Multiplayer.Events;
 using Fenrir.Multiplayer.Exceptions;
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
@@ -11,15 +12,27 @@ using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.LiteNet
 {
+    /// <summary>
+    /// LiteNet protocol connector implementation
+    /// Connects to the Protocol Listener using LiteNet protocol
+    /// </summary>
     class LiteNetProtocolConnector : IProtocolConnector, INetEventListener, IDisposable
     {
-        public EventHandler<DisconnectedEventArgs> Disconnected;
-        public EventHandler<NetworkErrorEventArgs> NetworkError;
+        ///<inheritdoc/>
+        public event EventHandler<DisconnectedEventArgs> Disconnected;
 
+        ///<inheritdoc/>
+        public event EventHandler<NetworkErrorEventArgs> NetworkError;
+
+        /// <summary>
+        /// Version of the protocol
+        /// </summary>
         private const int ProtocolVersion = 1;
 
+        ///<inheritdoc/>
         public int Latency { get; private set; } = -1;
 
+        #region Dependencies
         private readonly LiteNetMessageReader _messageReader;
         private readonly LiteNetMessageWriter _messageWriter;
         private readonly ISerializationProvider _serializerProvider;
@@ -27,19 +40,27 @@ namespace Fenrir.Multiplayer.LiteNet
         private readonly IResponseReceiver _responseReceiver;
         private readonly IResponseMap _responseMap;
         private readonly ITypeMap _typeMap;
+        #endregion
 
-        private readonly string _hostname;
-        private readonly short _port;
-        private object _connectionData;
-        private string _clientId;
-
+        /// <summary>
+        /// LiteNet Data Writer to write outgoing data
+        /// </summary>
         private readonly NetDataWriter _netDataWriter;
-        private readonly NetManager _netManager;
 
+        /// <summary>
+        /// LiteNet NetManager
+        /// </summary>
+        private NetManager _netManager;
+
+        /// <summary>
+        /// LiteNet peer
+        /// </summary>
         private LiteNetClientPeer _peer;
 
+        ///<inheritdoc/>
         public IClientPeer Peer => _peer;
 
+        ///<inheritdoc/>
         public ConnectorState State
         {
             get
@@ -59,82 +80,106 @@ namespace Fenrir.Multiplayer.LiteNet
             }
         }
 
-        private TaskCompletionSource<ConnectionResult> _connectionTcs = null;
+        /// <summary>
+        /// TaskCompletionSource that represents connection task
+        /// </summary>
+        private TaskCompletionSource<ClientConnectionResult> _connectionTcs = null;
 
-        public LiteNetProtocolConnector(string hostname, 
-            short port,
-            string clientId,
-            object connectionData, 
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        /// <param name="serializerProvider"></param>
+        /// <param name="eventReceiver"></param>
+        /// <param name="responseReceiver"></param>
+        /// <param name="responseMap"></param>
+        /// <param name="typeMap"></param>
+        public LiteNetProtocolConnector(
             ISerializationProvider serializerProvider, 
             IEventReceiver eventReceiver, 
             IResponseReceiver responseReceiver, 
             IResponseMap responseMap,
-            ITypeMap typeMap, 
-            IPv6ProtocolMode ipv6Mode)
+            ITypeMap typeMap)
         {
             _serializerProvider = serializerProvider;
             _eventReceiver = eventReceiver;
             _responseReceiver = responseReceiver;
             _responseMap = responseMap;
 
-            _hostname = hostname;
-            _port = port;
-            _clientId = clientId;
-            _connectionData = connectionData;
             _typeMap = typeMap;
 
             _messageReader = new LiteNetMessageReader(serializerProvider, typeMap, new RecyclableObjectPool<ByteStreamReader>());
             _messageWriter = new LiteNetMessageWriter(serializerProvider, typeMap, new RecyclableObjectPool<ByteStreamWriter>());
 
             _netDataWriter = new NetDataWriter();
-            _netManager = new NetManager(this)
-            {
-                AutoRecycle = true,
-                IPv6Enabled = (IPv6Mode)ipv6Mode
-            };
-
-            _netManager.Start();
         }
 
-        public Task<ConnectionResult> Connect()
+        ///<inheritdoc/>
+        public Task<ClientConnectionResult> Connect(ClientConnectionRequest connectionRequest)
         {
             if(State != ConnectorState.Disconnected)
             {
                 throw new InvalidOperationException("Can not connect while state is " + State);
             }
 
-            _connectionTcs = new TaskCompletionSource<ConnectionResult>();
-            _netManager.Connect(_hostname, _port, GetConnectionData());
+            // Get protocol connection data
+            var protocolConnectionData = connectionRequest.ProtocolConnectionData as LiteNetProtocolConnectionData;
+
+            if (protocolConnectionData == null)
+            {
+                throw new InvalidCastException($"Failed to cast {nameof(connectionRequest.ProtocolConnectionData)} to {nameof(LiteNetProtocolConnectionData)}");
+            }
+
+            // Create task completion source
+            _connectionTcs = new TaskCompletionSource<ClientConnectionResult>();
+
+            // Create net manager
+            _netManager = new NetManager(this)
+            {
+                AutoRecycle = true,
+                IPv6Enabled = (IPv6Mode)protocolConnectionData.IPv6Mode
+            };
+
+            // Start net manager
+            _netManager.Start();
+
+            // Connect
+            _netManager.Connect(protocolConnectionData.Hostname, protocolConnectionData.Port, GetConnectionData(connectionRequest.ClientId, connectionRequest.ConnectionRequestData));
+
             return _connectionTcs.Task;
         }
 
+        ///<inheritdoc/>
         public void Disconnect()
         {
             if(State != ConnectorState.Disconnected)
             {
                 _netManager.Stop();
             }
+
+            _netManager = null;
+            _peer = null;
         }
 
-        private NetDataWriter GetConnectionData()
+        private NetDataWriter GetConnectionData(string clientId, object connectionRequestData = null)
         {
             _netDataWriter.Reset();
             _netDataWriter.Put(ProtocolVersion); // Protocol Version
-            _netDataWriter.Put(_clientId); // Client Id
+            _netDataWriter.Put(clientId); // Client Id
 
-            if (_connectionData != null)
+            if (connectionRequestData != null)
             {
                 // Client data type code
-                ulong typeCode = _typeMap.GetTypeHash(_connectionData.GetType());
+                ulong typeCode = _typeMap.GetTypeHash(connectionRequestData.GetType());
                 _netDataWriter.Put(typeCode);
 
                 // Client data deserialized
-                _serializerProvider.Serialize(_connectionData, new ByteStreamWriter(_netDataWriter));
+                _serializerProvider.Serialize(connectionRequestData, new ByteStreamWriter(_netDataWriter));
             }
 
             return _netDataWriter;
         }
 
+        #region INetEventListener Implementation
         void INetEventListener.OnPeerConnected(NetPeer peer)
         {
             if(State != ConnectorState.Connecting)
@@ -143,7 +188,7 @@ namespace Fenrir.Multiplayer.LiteNet
             }
 
             _peer = new LiteNetClientPeer(peer, _messageWriter, _responseMap);
-            _connectionTcs.SetResult(ConnectionResult.Successful);
+            _connectionTcs.SetResult(ClientConnectionResult.Successful);
         }
 
         void INetEventListener.OnPeerDisconnected(NetPeer peer, DisconnectInfo disconnectInfo)
@@ -222,7 +267,9 @@ namespace Fenrir.Multiplayer.LiteNet
         {
             // Do nothing
         }
+        #endregion
 
+        #region IDisposable Implementation
         public void Dispose()
         {
             if(State != ConnectorState.Disconnected)
@@ -230,5 +277,6 @@ namespace Fenrir.Multiplayer.LiteNet
                 Disconnect();
             }
         }
+        #endregion
     }
 }

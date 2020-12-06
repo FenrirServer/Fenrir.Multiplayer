@@ -1,5 +1,5 @@
 ﻿using Fenrir.Multiplayer.Client;
-using Fenrir.Multiplayer.Host;
+using Fenrir.Multiplayer.Server;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -38,7 +38,7 @@ namespace Fenrir.Multiplayer
             return _clientConfigurator.BuildClient();
         }
 
-        public IFenrirHost BuildHost()
+        public IFenrirServer BuildHost()
         {
             return _hostConfigurator.BuildHost();
         }

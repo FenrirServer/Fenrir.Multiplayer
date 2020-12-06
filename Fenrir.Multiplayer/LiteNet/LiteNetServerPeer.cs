@@ -3,9 +3,9 @@ using LiteNetLib;
 
 namespace Fenrir.Multiplayer.LiteNet
 {
-    class LiteNetHostPeer : LiteNetBasePeer, IHostPeer
+    class LiteNetServerPeer : LiteNetBasePeer, IHostPeer
     {
-        public LiteNetHostPeer(NetPeer netPeer, LiteNetMessageWriter messageWriter)
+        public LiteNetServerPeer(NetPeer netPeer, LiteNetMessageWriter messageWriter)
             : base(netPeer, messageWriter)
         {
             NetPeer.Tag = this;

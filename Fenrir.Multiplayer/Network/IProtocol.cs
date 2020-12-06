@@ -1,8 +1,15 @@
-﻿namespace Fenrir.Multiplayer.Network
+﻿using System;
+
+namespace Fenrir.Multiplayer.Network
 {
     public interface IProtocol
     {
         ProtocolType ProtocolType { get; }
-        IProtocolConnectorFactory ConnectorFactory { get; }
+
+        Type ConnectionDataType { get; }
+
+        IProtocolConnector CreateConnector();
+
+        IProtocolListener CreateListener();
     }
 }

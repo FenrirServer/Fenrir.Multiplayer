@@ -1,5 +1,5 @@
 ﻿using Fenrir.Multiplayer.Exceptions;
-using Fenrir.Multiplayer.Host;
+using Fenrir.Multiplayer.Server;
 using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
@@ -21,10 +21,6 @@ namespace Fenrir.Multiplayer.LiteNet
         private readonly IFenrirLogger _logger;
         private readonly ITypeMap _typeMap;
 
-        private readonly string _hostnameIPv4;
-        private readonly string _hostnameIPv6;
-        private readonly short _port;
-
         private readonly NetDataWriterPool _netDataWriterPool;
         private readonly RecyclableObjectPool<ByteStreamReader> _byteStreamReaderPool;
         private readonly RecyclableObjectPool<ByteStreamWriter> _byteStreamWriterPool;
@@ -35,23 +31,22 @@ namespace Fenrir.Multiplayer.LiteNet
         private Action<IHostPeer> _connectHandler = null;
         private Action<IHostPeer> _disconnectHandler = null;
 
-        public LiteNetProtocolListener(string hostnameIPv4,
-            string hostnameIPv6,
-            short port,
+        public Network.ProtocolType ProtocolType => Network.ProtocolType.LiteNet;
+
+        public IProtocolConnectionData ConnectionData { get; private set; }
+
+        public bool IsRunning { get; private set; } = false;
+
+        public LiteNetProtocolListener(
             ISerializationProvider serializerProvider,
             IRequestReceiver requestReceiver,
             IFenrirLogger logger,
-            ITypeMap typeMap,
-            IPv6ProtocolMode ipv6Mode)
+            ITypeMap typeMap)
         {
             _serializerProvider = serializerProvider;
             _requestReceiver = requestReceiver;
             _logger = logger;
             _typeMap = typeMap;
-
-            _hostnameIPv4 = hostnameIPv4;
-            _hostnameIPv6 = hostnameIPv6;
-            _port = port;
 
             _byteStreamReaderPool = new RecyclableObjectPool<ByteStreamReader>();
             _byteStreamWriterPool = new RecyclableObjectPool<ByteStreamWriter>();
@@ -74,6 +69,8 @@ namespace Fenrir.Multiplayer.LiteNet
 
         private void RejectConnectionRequest(ConnectionRequest connectionRequest, string reason)
         {
+            _logger.Trace("Rejecting connection request from {0} with reason {1}", connectionRequest.RemoteEndPoint, reason);
+
             NetDataWriter netDataWriter = _netDataWriterPool.Get();
             try
             {
@@ -86,8 +83,8 @@ namespace Fenrir.Multiplayer.LiteNet
             }
         }
 
-        public void SetConnectionRequestHandler<TConnectionData>(Func<HostConnectionRequest<TConnectionData>, Task<ConnectionResult>> handler)
-            where TConnectionData : class, new()
+        public void SetConnectionRequestHandler<TConnectionRequestData>(Func<HostConnectionRequest<TConnectionRequestData>, Task<ClientConnectionResult>> handler)
+            where TConnectionRequestData : class, new()
         {
             if(handler == null)
             {
@@ -95,13 +92,15 @@ namespace Fenrir.Multiplayer.LiteNet
             }
 
             // Add type to the type map
-            _typeMap.AddType<TConnectionData>();
+            _typeMap.AddType<TConnectionRequestData>();
 
             // Set handler
             _connectionRequestHandler = async (connectionRequest, clientId) =>
             {
+                _logger.Trace("Received connection request from {0}, client id {1}", connectionRequest.RemoteEndPoint, clientId);
+
                 // Read connection request data, if present
-                TConnectionData connectionData = null;
+                TConnectionRequestData connectionRequestData = null;
                 var netDataReader = connectionRequest.Data;
                 if (netDataReader != null && !netDataReader.EndOfData)
                 {
@@ -122,7 +121,7 @@ namespace Fenrir.Multiplayer.LiteNet
 
                     try
                     {
-                        connectionData = _serializerProvider.Deserialize<TConnectionData>(byteStreamReader);
+                        connectionRequestData = _serializerProvider.Deserialize<TConnectionRequestData>(byteStreamReader);
                     }
                     catch(SerializationException e)
                     {
@@ -137,10 +136,10 @@ namespace Fenrir.Multiplayer.LiteNet
                 }
 
                 // Create connection request object
-                HostConnectionRequest<TConnectionData> hostConnectionRequest = new HostConnectionRequest<TConnectionData>(connectionRequest.RemoteEndPoint, clientId, connectionData);
+                HostConnectionRequest<TConnectionRequestData> hostConnectionRequest = new HostConnectionRequest<TConnectionRequestData>(connectionRequest.RemoteEndPoint, clientId, connectionRequestData);
 
                 // Invoke handler
-                ConnectionResult result = await handler(hostConnectionRequest);
+                ClientConnectionResult result = await handler(hostConnectionRequest);
 
                 if(!result.Success)
                 {
@@ -148,6 +147,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 }
                 else
                 {
+                    _logger.Trace("Accepted connection request from {0}, client id {1}", connectionRequest.RemoteEndPoint, clientId);
                     connectionRequest.Accept();
                 }
             };
@@ -182,14 +182,35 @@ namespace Fenrir.Multiplayer.LiteNet
             _logger.Debug("Socket error from {0}: {1}", endPoint, socketError);
         }
 
-        void INetEventListener.OnNetworkLatencyUpdate(NetPeer peer, int latency)
-        {
-            throw new System.NotImplementedException();
-        }
 
         void INetEventListener.OnNetworkReceive(NetPeer peer, NetPacketReader reader, DeliveryMethod deliveryMethod)
         {
-            throw new System.NotImplementedException();
+            // Get message
+            MessageWrapper messageWrapper = _messageReader.ReadMessage(reader);
+
+            // Dispatch message
+            if (messageWrapper.MessageType == MessageType.Event)
+            {
+                // Event
+                IEvent evt = messageWrapper.MessageData as IEvent;
+                if (evt == null) // Someone is trying to mess with the protocol
+                {
+                    return;
+                }
+
+                _eventReceiver.OnReceiveEvent(messageWrapper);
+            }
+            else if (messageWrapper.MessageType == MessageType.Response)
+            {
+                // Response
+                IResponse response = messageWrapper.MessageData as IResponse;
+                if (response == null) // Someone is trying to mess with the protocol
+                {
+                    return;
+                }
+
+                _responseReceiver.OnReceiveResponse(messageWrapper.RequestId, messageWrapper);
+            }
         }
 
         void INetEventListener.OnNetworkReceiveUnconnected(IPEndPoint remoteEndPoint, NetPacketReader reader, UnconnectedMessageType messageType)
@@ -201,7 +222,7 @@ namespace Fenrir.Multiplayer.LiteNet
         {
             // Create host peer
             var messageWriter = new LiteNetMessageWriter(_serializerProvider, _typeMap, _byteStreamWriterPool);
-            var hostPeer = new LiteNetHostPeer(netPeer, messageWriter);
+            var hostPeer = new LiteNetServerPeer(netPeer, messageWriter);
             _connectHandler?.Invoke(hostPeer);
         }
 
@@ -209,9 +230,27 @@ namespace Fenrir.Multiplayer.LiteNet
         {
             if(netPeer.Tag != null) 
             {
-                LiteNetHostPeer hostPeer = (LiteNetHostPeer)netPeer.Tag;
+                LiteNetServerPeer hostPeer = (LiteNetServerPeer)netPeer.Tag;
                 _disconnectHandler?.Invoke(hostPeer);
             }
+        }
+        void INetEventListener.OnNetworkLatencyUpdate(NetPeer netPeer, int latency)
+        {
+            if (netPeer.Tag != null)
+            {
+                LiteNetServerPeer hostPeer = (LiteNetServerPeer)netPeer.Tag;
+
+            }
+        }
+
+        public Task Start()
+        {
+            IsRunning = true;
+        }
+
+        public Task Stop()
+        {
+            IsRunning = false;
         }
         #endregion
     }
