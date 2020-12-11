@@ -37,7 +37,8 @@ namespace Fenrir.Multiplayer.LiteNet
 
         public Network.ProtocolType ProtocolType => Network.ProtocolType.LiteNet;
 
-        public IProtocolConnectionData ConnectionData { get; private set; }
+        public IProtocolConnectionData ConnectionData =>
+            new LiteNetProtocolConnectionData(HostnameIPv4, HostnameIPv6, Port, IPv6Mode);
 
         public bool IsRunning { get; private set; } = false;
 
@@ -48,7 +49,7 @@ namespace Fenrir.Multiplayer.LiteNet
         public string HostnameIPv6 { get; set; } = "::/0";
 
 
-        public short Port { get; set; } = 27001;
+        public ushort Port { get; set; } = 27001;
 
         public LiteNetProtocolListener()
         {

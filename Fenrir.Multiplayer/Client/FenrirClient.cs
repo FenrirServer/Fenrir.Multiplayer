@@ -1,4 +1,5 @@
 ﻿using Fenrir.Multiplayer.Exceptions;
+using Fenrir.Multiplayer.LiteNet;
 using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
@@ -37,9 +38,20 @@ namespace Fenrir.Multiplayer.Client
         public IClientPeer Peer => _protocolConnector?.Peer;
 
         /// <summary>
-        /// Constructor that takes in HttpClient
+        /// Creates Fenrir Client
         /// </summary>
-        /// <param name="httpClient">HttpClient</param>
+        /// <param name="httpClient">HttpClient to use</param>
+        public FenrirClient(HttpClient httpClient)
+            : this()
+        {
+            _httpClient = httpClient;
+        }
+
+        /// <summary>
+        /// Creates Fenrir Client
+        /// </summary>
+        /// <param name="supportedProtocolConnectors">Supported Protocols</param>
+        /// <param name="httpClient">HttpClient to use</param>
         public FenrirClient(IProtocolConnector[] supportedProtocolConnectors, HttpClient httpClient)
             : this(supportedProtocolConnectors)
         {
@@ -47,8 +59,17 @@ namespace Fenrir.Multiplayer.Client
         }
 
         /// <summary>
-        /// Default constructor
+        /// Creates Fenrir Client
         /// </summary>
+        public FenrirClient()
+            : this(new IProtocolConnector[] { new LiteNetProtocolConnector() })
+        {
+        }
+
+        /// <summary>
+        /// Creates Fenrir Client
+        /// </summary>
+        /// <param name="supportedProtocolConnectors">Supported Protocols</param>
         public FenrirClient(IProtocolConnector[] supportedProtocolConnectors)
         {
             ClientId = Guid.NewGuid().ToString();

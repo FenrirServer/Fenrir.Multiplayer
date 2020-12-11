@@ -17,9 +17,9 @@ namespace Fenrir.Multiplayer.Server
     public class ServerInfoService : IServerInfoService
     {
         /// <summary>
-        /// Instance of the Fenrir Server
+        /// Fenrir Server Info Provider
         /// </summary>
-        private readonly IFenrirServer _fenrirServer;
+        private readonly IFenrirServerInfoProvider _fenrirServerInfoProvider;
 
         /// <summary>
         /// Instance of the Http Server
@@ -35,10 +35,13 @@ namespace Fenrir.Multiplayer.Server
         /// <summary>
         /// Default constructor
         /// </summary>
-        /// <param name="fenrirServer">Instace of the Fenrir Server</param>
-        public ServerInfoService(IFenrirServer fenrirServer)
+        /// <param name="fenrirServerInfoProvider">
+        /// Information provider for the Fenrir Server.
+        /// Usually, Fenrir Server instance
+        /// </param>
+        public ServerInfoService(IFenrirServerInfoProvider fenrirServerInfoProvider)
         {
-            _fenrirServer = fenrirServer;
+            _fenrirServerInfoProvider = fenrirServerInfoProvider;
         }
 
         /// <inheritdoc/>
@@ -68,11 +71,21 @@ namespace Fenrir.Multiplayer.Server
 
         private void OnHttpServerGet(object sender, HttpRequestEventArgs e)
         {
+            var response = e.Response;
+
+            // Check server status
+            if (_fenrirServerInfoProvider.Status != ServerStatus.Running)
+            {
+                // Send response
+                response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                response.Close();
+            }
+
             // Get server info
             var serverInfo = new ServerInfo()
             {
-                ServerId = _fenrirServer.ServerId,
-                Protocols = _fenrirServer.Listeners.Select(
+                ServerId = _fenrirServerInfoProvider.ServerId,
+                Protocols = _fenrirServerInfoProvider.Listeners.Select(
                     listener => new ProtocolInfo()
                     {
                         ProtocolType = listener.ProtocolType,
@@ -81,11 +94,9 @@ namespace Fenrir.Multiplayer.Server
                 ).ToArray()
             };
 
+            // Create response
             string contentsString = JsonConvert.SerializeObject(serverInfo);
             byte[] contentsByte = Encoding.UTF8.GetBytes(contentsString);
-
-            var response = e.Response;
-            
 
             // Send response
             response.StatusCode = (int)HttpStatusCode.OK;

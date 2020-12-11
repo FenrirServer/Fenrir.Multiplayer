@@ -1,4 +1,5 @@
-﻿using Fenrir.Multiplayer.Logging;
+﻿using Fenrir.Multiplayer.LiteNet;
+using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
 using System;
@@ -28,8 +29,17 @@ namespace Fenrir.Multiplayer.Server
         public ServerStatus Status { get; private set; } = ServerStatus.Stopped;
 
         /// <summary>
-        /// Default constructor
+        /// Default constructor. Creates Fenrir Server with all default protocols 
         /// </summary>
+        public FenrirServer()
+            : this(new IProtocolListener[] { new LiteNetProtocolListener() })
+        {
+        }
+
+        /// <summary>
+        /// Creates Fenrir Server with specified protocols
+        /// </summary>
+        /// <param name="protocolListeners"></param>
         public FenrirServer(IProtocolListener[] protocolListeners)
         {
             ServerId = Guid.NewGuid().ToString();
@@ -46,7 +56,6 @@ namespace Fenrir.Multiplayer.Server
 
             _protocolListeners = protocolListeners;
         }
-
 
         /// <inheritdoc/>
         public async Task Start()

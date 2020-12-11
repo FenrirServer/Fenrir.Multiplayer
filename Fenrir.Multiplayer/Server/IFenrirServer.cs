@@ -9,23 +9,8 @@ namespace Fenrir.Multiplayer.Server
     /// <summary>
     /// Fenrir Server Host
     /// </summary>
-    public interface IFenrirServer
+    public interface IFenrirServer : IFenrirServerInfoProvider
     {
-        /// <summary>
-        /// Unique Id of the server
-        /// </summary>
-        string ServerId { get; set; }
-
-        /// <summary>
-        /// Status of the server
-        /// </summary>
-        ServerStatus Status { get; }
-
-        /// <summary>
-        /// Listeners available on this server
-        /// </summary>
-        IEnumerable<IProtocolListener> Listeners { get; }
-
         /// <summary>
         /// Starts the server
         /// </summary>

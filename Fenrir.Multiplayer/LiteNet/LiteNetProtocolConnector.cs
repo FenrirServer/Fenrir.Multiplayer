@@ -144,7 +144,7 @@ namespace Fenrir.Multiplayer.LiteNet
             _netManager.Start();
 
             // Connect
-            _netManager.Connect(protocolConnectionData.Hostname, protocolConnectionData.Port, GetConnectionData(connectionRequest.ClientId, connectionRequest.ConnectionRequestData));
+            _netManager.Connect(protocolConnectionData.HostnameV4, protocolConnectionData.Port, GetConnectionData(connectionRequest.ClientId, connectionRequest.ConnectionRequestData));
 
             return _connectionTcs.Task;
         }
