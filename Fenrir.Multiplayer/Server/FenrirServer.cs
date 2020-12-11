@@ -1,4 +1,6 @@
-﻿using Fenrir.Multiplayer.Network;
+﻿using Fenrir.Multiplayer.Logging;
+using Fenrir.Multiplayer.Network;
+using Fenrir.Multiplayer.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,7 +19,7 @@ namespace Fenrir.Multiplayer.Server
         /// <summary>
         /// List of available protocols
         /// </summary>
-        private List<IProtocolListener> _protocolListeners = new List<IProtocolListener>();
+        private IProtocolListener[] _protocolListeners;
 
         /// <inheritdoc/>
         public IEnumerable<IProtocolListener> Listeners => _protocolListeners;
@@ -28,17 +30,23 @@ namespace Fenrir.Multiplayer.Server
         /// <summary>
         /// Default constructor
         /// </summary>
-        public FenrirServer()
+        public FenrirServer(IProtocolListener[] protocolListeners)
         {
             ServerId = Guid.NewGuid().ToString();
+
+            if(protocolListeners == null)
+            {
+                throw new ArgumentNullException(nameof(protocolListeners));
+            }
+
+            if (protocolListeners.Length == 0)
+            {
+                throw new ArgumentException("Protocol Listeners can not be empty", nameof(protocolListeners));
+            }
+
+            _protocolListeners = protocolListeners;
         }
 
-        /// <inheritdoc/>
-        public void AddProtocol(IProtocol protocol)
-        {
-            IProtocolListener protocolListener = protocol.CreateListener();
-            _protocolListeners.Add(protocolListener);
-        }
 
         /// <inheritdoc/>
         public async Task Start()
@@ -62,6 +70,25 @@ namespace Fenrir.Multiplayer.Server
 
             // Stop all protocol listeners
             await Task.WhenAll(_protocolListeners.Select(listener => listener.Stop()));
+        }
+
+
+        /// <inheritdoc/>
+        public void SetLogger(IFenrirLogger logger)
+        {
+            foreach (var protocolListener in _protocolListeners)
+            {
+                protocolListener.SetLogger(logger);
+            }
+        }
+
+        /// <inheritdoc/>
+        public void SetContractSerializer(IContractSerializer contractSerializer)
+        {
+            foreach (var protocolListener in _protocolListeners)
+            {
+                protocolListener.SetContractSerializer(contractSerializer);
+            }
         }
     }
 }

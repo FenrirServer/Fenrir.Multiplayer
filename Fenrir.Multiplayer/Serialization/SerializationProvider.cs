@@ -5,13 +5,10 @@ namespace Fenrir.Multiplayer.Serialization
 {
     public class SerializationProvider : ISerializationProvider
     {
-        private readonly ByteStreamSerializer _byteStreamSerializer;
-
-        public IContractSerializer ContractSerializer { get; set; }
+        public IContractSerializer ContractSerializer { get; private set; }
 
         public SerializationProvider()
         {
-            _byteStreamSerializer = new ByteStreamSerializer();
         }
 
         public void Serialize(object data, IByteStreamWriter byteStreamWriter)
@@ -104,6 +101,11 @@ namespace Fenrir.Multiplayer.Serialization
             {
                 throw new SerializationException($"Failed to deserialize {type.Name}: type does not implement {nameof(IByteStreamSerializable)} and {nameof(ContractSerializer)} is not set");
             }
+        }
+
+        public void SetContractSerializer(IContractSerializer contractSerializer)
+        {
+            ContractSerializer = contractSerializer;
         }
     }
 }

@@ -3,8 +3,12 @@ using LiteNetLib;
 
 namespace Fenrir.Multiplayer.LiteNet
 {
-    class LiteNetServerPeer : LiteNetBasePeer, IHostPeer
+    class LiteNetServerPeer : LiteNetBasePeer, IServerPeer
     {
+        private volatile int _latency;
+
+        public int Latency => _latency;
+
         public LiteNetServerPeer(NetPeer netPeer, LiteNetMessageWriter messageWriter)
             : base(netPeer, messageWriter)
         {
@@ -23,6 +27,11 @@ namespace Fenrir.Multiplayer.LiteNet
             };
 
             Send(messageWrapper);
+        }
+
+        public void SetLatency(int latency)
+        {
+            _latency = latency;
         }
     }
 }

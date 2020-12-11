@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Fenrir.Multiplayer.Network
 {
-    class EventHandlerMap : IEventHandlerMap, IEventReceiver
+    class EventHandlerMap
     {
         private readonly object _syncRoot = new object();
 

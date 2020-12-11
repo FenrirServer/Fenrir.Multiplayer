@@ -4,11 +4,11 @@ using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.Network
 {
-    class RequestResponseMap : IResponseMap, IResponseReceiver
+    class RequestResponseMap
     {
         private Dictionary<int, TaskCompletionSource<MessageWrapper>> _requests = new Dictionary<int, TaskCompletionSource<MessageWrapper>>();
 
-        private object _syncRoot;
+        private object _syncRoot = new object();
 
         public RequestResponseMap()
         {

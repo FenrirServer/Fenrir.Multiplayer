@@ -9,9 +9,9 @@ namespace Fenrir.Multiplayer.LiteNet
     class LiteNetClientPeer : LiteNetBasePeer, IClientPeer
     {
         private int _requestId = 0;
-        private readonly IResponseMap _responseMap;
+        private readonly RequestResponseMap _responseMap;
 
-        public LiteNetClientPeer(NetPeer netPeer, LiteNetMessageWriter messageWriter, IResponseMap responseMap)
+        public LiteNetClientPeer(NetPeer netPeer, LiteNetMessageWriter messageWriter, RequestResponseMap responseMap)
             : base(netPeer, messageWriter)
         {
             _responseMap = responseMap;

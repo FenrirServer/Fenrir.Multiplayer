@@ -11,7 +11,6 @@ namespace Fenrir.Multiplayer.LiteNet
         private readonly ITypeMap _typeMap;
         private readonly RecyclableObjectPool<ByteStreamReader> _byteStreamReaderPool;
 
-
         public LiteNetMessageReader(ISerializationProvider serializerProvider, ITypeMap typeMap, RecyclableObjectPool<ByteStreamReader> byteStreamReaderPool)
         {
             _serializerProvider = serializerProvider;

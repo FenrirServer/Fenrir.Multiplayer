@@ -1,4 +1,6 @@
-﻿using Fenrir.Multiplayer.Network;
+﻿using Fenrir.Multiplayer.Logging;
+using Fenrir.Multiplayer.Network;
+using Fenrir.Multiplayer.Serialization;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -25,12 +27,6 @@ namespace Fenrir.Multiplayer.Server
         IEnumerable<IProtocolListener> Listeners { get; }
 
         /// <summary>
-        /// Adds protocol to the server
-        /// </summary>
-        /// <param name="protocol">Protocol</param>
-        void AddProtocol(IProtocol protocol);
-
-        /// <summary>
         /// Starts the server
         /// </summary>
         /// <returns>Task that completes when server has started</returns>
@@ -41,5 +37,19 @@ namespace Fenrir.Multiplayer.Server
         /// </summary>
         /// <returns>Task that completes when server has stopped</returns>
         Task Stop();
+
+        /// <summary>
+        /// Sets contract serializer. 
+        /// If not set, IByteStreamSerializable is the only supported way of serialization.
+        /// If set, any data contract will be serialized using that contract serializer,
+        /// with IByteStreamSerializable used as a fall back.
+        /// </summary>
+        void SetContractSerializer(IContractSerializer contractSerializer);
+
+        /// <summary>
+        /// Sets Fenrir Logger. If not set, EventBasedLogger is used
+        /// </summary>
+        /// <param name="logger">Fenrir Logger</param>
+        void SetLogger(IFenrirLogger logger);
     }
 }

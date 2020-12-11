@@ -7,6 +7,7 @@ using Fenrir.Multiplayer.Serialization;
 using LiteNetLib;
 using LiteNetLib.Utils;
 using System;
+using System.Diagnostics.Contracts;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -33,16 +34,18 @@ namespace Fenrir.Multiplayer.LiteNet
         ///<inheritdoc/>
         public int Latency { get; private set; } = -1;
 
-        #region Dependencies
         private readonly LiteNetMessageReader _messageReader;
         private readonly LiteNetMessageWriter _messageWriter;
-        private readonly ISerializationProvider _serializerProvider;
-        private readonly IEventReceiver _eventReceiver;
-        private readonly IResponseReceiver _responseReceiver;
-        private readonly IResponseMap _responseMap;
-        private readonly IFenrirLogger _logger;
-        private readonly ITypeMap _typeMap;
-        #endregion
+        private readonly RequestResponseMap _requestResponseMap;
+        private readonly EventHandlerMap _eventHandlerMap;
+        private readonly SerializationProvider _serializationProvider;
+        private readonly RequestResponseMap _responseMap;
+        private readonly TypeMap _typeMap;
+
+        /// <summary>
+        /// Logger
+        /// </summary>
+        private IFenrirLogger _logger;
 
         /// <summary>
         /// LiteNet Data Writer to write outgoing data
@@ -61,6 +64,9 @@ namespace Fenrir.Multiplayer.LiteNet
 
         ///<inheritdoc/>
         public IClientPeer Peer => _peer;
+
+        ///<inheritdoc/>
+        public Network.ProtocolType ProtocolType => Network.ProtocolType.LiteNet;
 
         ///<inheritdoc/>
         public ConnectorState State
@@ -82,6 +88,9 @@ namespace Fenrir.Multiplayer.LiteNet
             }
         }
 
+        ///<inheritdoc/>
+        public Type ConnectionDataType => typeof(LiteNetProtocolConnectionData);
+
         /// <summary>
         /// TaskCompletionSource that represents connection task
         /// </summary>
@@ -90,30 +99,17 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Default constructor
         /// </summary>
-        /// <param name="serializerProvider"></param>
-        /// <param name="eventReceiver"></param>
-        /// <param name="responseReceiver"></param>
-        /// <param name="responseMap"></param>
-        /// <param name="typeMap"></param>
-        /// <param name="logger"></param>
-        public LiteNetProtocolConnector(
-            ISerializationProvider serializerProvider, 
-            IEventReceiver eventReceiver, 
-            IResponseReceiver responseReceiver, 
-            IResponseMap responseMap,
-            IFenrirLogger logger,
-            ITypeMap typeMap)
+        /// <param name="serializationProvider">Serialization Provider</param>
+        /// <param name="logger">Logger</param>
+        public LiteNetProtocolConnector()
         {
-            _serializerProvider = serializerProvider;
-            _eventReceiver = eventReceiver;
-            _responseReceiver = responseReceiver;
-            _responseMap = responseMap;
-
-            _logger = logger;
-            _typeMap = typeMap;
-
-            _messageReader = new LiteNetMessageReader(serializerProvider, typeMap, new RecyclableObjectPool<ByteStreamReader>());
-            _messageWriter = new LiteNetMessageWriter(serializerProvider, typeMap, new RecyclableObjectPool<ByteStreamWriter>());
+            _serializationProvider = new SerializationProvider();
+            _logger = new EventBasedLogger();
+            _typeMap = new TypeMap();
+            _eventHandlerMap = new EventHandlerMap();
+            _requestResponseMap = new RequestResponseMap();
+            _messageReader = new LiteNetMessageReader(_serializationProvider, _typeMap, new RecyclableObjectPool<ByteStreamReader>());
+            _messageWriter = new LiteNetMessageWriter(_serializationProvider, _typeMap, new RecyclableObjectPool<ByteStreamWriter>());
 
             _netDataWriter = new NetDataWriter();
         }
@@ -178,10 +174,33 @@ namespace Fenrir.Multiplayer.LiteNet
                 _netDataWriter.Put(typeCode);
 
                 // Client data deserialized
-                _serializerProvider.Serialize(connectionRequestData, new ByteStreamWriter(_netDataWriter));
+                _serializationProvider.Serialize(connectionRequestData, new ByteStreamWriter(_netDataWriter));
             }
 
             return _netDataWriter;
+        }
+
+        ///<inheritdoc/>
+        public void AddEventHandler<TEvent>(IEventHandler<TEvent> eventHandler) where TEvent : IEvent
+        {
+            _eventHandlerMap.AddEventHandler<TEvent>(eventHandler);
+        }
+
+        ///<inheritdoc/>
+        public void RemoveEventHandler<TEvent>(IEventHandler<TEvent> eventHandler) where TEvent : IEvent
+        {
+            _eventHandlerMap.RemoveEventHandler<TEvent>(eventHandler);
+        }
+
+        ///<inheritdoc/>
+        public void SetContractSerializer(IContractSerializer contractSerializer)
+        {
+            _serializationProvider.SetContractSerializer(contractSerializer);
+        }
+
+        public void SetLogger(IFenrirLogger logger)
+        {
+            _logger = logger;
         }
 
         #region INetEventListener Implementation
@@ -192,7 +211,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 throw new InvalidOperationException("Connection succeeeded during wrong state: " + State);
             }
 
-            _peer = new LiteNetClientPeer(peer, _messageWriter, _responseMap);
+            _peer = new LiteNetClientPeer(peer, _messageWriter, _requestResponseMap);
             _connectionTcs.SetResult(ConnectionResponse.Successful);
         }
 
@@ -244,7 +263,7 @@ namespace Fenrir.Multiplayer.LiteNet
                     return;
                 }
 
-                _eventReceiver.OnReceiveEvent(messageWrapper);
+                _eventHandlerMap.OnReceiveEvent(messageWrapper);
             }
             else if(messageWrapper.MessageType == MessageType.Response)
             {
@@ -256,7 +275,7 @@ namespace Fenrir.Multiplayer.LiteNet
                     return;
                 }
 
-                _responseReceiver.OnReceiveResponse(messageWrapper.RequestId, messageWrapper);
+                _requestResponseMap.OnReceiveResponse(messageWrapper.RequestId, messageWrapper);
             }
             else
             {

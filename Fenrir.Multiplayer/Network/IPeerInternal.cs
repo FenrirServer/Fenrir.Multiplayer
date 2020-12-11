@@ -1,8 +1,6 @@
-﻿using Fenrir.Multiplayer.Network;
-
-namespace Fenrir.Multiplayer.Network
+﻿namespace Fenrir.Multiplayer.Network
 {
-    internal interface IPeerInternal
+    internal interface IPeerInternal : IPeer
     {
         void Send(MessageWrapper messageWrapper);
     }

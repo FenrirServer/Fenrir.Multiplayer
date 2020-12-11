@@ -6,12 +6,12 @@ namespace Fenrir.Multiplayer.Network
         where TRequest : IRequest<TResponse>
         where TResponse : IResponse
     {
-        Task<TResponse> HandleRequest(TRequest request, IPeer peer);
+        Task<TResponse> HandleRequest(TRequest request, IServerPeer peer);
     }
 
     public interface IRequestHandler<TRequest>
         where TRequest : IRequest
     {
-        void HandleRequest(TRequest request, IPeer peer);
+        void HandleRequest(TRequest request, IServerPeer peer);
     }
 }

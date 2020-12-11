@@ -4,7 +4,7 @@ using LiteNetLib.Utils;
 
 namespace Fenrir.Multiplayer.LiteNet
 {
-    class LiteNetBasePeer : IPeer, IPeerInternal
+    class LiteNetBasePeer : IPeerInternal
     {
         private readonly NetDataWriter _netDataWriter;
         protected NetPeer NetPeer { get; private set; }

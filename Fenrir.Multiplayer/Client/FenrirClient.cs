@@ -1,8 +1,9 @@
 ﻿using Fenrir.Multiplayer.Exceptions;
+using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
+using Fenrir.Multiplayer.Serialization;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -20,9 +21,9 @@ namespace Fenrir.Multiplayer.Client
         private readonly HttpClient _httpClient = new HttpClient();
 
         /// <summary>
-        /// List of supported protocols
+        /// List of supported protocol connectors
         /// </summary>
-        private List<IProtocol> _supportedProtocols = new List<IProtocol>();
+        private readonly IProtocolConnector[] _supportedProtocolConnectors;
 
         /// <summary>
         /// Current protocol connector. Null if no connection attempt was made
@@ -39,8 +40,8 @@ namespace Fenrir.Multiplayer.Client
         /// Constructor that takes in HttpClient
         /// </summary>
         /// <param name="httpClient">HttpClient</param>
-        public FenrirClient(HttpClient httpClient)
-            : this()
+        public FenrirClient(IProtocolConnector[] supportedProtocolConnectors, HttpClient httpClient)
+            : this(supportedProtocolConnectors)
         {
             _httpClient = httpClient;
         }
@@ -48,15 +49,21 @@ namespace Fenrir.Multiplayer.Client
         /// <summary>
         /// Default constructor
         /// </summary>
-        public FenrirClient()
+        public FenrirClient(IProtocolConnector[] supportedProtocolConnectors)
         {
             ClientId = Guid.NewGuid().ToString();
-        }
 
-        /// <inheritdoc/>
-        public void AddProtocol(IProtocol protocol)
-        {
-            _supportedProtocols.Add(protocol);
+            if(supportedProtocolConnectors == null)
+            {
+                throw new ArgumentNullException(nameof(supportedProtocolConnectors));
+            }
+
+            if (supportedProtocolConnectors.Length == 0)
+            {
+                throw new ArgumentException("Supported protocol connectors can not be empty", nameof(supportedProtocolConnectors));
+            }
+
+            _supportedProtocolConnectors = supportedProtocolConnectors;
         }
 
         /// <inheritdoc/>
@@ -98,33 +105,63 @@ namespace Fenrir.Multiplayer.Client
             {
                 throw new FenrirClientException(
                     $"Failed to connect - no supported protocols found. Client supported protocols: " +
-                    string.Join(", ", _supportedProtocols.Select(protocol => protocol.ProtocolType.ToString())) +
+                    string.Join(", ", _supportedProtocolConnectors.Select(protocolConnector => protocolConnector.ProtocolType.ToString())) +
                     ", server supported protocols: " +
                     string.Join(", ", serverInfo.Protocols.Select(protocol => protocol.ProtocolType.ToString()))
                 );
             }
 
-            var selectedProtocol = _supportedProtocols.Where(protocol => protocol.ProtocolType == selectedProtocolInfo.ProtocolType).First();
+            _protocolConnector = _supportedProtocolConnectors.Where(protocol => protocol.ProtocolType == selectedProtocolInfo.ProtocolType).First();
 
             // Get protocol data
-            IProtocolConnectionData protocolData = (IProtocolConnectionData)selectedProtocolInfo.GetConnectionData(selectedProtocol.ConnectionDataType);
+            IProtocolConnectionData protocolData = (IProtocolConnectionData)selectedProtocolInfo.GetConnectionData(_protocolConnector.ConnectionDataType);
 
             // Connect using selected protocol
-            _protocolConnector = selectedProtocol.CreateConnector();
             var connectionRequest = new ClientConnectionRequest(ClientId, connectionRequestData, protocolData);
             return await _protocolConnector.Connect(connectionRequest);
         }
 
         private ProtocolInfo SelectProtocol(ServerInfo serverInfo)
         {
-            if(_supportedProtocols.Count == 0)
-            {
-                throw new FenrirClientException("No protocols found. Please add at least one protocol using AddProtocol");
-            }
-
             return serverInfo.Protocols
-                .Where(protocolInfo => _supportedProtocols.Any(listItem => protocolInfo.ProtocolType == listItem.ProtocolType))
+                .Where(protocolInfo => _supportedProtocolConnectors.Any(listItem => protocolInfo.ProtocolType == listItem.ProtocolType))
                 .FirstOrDefault();
+        }
+
+        /// <inheritdoc/>
+        public void AddEventHandler<TEvent>(IEventHandler<TEvent> eventHandler) where TEvent : IEvent
+        {
+            foreach(var protocolConnector in _supportedProtocolConnectors)
+            {
+                protocolConnector.AddEventHandler<TEvent>(eventHandler);
+            }
+        }
+
+        /// <inheritdoc/>
+        public void RemoveEventHandler<TEvent>(IEventHandler<TEvent> eventHandler) where TEvent : IEvent
+        {
+            foreach (var protocolConnector in _supportedProtocolConnectors)
+            {
+                protocolConnector.RemoveEventHandler<TEvent>(eventHandler);
+            }
+        }
+
+        /// <inheritdoc/>
+        public void SetLogger(IFenrirLogger logger)
+        {
+            foreach (var protocolConnector in _supportedProtocolConnectors)
+            {
+                protocolConnector.SetLogger(logger);
+            }
+        }
+
+        /// <inheritdoc/>
+        public void SetContractSerializer(IContractSerializer contractSerializer)
+        {
+            foreach (var protocolConnector in _supportedProtocolConnectors)
+            {
+                protocolConnector.SetContractSerializer(contractSerializer);
+            }
         }
 
         public void Dispose()

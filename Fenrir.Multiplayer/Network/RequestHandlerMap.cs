@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Fenrir.Multiplayer.Network
 {
-    class RequestListener
+    class RequestHandlerMap
     {
         private readonly object _syncRoot = new object();
 
@@ -22,7 +22,7 @@ namespace Fenrir.Multiplayer.Network
 
                 _requestHandlers.Add(typeof(TRequest), requestWrapper =>
                 {
-                    requestHandler.HandleRequest((TRequest)requestWrapper.MessageData, requestWrapper.Peer);
+                    requestHandler.HandleRequest((TRequest)requestWrapper.MessageData, (IServerPeer)requestWrapper.Peer);
                 });
             }
         }
@@ -40,7 +40,7 @@ namespace Fenrir.Multiplayer.Network
 
                 _requestHandlers.Add(typeof(TRequest), async requestWrapper =>
                 {
-                    TResponse response = await requestHandler.HandleRequest((TRequest)requestWrapper.MessageData, requestWrapper.Peer);
+                    TResponse response = await requestHandler.HandleRequest((TRequest)requestWrapper.MessageData, (IServerPeer)requestWrapper.Peer);
 
                     if(response != null)
                     {
@@ -86,8 +86,7 @@ namespace Fenrir.Multiplayer.Network
             }
         }
 
-
-        public void OnReceiveRequest(MessageWrapper requestWrapper)
+        public void OnReceiveRequest(IServerPeer serverPeer, MessageWrapper requestWrapper)
         {
             Type requestType = requestWrapper.MessageData.GetType();
 

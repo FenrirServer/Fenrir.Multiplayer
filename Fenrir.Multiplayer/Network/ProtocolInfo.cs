@@ -29,5 +29,10 @@ namespace Fenrir.Multiplayer.Network
 
             return ConnectionData.ToObject(connectionDataType);
         }
+
+        internal IProtocolConnectionData GetConnectionData(object connectionDataType)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
