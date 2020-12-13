@@ -1,3 +1,4 @@
+using Fenrir.Multiplayer.Client;
 using Fenrir.Multiplayer.LiteNet;
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Server;
@@ -7,7 +8,6 @@ using Newtonsoft.Json;
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Xml.XPath;
 
 namespace Fenrir.Multiplayer.Tests
 {
@@ -50,6 +50,30 @@ namespace Fenrir.Multiplayer.Tests
 
             Assert.IsNotNull(connectionData, "connection data is null");
             Assert.AreEqual(27015, connectionData.Port);
+        }
+
+        [TestMethod]
+        public async Task FenrirClient_ConnectsToFenrirServer_WithLiteNetProtocol()
+        {
+            var fenrirServer = new FenrirServer();
+            await fenrirServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
+
+            var fenrirClient = new FenrirClient();
+            var serverInfo = new ServerInfo()
+            {
+                Hostname = "127.0.0.1",
+                ServerId = "test_id",
+                Protocols = new ProtocolInfo[]
+                {
+                    new ProtocolInfo(ProtocolType.LiteNet, new LiteNetProtocolConnectionData(27015))
+                }
+            };
+
+            await fenrirClient.Connect(serverInfo);
+
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not connected");
         }
     }
 }

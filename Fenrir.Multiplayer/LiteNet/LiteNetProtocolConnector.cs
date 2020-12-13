@@ -28,17 +28,39 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Version of the protocol
         /// </summary>
-        private const int ProtocolVersion = 1;
+        private const int _protocolVersion = 1;
 
         ///<inheritdoc/>
         public int Latency { get; private set; } = -1;
 
+        /// <summary>
+        /// Message reader, used to dispatch incoming messages
+        /// </summary>
         private readonly LiteNetMessageReader _messageReader;
+        
+        /// <summary>
+        /// Message writer, used to wrap outgoing messages
+        /// </summary>
         private readonly LiteNetMessageWriter _messageWriter;
+
+        /// <summary>
+        /// Request-response map. Stores request handlers until response arrives
+        /// </summary>
         private readonly RequestResponseMap _requestResponseMap;
+
+        /// <summary>
+        /// Event handler map. Stores event handlers bound to event types
+        /// </summary>
         private readonly EventHandlerMap _eventHandlerMap;
+
+        /// <summary>
+        /// Serialization provider. Used for serialization of messages
+        /// </summary>
         private readonly SerializationProvider _serializationProvider;
-        private readonly RequestResponseMap _responseMap;
+
+        /// <summary>
+        /// Type map - stores type hashes
+        /// </summary>
         private readonly TypeMap _typeMap;
 
         /// <summary>
@@ -67,22 +89,30 @@ namespace Fenrir.Multiplayer.LiteNet
         ///<inheritdoc/>
         public Network.ProtocolType ProtocolType => Network.ProtocolType.LiteNet;
 
+        /// <summary>
+        /// Client ticks per second
+        /// </summary>
+        public int TickRate { get; set; } = 66;
+
         ///<inheritdoc/>
-        public ConnectorState State
+        public bool IsRunning => State != Network.ConnectionState.Disconnected;
+
+        ///<inheritdoc/>
+        public Network.ConnectionState State
         {
             get
             {
                 if (_connectionTcs == null)
                 {
-                    return ConnectorState.Disconnected;
+                    return Network.ConnectionState.Disconnected;
                 }
                 else if (!_connectionTcs.Task.IsCompleted)
                 {
-                    return ConnectorState.Connecting;
+                    return Network.ConnectionState.Connecting;
                 }
                 else
                 {
-                    return ConnectorState.Connected;
+                    return Network.ConnectionState.Connected;
                 }
             }
         }
@@ -116,7 +146,7 @@ namespace Fenrir.Multiplayer.LiteNet
         ///<inheritdoc/>
         public Task<ConnectionResponse> Connect(ClientConnectionRequest connectionRequest)
         {
-            if(State != ConnectorState.Disconnected)
+            if (State != Network.ConnectionState.Disconnected)
             {
                 throw new InvalidOperationException("Can not connect while state is " + State);
             }
@@ -142,16 +172,37 @@ namespace Fenrir.Multiplayer.LiteNet
             // Start net manager
             _netManager.Start();
 
+            // Start polling events
+            RunEventLoop();
+
             // Connect
             _netManager.Connect(connectionRequest.Hostname, protocolConnectionData.Port, GetConnectionData(connectionRequest.ClientId, connectionRequest.ConnectionRequestData));
 
             return _connectionTcs.Task;
         }
 
+        private async void RunEventLoop()
+        {
+            while(IsRunning)
+            {
+                try
+                {
+                    _netManager.PollEvents();
+                }
+                catch(Exception e)
+                {
+                    _logger?.Error("Error during server tick: " + e);
+                }
+
+                float delaySeconds = 1f / TickRate;
+                await Task.Delay((int)(delaySeconds * 1000f));
+            }
+        }
+
         ///<inheritdoc/>
         public void Disconnect()
         {
-            if(State != ConnectorState.Disconnected)
+            if(State != Network.ConnectionState.Disconnected)
             {
                 _netManager.Stop();
             }
@@ -163,7 +214,7 @@ namespace Fenrir.Multiplayer.LiteNet
         private NetDataWriter GetConnectionData(string clientId, object connectionRequestData = null)
         {
             _netDataWriter.Reset();
-            _netDataWriter.Put(ProtocolVersion); // Protocol Version
+            _netDataWriter.Put(_protocolVersion); // Protocol Version
             _netDataWriter.Put(clientId); // Client Id
 
             if (connectionRequestData != null)
@@ -205,7 +256,7 @@ namespace Fenrir.Multiplayer.LiteNet
         #region INetEventListener Implementation
         void INetEventListener.OnPeerConnected(NetPeer peer)
         {
-            if(State != ConnectorState.Connecting)
+            if(State != Network.ConnectionState.Connecting)
             {
                 throw new InvalidOperationException("Connection succeeeded during wrong state: " + State);
             }
@@ -217,7 +268,7 @@ namespace Fenrir.Multiplayer.LiteNet
         void INetEventListener.OnPeerDisconnected(NetPeer peer, DisconnectInfo disconnectInfo)
         {
 
-            if (State != ConnectorState.Disconnected)
+            if (State == Network.ConnectionState.Disconnected)
             {
                 throw new InvalidOperationException("Received disconnected event while not connected");
             }
@@ -226,12 +277,12 @@ namespace Fenrir.Multiplayer.LiteNet
             SocketError socketError = disconnectInfo.SocketErrorCode;
             object data = null;
 
-            if(disconnectInfo.AdditionalData != null)
+            if(disconnectInfo.AdditionalData != null && !disconnectInfo.AdditionalData.EndOfData)
             {
                 data = _messageReader.ReadMessage(disconnectInfo.AdditionalData);
             }
 
-            if (State == ConnectorState.Connecting)
+            if (State == Network.ConnectionState.Connecting)
             {
                 _connectionTcs.SetException(new ConnectionFailedException("Connection failed", reason, socketError, data));
             }
@@ -301,7 +352,7 @@ namespace Fenrir.Multiplayer.LiteNet
         #region IDisposable Implementation
         public void Dispose()
         {
-            if(State != ConnectorState.Disconnected)
+            if(State != Network.ConnectionState.Disconnected)
             {
                 Disconnect();
             }

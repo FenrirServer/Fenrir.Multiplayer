@@ -22,6 +22,11 @@ namespace Fenrir.Multiplayer.Client
         /// Client Peer object. null if client is not connected
         /// </summary>
         IClientPeer Peer { get; }
+        
+        /// <summary>
+        /// State of the connection
+        /// </summary>
+        ConnectionState State { get; }
 
         /// <summary>
         /// Connects using Server Info URI

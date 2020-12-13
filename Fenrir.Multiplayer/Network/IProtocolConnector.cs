@@ -30,9 +30,14 @@ namespace Fenrir.Multiplayer.Network
         ProtocolType ProtocolType { get; }
 
         /// <summary>
+        /// True if connector is running
+        /// </summary>
+        bool IsRunning { get; }
+
+        /// <summary>
         /// State of the connection
         /// </summary>
-        ConnectorState State { get; }
+        ConnectionState State { get; }
 
         /// <summary>
         /// Latency between client and server (packet round-trip time)

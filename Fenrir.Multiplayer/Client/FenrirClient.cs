@@ -37,6 +37,9 @@ namespace Fenrir.Multiplayer.Client
         /// <inheritdoc/>
         public IClientPeer Peer => _protocolConnector?.Peer;
 
+        /// <inheritdoc/>
+        public ConnectionState State => _protocolConnector?.State ?? ConnectionState.Disconnected;
+
         /// <summary>
         /// Creates Fenrir Client
         /// </summary>
@@ -188,6 +191,7 @@ namespace Fenrir.Multiplayer.Client
         public void Dispose()
         {
             _protocolConnector.Dispose();
+            _protocolConnector = null;
         }
     }
 }

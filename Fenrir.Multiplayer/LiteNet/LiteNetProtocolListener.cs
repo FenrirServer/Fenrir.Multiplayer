@@ -17,40 +17,116 @@ namespace Fenrir.Multiplayer.LiteNet
     /// </summary>
     class LiteNetProtocolListener : IProtocolListener, INetEventListener, IDisposable
     {
+        /// <summary>
+        /// Minimum supported protocol version by the server
+        /// </summary>
         private const int _minSupportedProtocolVersion = 1;
 
+        /// <summary>
+        /// Serialization provider. Used for serialization of messages
+        /// </summary>
         private readonly SerializationProvider _serializationProvider;
+
+        /// <summary>
+        /// Type map - stores type hashes
+        /// </summary>
         private readonly TypeMap _typeMap;
+
+        /// <summary>
+        /// Request handler - stores event handlers bound to event types
+        /// </summary>
         private readonly RequestHandlerMap _requestHandlerMap;
+
+        /// <summary>
+        /// Message reader, used to dispatch incoming messages
+        /// </summary>
         private readonly LiteNetMessageReader _messageReader;
+
+        /// <summary>
+        /// Object pool of NetDataWriters used to write outgoing messages
+        /// </summary>
         private readonly NetDataWriterPool _netDataWriterPool;
+
+        /// <summary>
+        /// Pool if byte stream readers - used as temporary dispatch buffers
+        /// </summary>
         private readonly RecyclableObjectPool<ByteStreamReader> _byteStreamReaderPool;
+
+        /// <summary>
+        /// Object pool of byte stream writers - used as temporary write buffers
+        /// </summary>
         private readonly RecyclableObjectPool<ByteStreamWriter> _byteStreamWriterPool;
 
+        /// <summary>
+        /// Logger
+        /// </summary>
         private IFenrirLogger _logger;
 
+        /// <summary>
+        /// LiteNet NetManager
+        /// </summary>
         private NetManager _netManager;
 
+        /// <summary>
+        /// Stores delegate connection custom request handler if one is used
+        /// </summary>
         private Action<ConnectionRequest, string> _connectionRequestHandler = null;
+
+        /// <summary>
+        /// True if server is running
+        /// </summary>
+        private volatile bool _isRunning;
+
+        /// <summary>
+        /// Stores connected handler
+        /// </summary>
         private Action<IServerPeer> _connectHandler = null;
+
+        /// <summary>
+        /// Stores disconnected handler
+        /// </summary>
         private Action<IServerPeer> _disconnectHandler = null;
 
+        /// <inheritdoc/>
         public Network.ProtocolType ProtocolType => Network.ProtocolType.LiteNet;
 
+        /// <inheritdoc/>
+        public bool IsRunning => _isRunning;
 
-        public bool IsRunning { get; private set; } = false;
-
+        /// <summary>
+        /// Stores IPv6 mode 
+        /// </summary>
         public IPv6ProtocolMode IPv6Mode { get; set; } = IPv6ProtocolMode.Disabled;
 
+        /// <summary>
+        /// IPv4 endpoint at which listener should be bound
+        /// </summary>
         public string BindIPv4 { get; set; } = "0.0.0.0";
 
-        public string BindIPv6 { get; set; } = "::/0";
+        /// <summary>
+        /// IPv6 endpoint at which listener should be bound
+        /// </summary>
+        public string BindIPv6 { get; set; } = "::";
 
-        public ushort Port { get; set; } = 27001;
+        /// <summary>
+        /// Port at which listener should be bound
+        /// </summary>
+        public ushort Port { get; set; } = 27015;
 
+        /// <summary>
+        /// Public port. Overrides listen <seealso cref="Port"/> when reporting to the client
+        /// Override this port if container maps <seealso cref="Port"/> to something else
+        /// </summary>
         public ushort? PublicPort { get; set; } = null;
 
+        /// <summary>
+        /// Server ticks per second
+        /// </summary>
+        public int TickRate { get; set; } = 66;
 
+        /// <summary>
+        /// Default constructor
+        /// </summary>
         public LiteNetProtocolListener()
         {
             _serializationProvider = new SerializationProvider();
@@ -62,12 +138,12 @@ namespace Fenrir.Multiplayer.LiteNet
             _byteStreamReaderPool = new RecyclableObjectPool<ByteStreamReader>();
             _byteStreamWriterPool = new RecyclableObjectPool<ByteStreamWriter>();
             _netDataWriterPool = new NetDataWriterPool();
-
         }
 
+        /// <inheritdoc/>
         public Task Start()
         {
-            if (!IsRunning)
+            if (!_isRunning)
             {
                 _netManager = new NetManager(this)
                 {
@@ -77,19 +153,44 @@ namespace Fenrir.Multiplayer.LiteNet
 
                 _netManager.Start(BindIPv4, BindIPv6, Port);
 
-                IsRunning = true;
+                _isRunning = true;
+
+                RunEventLoop();
             }
 
             return Task.CompletedTask;
         }
 
+
+        /// <summary>
+        /// Ticks the server
+        /// </summary>
+        private async void RunEventLoop()
+        {
+            while(_isRunning)
+            {
+                try
+                {
+                    _netManager.PollEvents();
+                }
+                catch (Exception e)
+                {
+                    _logger?.Error("Error during server tick: " + e);
+                }
+
+                float delaySeconds = 1f / TickRate;
+                await Task.Delay((int)(delaySeconds * 1000f));
+            }
+        }
+
+        /// <inheritdoc/>
         public Task Stop()
         {
-            if (IsRunning)
+            if (_isRunning)
             {
                 _netManager.Stop();
                 _netManager = null;
-                IsRunning = false;
+                _isRunning = false;
             }
 
             return Task.CompletedTask;
@@ -111,6 +212,7 @@ namespace Fenrir.Multiplayer.LiteNet
             }
         }
 
+        /// <inheritdoc/>
         public void SetConnectionRequestHandler<TConnectionRequestData>(Func<ServerConnectionRequest<TConnectionRequestData>, Task<ConnectionResponse>> handler)
             where TConnectionRequestData : class, new()
         {
@@ -201,6 +303,7 @@ namespace Fenrir.Multiplayer.LiteNet
             _logger = logger;
         }
 
+        /// <inheritdoc/>
         public IProtocolConnectionData GetConnectionData()
         {
             return new LiteNetProtocolConnectionData(
@@ -242,7 +345,7 @@ namespace Fenrir.Multiplayer.LiteNet
         }
 
 
-        async void INetEventListener.OnNetworkReceive(NetPeer netPeer, NetPacketReader reader, DeliveryMethod deliveryMethod)
+        void INetEventListener.OnNetworkReceive(NetPeer netPeer, NetPacketReader reader, DeliveryMethod deliveryMethod)
         {
             // Get LiteNet peer
             if(netPeer.Tag == null)
@@ -310,7 +413,7 @@ namespace Fenrir.Multiplayer.LiteNet
         #region IDisposable Implementation
         public void Dispose()
         {
-            if(IsRunning)
+            if(_isRunning)
             {
                 Stop();
             }

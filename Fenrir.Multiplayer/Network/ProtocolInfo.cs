@@ -30,9 +30,22 @@ namespace Fenrir.Multiplayer.Network
             return ConnectionData.ToObject(connectionDataType);
         }
 
-        internal IProtocolConnectionData GetConnectionData(object connectionDataType)
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        public ProtocolInfo()
         {
-            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Constructs an object using custom protocol type and connection data
+        /// </summary>
+        /// <param name="protocolType">Type of the protocol</param>
+        /// <param name="connectionData">Connection data</param>
+        public ProtocolInfo(ProtocolType protocolType, IProtocolConnectionData connectionData) : this()
+        {
+            ProtocolType = protocolType;
+            ConnectionData = JObject.FromObject(connectionData);
         }
     }
 }

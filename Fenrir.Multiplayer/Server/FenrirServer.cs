@@ -1,4 +1,5 @@
-﻿using Fenrir.Multiplayer.LiteNet;
+﻿using Fenrir.Multiplayer.Exceptions;
+using Fenrir.Multiplayer.LiteNet;
 using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
@@ -20,16 +21,24 @@ namespace Fenrir.Multiplayer.Server
         /// <inheritdoc/>
         public string Hostname { get; set; }
 
-        /// <summary>
-        /// List of available protocols
-        /// </summary>
-        private IProtocolListener[] _protocolListeners;
-
         /// <inheritdoc/>
         public IEnumerable<IProtocolListener> Listeners => _protocolListeners;
 
         /// <inheritdoc/>
         public ServerStatus Status { get; private set; } = ServerStatus.Stopped;
+
+        /// <inheritdoc/>
+        public bool IsRunning => Status == ServerStatus.Running;
+
+        /// <summary>
+        /// List of available protocols
+        /// </summary>
+        private IProtocolListener[] _protocolListeners;
+
+        /// <summary>
+        /// Fenrir Logger
+        /// </summary>
+        private IFenrirLogger _logger;
 
         /// <summary>
         /// Default constructor. Creates Fenrir Server with all default protocols 
@@ -37,6 +46,7 @@ namespace Fenrir.Multiplayer.Server
         public FenrirServer()
             : this(new IProtocolListener[] { new LiteNetProtocolListener() })
         {
+            _logger = new EventBasedLogger();
         }
 
         /// <summary>
@@ -68,8 +78,21 @@ namespace Fenrir.Multiplayer.Server
                 throw new InvalidOperationException("Failed to start server, server is already " + Status);
             }
 
+            Status = ServerStatus.Starting;
+
             // Start all protocol listeners
             await Task.WhenAll(_protocolListeners.Select(listener => listener.Start()));
+
+            // Check that all listeners has started properly and were not stopped during the start
+            foreach(var protocolListener in _protocolListeners)
+            {
+                if(!protocolListener.IsRunning)
+                {
+                    throw new FenrirServerException($"Failed to start server, protocol listener {protocolListener.ProtocolType} is not running");
+                }
+            }
+
+            Status = ServerStatus.Running;
         }
 
         /// <inheritdoc/>
@@ -80,8 +103,12 @@ namespace Fenrir.Multiplayer.Server
                 throw new InvalidOperationException("Failed to stop server, server is already " + Status);
             }
 
+            Status = ServerStatus.Stopping;
+
             // Stop all protocol listeners
             await Task.WhenAll(_protocolListeners.Select(listener => listener.Stop()));
+
+            Status = ServerStatus.Stopped;
         }
 
 

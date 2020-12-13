@@ -87,11 +87,7 @@ namespace Fenrir.Multiplayer.Server
                 ServerId = _fenrirServerInfoProvider.ServerId,
                 Hostname = _fenrirServerInfoProvider.Hostname,
                 Protocols = _fenrirServerInfoProvider.Listeners.Select(
-                    listener => new ProtocolInfo()
-                    {
-                        ProtocolType = listener.ProtocolType,
-                        ConnectionData = JObject.FromObject(listener.GetConnectionData())
-                    }
+                    listener => new ProtocolInfo(listener.ProtocolType, listener.GetConnectionData())
                 ).ToArray()
             };
 

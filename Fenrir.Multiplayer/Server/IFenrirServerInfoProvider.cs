@@ -25,6 +25,11 @@ namespace Fenrir.Multiplayer.Server
         ServerStatus Status { get; }
 
         /// <summary>
+        /// True if server is running
+        /// </summary>
+        bool IsRunning { get; }
+
+        /// <summary>
         /// Listeners available on this server
         /// </summary>
         IEnumerable<IProtocolListener> Listeners { get; }
