@@ -138,7 +138,7 @@ namespace Fenrir.Multiplayer.Client
             IProtocolConnectionData protocolData = (IProtocolConnectionData)selectedProtocolInfo.GetConnectionData(_protocolConnector.ConnectionDataType);
 
             // Connect using selected protocol
-            var connectionRequest = new ClientConnectionRequest(ClientId, connectionRequestData, protocolData);
+            var connectionRequest = new ClientConnectionRequest(serverInfo.Hostname, ClientId, connectionRequestData, protocolData);
             return await _protocolConnector.Connect(connectionRequest);
         }
 

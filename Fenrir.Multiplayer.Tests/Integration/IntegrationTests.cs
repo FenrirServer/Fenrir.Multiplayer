@@ -21,7 +21,7 @@ namespace Fenrir.Multiplayer.Tests
             fenrirServerMock.Setup(server => server.Status).Returns(ServerStatus.Running);
             fenrirServerMock.Setup(server => server.ServerId).Returns("test_id");
             fenrirServerMock.Setup(server => server.Listeners).Returns(new IProtocolListener[] { 
-                new LiteNetProtocolListener()
+                new LiteNetProtocolListener(){ Port = 27015 }
             });
 
             // Start service
@@ -49,7 +49,7 @@ namespace Fenrir.Multiplayer.Tests
             var connectionData = serverInfo.Protocols[0].GetConnectionData(typeof(LiteNetProtocolConnectionData)) as LiteNetProtocolConnectionData;
 
             Assert.IsNotNull(connectionData, "connection data is null");
-            Assert.AreEqual("0.0.0.0", connectionData.HostnameV4);
+            Assert.AreEqual(27015, connectionData.Port);
         }
     }
 }

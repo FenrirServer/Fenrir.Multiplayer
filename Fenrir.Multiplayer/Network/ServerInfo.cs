@@ -7,6 +7,11 @@
     public class ServerInfo
     {
         /// <summary>
+        /// Public hostname of the server
+        /// </summary>
+        public string Hostname { get; set; }
+
+        /// <summary>
         /// Unique ID of the server
         /// </summary>
         public string ServerId { get; set; }

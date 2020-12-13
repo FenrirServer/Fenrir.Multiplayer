@@ -21,11 +21,6 @@ namespace Fenrir.Multiplayer.Network
         ProtocolType ProtocolType { get; }
 
         /// <summary>
-        /// Connection data, required to pass by the client when connecting using this protocol
-        /// </summary>
-        IProtocolConnectionData ConnectionData { get; }
-
-        /// <summary>
         /// Starts protocol listener
         /// </summary>
         /// <returns>Task that completes when protocol listener is runnign</returns>
@@ -50,5 +45,11 @@ namespace Fenrir.Multiplayer.Network
         /// </summary>
         /// <param name="logger">Fenrir Logger</param>
         void SetLogger(IFenrirLogger logger);
+
+
+        /// <summary>
+        /// Returns protocol connection data, required to pass by the client when connecting using this protocol
+        /// </summary>
+        IProtocolConnectionData GetConnectionData();
     }
 }

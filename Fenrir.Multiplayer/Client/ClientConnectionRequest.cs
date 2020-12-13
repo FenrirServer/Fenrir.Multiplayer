@@ -2,8 +2,16 @@
 
 namespace Fenrir.Multiplayer.Client
 {
+    /// <summary>
+    /// Client to server connection request
+    /// </summary>
     public class ClientConnectionRequest
     {
+        /// <summary>
+        /// Sever hostname
+        /// </summary>
+        public string Hostname { get; private set; }
+
         /// <summary>
         /// Unique id of the client
         /// </summary>
@@ -19,8 +27,9 @@ namespace Fenrir.Multiplayer.Client
         /// </summary>
         public IProtocolConnectionData ProtocolConnectionData { get; private set; }
 
-        public ClientConnectionRequest(string clientId, object connectionRequestData, IProtocolConnectionData protocolConnectionData)
+        public ClientConnectionRequest(string hostname, string clientId, object connectionRequestData, IProtocolConnectionData protocolConnectionData)
         {
+            Hostname = hostname;
             ClientId = clientId;
             ConnectionRequestData = connectionRequestData;
             ProtocolConnectionData = protocolConnectionData;

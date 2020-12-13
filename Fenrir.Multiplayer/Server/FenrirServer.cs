@@ -17,6 +17,9 @@ namespace Fenrir.Multiplayer.Server
         /// <inheritdoc/>
         public string ServerId { get; set; }
 
+        /// <inheritdoc/>
+        public string Hostname { get; set; }
+
         /// <summary>
         /// List of available protocols
         /// </summary>

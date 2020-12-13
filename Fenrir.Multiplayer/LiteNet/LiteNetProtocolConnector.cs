@@ -7,7 +7,6 @@ using Fenrir.Multiplayer.Serialization;
 using LiteNetLib;
 using LiteNetLib.Utils;
 using System;
-using System.Diagnostics.Contracts;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -144,7 +143,7 @@ namespace Fenrir.Multiplayer.LiteNet
             _netManager.Start();
 
             // Connect
-            _netManager.Connect(protocolConnectionData.HostnameV4, protocolConnectionData.Port, GetConnectionData(connectionRequest.ClientId, connectionRequest.ConnectionRequestData));
+            _netManager.Connect(connectionRequest.Hostname, protocolConnectionData.Port, GetConnectionData(connectionRequest.ClientId, connectionRequest.ConnectionRequestData));
 
             return _connectionTcs.Task;
         }

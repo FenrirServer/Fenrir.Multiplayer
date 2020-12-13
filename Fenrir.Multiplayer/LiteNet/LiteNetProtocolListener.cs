@@ -37,19 +37,19 @@ namespace Fenrir.Multiplayer.LiteNet
 
         public Network.ProtocolType ProtocolType => Network.ProtocolType.LiteNet;
 
-        public IProtocolConnectionData ConnectionData =>
-            new LiteNetProtocolConnectionData(HostnameIPv4, HostnameIPv6, Port, IPv6Mode);
 
         public bool IsRunning { get; private set; } = false;
 
         public IPv6ProtocolMode IPv6Mode { get; set; } = IPv6ProtocolMode.Disabled;
 
-        public string HostnameIPv4 { get; set; } = "0.0.0.0";
+        public string BindIPv4 { get; set; } = "0.0.0.0";
 
-        public string HostnameIPv6 { get; set; } = "::/0";
-
+        public string BindIPv6 { get; set; } = "::/0";
 
         public ushort Port { get; set; } = 27001;
+
+        public ushort? PublicPort { get; set; } = null;
+
 
         public LiteNetProtocolListener()
         {
@@ -75,7 +75,7 @@ namespace Fenrir.Multiplayer.LiteNet
                     IPv6Enabled = (IPv6Mode)IPv6Mode
                 };
 
-                _netManager.Start(HostnameIPv4, HostnameIPv6, Port);
+                _netManager.Start(BindIPv4, BindIPv6, Port);
 
                 IsRunning = true;
             }
@@ -201,6 +201,13 @@ namespace Fenrir.Multiplayer.LiteNet
             _logger = logger;
         }
 
+        public IProtocolConnectionData GetConnectionData()
+        {
+            return new LiteNetProtocolConnectionData(
+                PublicPort ?? Port,
+                IPv6Mode
+                );
+        }
 
         #region INetEventListener Implementation
         void INetEventListener.OnConnectionRequest(ConnectionRequest request)

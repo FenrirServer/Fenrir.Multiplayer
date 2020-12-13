@@ -9,6 +9,12 @@ namespace Fenrir.Multiplayer.Server
     public interface IFenrirServerInfoProvider
     {
         /// <summary>
+        /// Public server hostname. 
+        /// Clients will use to connect
+        /// </summary>
+        string Hostname { get; set; }
+
+        /// <summary>
         /// Unique Id of the server
         /// </summary>
         string ServerId { get; set; }
