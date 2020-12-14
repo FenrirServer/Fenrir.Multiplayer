@@ -3,6 +3,10 @@ using System;
 
 namespace Fenrir.Multiplayer.Network
 {
+    /// <summary>
+    /// Serializable structure that describes
+    /// available server protocol
+    /// </summary>
     public class ProtocolInfo
     {
         /// <summary>

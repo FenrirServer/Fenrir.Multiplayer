@@ -4,12 +4,27 @@ using System.Collections.Generic;
 
 namespace Fenrir.Multiplayer.Network
 {
+    /// <summary>
+    /// Map that stores bound event handles
+    /// Event handlers are bound to the specific event type
+    /// </summary>
     class EventHandlerMap
     {
+        /// <summary>
+        /// Sync root
+        /// </summary>
         private readonly object _syncRoot = new object();
 
+        /// <summary>
+        /// Bound handlers
+        /// </summary>
         private Dictionary<Type, Action<IEvent>> _eventHandlers = new Dictionary<Type, Action<IEvent>>();
 
+        /// <summary>
+        /// Binds event handler to an event type
+        /// </summary>
+        /// <typeparam name="TEvent">Event Type</typeparam>
+        /// <param name="eventHandler">Event Handler</param>
         public void AddEventHandler<TEvent>(IEventHandler<TEvent> eventHandler)
             where TEvent : IEvent
         {
@@ -29,6 +44,11 @@ namespace Fenrir.Multiplayer.Network
             }
         }
 
+        /// <summary>
+        /// Removes event handler of a specific event type
+        /// </summary>
+        /// <typeparam name="TEvent">Event Type</typeparam>
+        /// <param name="eventHandler">Event Handler</param>
         public void RemoveEventHandler<TEvent>(IEventHandler<TEvent> eventHandler)
             where TEvent : IEvent
         {
@@ -48,6 +68,10 @@ namespace Fenrir.Multiplayer.Network
             }
         }
 
+        /// <summary>
+        /// Invoked when event is received
+        /// </summary>
+        /// <param name="eventWrapper">Message Wrapper</param>
         public void OnReceiveEvent(MessageWrapper eventWrapper)
         {
             Type eventType = eventWrapper.MessageData.GetType();

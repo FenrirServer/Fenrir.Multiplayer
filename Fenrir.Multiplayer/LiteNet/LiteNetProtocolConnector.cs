@@ -44,9 +44,9 @@ namespace Fenrir.Multiplayer.LiteNet
         private readonly LiteNetMessageWriter _messageWriter;
 
         /// <summary>
-        /// Request-response map. Stores request handlers until response arrives
+        /// Pending request map. Stores request handlers until response arrives
         /// </summary>
-        private readonly RequestResponseMap _requestResponseMap;
+        private readonly PendingRequestMap _pendingRequestMap;
 
         /// <summary>
         /// Event handler map. Stores event handlers bound to event types
@@ -136,7 +136,7 @@ namespace Fenrir.Multiplayer.LiteNet
             _logger = new EventBasedLogger();
             _typeMap = new TypeMap();
             _eventHandlerMap = new EventHandlerMap();
-            _requestResponseMap = new RequestResponseMap();
+            _pendingRequestMap = new PendingRequestMap();
             _messageReader = new LiteNetMessageReader(_serializationProvider, _typeMap, new RecyclableObjectPool<ByteStreamReader>());
             _messageWriter = new LiteNetMessageWriter(_serializationProvider, _typeMap, new RecyclableObjectPool<ByteStreamWriter>());
 
@@ -261,7 +261,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 throw new InvalidOperationException("Connection succeeeded during wrong state: " + State);
             }
 
-            _peer = new LiteNetClientPeer(peer, _messageWriter, _requestResponseMap);
+            _peer = new LiteNetClientPeer(peer, _messageWriter, _pendingRequestMap);
             _connectionTcs.SetResult(ConnectionResponse.Successful);
         }
 
@@ -325,7 +325,7 @@ namespace Fenrir.Multiplayer.LiteNet
                     return;
                 }
 
-                _requestResponseMap.OnReceiveResponse(messageWrapper.RequestId, messageWrapper);
+                _pendingRequestMap.OnReceiveResponse(messageWrapper.RequestId, messageWrapper);
             }
             else
             {

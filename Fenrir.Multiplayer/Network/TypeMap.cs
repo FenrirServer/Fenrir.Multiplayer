@@ -4,6 +4,9 @@ using System.Collections.Generic;
 
 namespace Fenrir.Multiplayer.Network
 {
+    /// <summary>
+    /// Type map
+    /// </summary>
     public class TypeMap : ITypeMap
     {
         private Dictionary<ulong, Type> _hashToTypeDictionary = new Dictionary<ulong, Type>();
@@ -11,11 +14,13 @@ namespace Fenrir.Multiplayer.Network
 
         private object _syncRoot = new object();
 
+        /// <inheritdoc/>
         public void AddType<T>()
         {
             AddType(typeof(T));
         }
 
+        /// <inheritdoc/>
         public void AddType(Type type)
         {
             lock(_syncRoot)
@@ -34,7 +39,8 @@ namespace Fenrir.Multiplayer.Network
                 _typeToHashDictionary[type] = hash;
             }
         }
-        
+
+        /// <inheritdoc/>
         public void RemoveType(Type type)
         {
             lock (_syncRoot)
@@ -51,11 +57,13 @@ namespace Fenrir.Multiplayer.Network
             }
         }
 
+        /// <inheritdoc/>
         public ulong GetTypeHash<T>()
         {
             return GetTypeHash(typeof(T));
         }
 
+        /// <inheritdoc/>
         public ulong GetTypeHash(Type type)
         {
             // Walk the type tree, until we find hash for this type
@@ -77,8 +85,8 @@ namespace Fenrir.Multiplayer.Network
             throw new TypeMapException($"Failed ot get hash for type {type} or it's subtypes");
         }
 
-
-        public Type GetTypeByHashInternal(ulong hash)
+        /// <inheritdoc/>
+        public Type GetTypeByHash(ulong hash)
         {
             lock(_syncRoot)
             {
@@ -91,6 +99,11 @@ namespace Fenrir.Multiplayer.Network
             }
         }
 
+        /// <summary>
+        /// Calculates deterministic type name hash using fnv-1
+        /// </summary>
+        /// <param name="type">Type</param>
+        /// <returns>Deterministic type hash</returns>
         private ulong CalculateTypeHash(Type type)
         {
             // Calculates fnv-1 64 bit hash of the type name
