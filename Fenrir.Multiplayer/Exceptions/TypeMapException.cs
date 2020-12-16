@@ -1,9 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Fenrir.Multiplayer.Exceptions
 {
+    /// <summary>
+    /// Thrown when TypeMap encounters an error 
+    /// </summary>
     public class TypeMapException : FenrirException
     {
         public TypeMapException()

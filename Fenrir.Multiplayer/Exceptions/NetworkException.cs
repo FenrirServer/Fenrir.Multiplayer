@@ -2,6 +2,9 @@
 
 namespace Fenrir.Multiplayer.Exceptions
 {
+    /// <summary>
+    /// Base Network Exception
+    /// </summary>
     public class NetworkException : FenrirException
     {
         public NetworkException()

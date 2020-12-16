@@ -37,7 +37,7 @@ namespace Fenrir.Multiplayer.Network
             {
                 if(_eventHandlers.ContainsKey(typeof(TEvent)))
                 {
-                    throw new EventListenerException($"Failed to add event handler {eventHandler.GetType()}, handler for event type {typeof(TEvent).Name} is already registered");
+                    throw new EventHandlerException($"Failed to add event handler {eventHandler.GetType()}, handler for event type {typeof(TEvent).Name} is already registered");
                 }
 
                 _eventHandlers.Add(typeof(TEvent), evt => eventHandler.OnReceiveEvent((TEvent)evt));
@@ -61,7 +61,7 @@ namespace Fenrir.Multiplayer.Network
             {
                 if (_eventHandlers.ContainsKey(typeof(TEvent)))
                 {
-                    throw new EventListenerException($"Failed to remove event handler {eventHandler.GetType()}, handler for event type {typeof(TEvent).Name} is not registered");
+                    throw new EventHandlerException($"Failed to remove event handler {eventHandler.GetType()}, handler for event type {typeof(TEvent).Name} is not registered");
                 }
 
                 _eventHandlers.Remove(typeof(TEvent));
@@ -82,7 +82,7 @@ namespace Fenrir.Multiplayer.Network
             {
                 if (!_eventHandlers.ContainsKey(eventType))
                 {
-                    throw new EventListenerException($"Failed to dispatch event of type {eventType}, handler for event type is not registered");
+                    throw new EventHandlerException($"Failed to dispatch event of type {eventType}, handler for event type is not registered");
                 }
 
                 handler = _eventHandlers[eventType];

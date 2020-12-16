@@ -6,17 +6,34 @@ using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.LiteNet
 {
+    /// <summary>
+    /// LiteNet Client Peer Implementation
+    /// </summary>
     class LiteNetClientPeer : LiteNetBasePeer, IClientPeer
     {
+        /// <summary>
+        /// Numeric id of the last request
+        /// </summary>
         private int _requestId = 0;
-        private readonly PendingRequestMap _responseMap;
 
-        public LiteNetClientPeer(NetPeer netPeer, LiteNetMessageWriter messageWriter, PendingRequestMap responseMap)
+        /// <summary>
+        /// Map of pending requests, that are waiting for a response from the server
+        /// </summary>
+        private readonly PendingRequestMap _pendingRequestMap;
+
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        /// <param name="netPeer">LiteNet NetPeer</param>
+        /// <param name="messageWriter">Message Writer</param>
+        /// <param name="pendingRequestMap">Pending Request Map</param>
+        public LiteNetClientPeer(NetPeer netPeer, LiteNetMessageWriter messageWriter, PendingRequestMap pendingRequestMap)
             : base(netPeer, messageWriter)
         {
-            _responseMap = responseMap;
+            _pendingRequestMap = pendingRequestMap;
         }
 
+        /// <inheritdoc/>
         public void SendRequest<TRequest>(TRequest request, byte channel = 0, MessageDeliveryMethod deliveryMethod = MessageDeliveryMethod.ReliableOrdered) where TRequest : IRequest
         {
             int requestId = Interlocked.Increment(ref _requestId);
@@ -34,6 +51,7 @@ namespace Fenrir.Multiplayer.LiteNet
             Send(messageWrapper);
         }
 
+        /// <inheritdoc/>
         public async Task<IResponse> SendRequest<TRequest, TResponse>(TRequest request, byte channel = 0, MessageDeliveryMethod deliveryMethod = MessageDeliveryMethod.ReliableOrdered)
             where TRequest : IRequest<TResponse>
             where TResponse : IResponse
@@ -51,7 +69,7 @@ namespace Fenrir.Multiplayer.LiteNet
             };
 
             // Add request awaiter to a response map
-            Task<MessageWrapper> task = _responseMap.OnSendRequest(messageWrapper);
+            Task<MessageWrapper> task = _pendingRequestMap.OnSendRequest(messageWrapper);
 
             Send(messageWrapper);
 

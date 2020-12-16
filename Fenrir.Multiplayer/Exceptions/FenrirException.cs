@@ -2,6 +2,9 @@
 
 namespace Fenrir.Multiplayer.Exceptions
 {
+    /// <summary>
+    /// Base Fenrir Multiplayer SDK Exception
+    /// </summary>
     public class FenrirException : Exception
     {
         public FenrirException()
