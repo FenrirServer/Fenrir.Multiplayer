@@ -3,14 +3,24 @@ using System.Runtime.Serialization;
 
 namespace Fenrir.Multiplayer.Serialization
 {
+    /// <summary>
+    /// Serialization provider - provides means of serialization of data contracts
+    /// </summary>
     public class SerializationProvider : ISerializationProvider
     {
+        /// <summary>
+        /// Custom contract serializer. Assign to use custom data contract serializer.
+        /// </summary>
         public IContractSerializer ContractSerializer { get; private set; }
 
+        /// <summary>
+        /// Default constructor
+        /// </summary>
         public SerializationProvider()
         {
         }
 
+        /// <inheritdoc/>
         public void Serialize(object data, IByteStreamWriter byteStreamWriter)
         {
             IByteStreamSerializable byteStreamSerializable = data as IByteStreamSerializable;
@@ -46,7 +56,7 @@ namespace Fenrir.Multiplayer.Serialization
             }
         }
 
-
+        /// <inheritdoc/>
         public TData Deserialize<TData>(IByteStreamReader byteStreamReader)
             where TData : new()
         {
@@ -84,6 +94,7 @@ namespace Fenrir.Multiplayer.Serialization
             }
         }
 
+        /// <inheritdoc/>
         public object Deserialize(Type type, IByteStreamReader byteStreamReader)
         {
             if (typeof(IByteStreamSerializable).IsAssignableFrom(type))
@@ -103,6 +114,7 @@ namespace Fenrir.Multiplayer.Serialization
             }
         }
 
+        /// <inheritdoc/>
         public void SetContractSerializer(IContractSerializer contractSerializer)
         {
             ContractSerializer = contractSerializer;
