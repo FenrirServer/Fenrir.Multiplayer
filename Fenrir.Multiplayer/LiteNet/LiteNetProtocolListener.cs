@@ -377,6 +377,8 @@ namespace Fenrir.Multiplayer.LiteNet
                 throw new ArgumentNullException(nameof(requestHandler));
             }
 
+            _typeMap.AddType<TRequest>();
+
             _requestHandlerMap.AddRequestHandler<TRequest>(requestHandler);
         }
 
@@ -389,6 +391,9 @@ namespace Fenrir.Multiplayer.LiteNet
             {
                 throw new ArgumentNullException(nameof(requestHandler));
             }
+
+            _typeMap.AddType<TRequest>();
+            _typeMap.AddType<TResponse>();
 
             _requestHandlerMap.AddRequestHandler<TRequest, TResponse>(requestHandler);
         }

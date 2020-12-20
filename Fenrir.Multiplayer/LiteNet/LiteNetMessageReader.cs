@@ -47,12 +47,13 @@ namespace Fenrir.Multiplayer.LiteNet
         public MessageWrapper ReadMessage(NetDataReader netDataReader)
         {
             MessageType messageType = (MessageType)netDataReader.GetByte(); // Type of the message
-            ulong messageTypeHash = netDataReader.GetULong(); // Type hash
             int requestId = 0;
             if(messageType == MessageType.Request || messageType == MessageType.Response)
             {
                 requestId = netDataReader.GetInt(); // Request id
             }
+
+            ulong messageTypeHash = netDataReader.GetULong(); // Type hash
 
             Type dataType = _typeMap.GetTypeByHash(messageTypeHash);
 

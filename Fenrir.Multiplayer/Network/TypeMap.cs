@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace Fenrir.Multiplayer.Network
 {
     /// <summary>
-    /// Type map
+    /// Type map - calculates and stores deterministic hash code for each System.Type
     /// </summary>
     public class TypeMap : ITypeMap
     {
@@ -66,25 +66,27 @@ namespace Fenrir.Multiplayer.Network
         /// <inheritdoc/>
         public ulong GetTypeHash(Type type)
         {
-            Type currentType = type;
+            ulong hash;
 
-            // Walk the type tree, until we find hash for this type
-            while(currentType != null && currentType != typeof(object))
+            // Try to find cached hash
+            lock(_syncRoot)
             {
-                // Try to find type
-                lock (_syncRoot)
+                if(_typeToHashDictionary.TryGetValue(type, out hash))
                 {
-                    if (_typeToHashDictionary.ContainsKey(currentType))
-                    {
-                        // Found type hash
-                        return _typeToHashDictionary[currentType];
-                    }
+                    return hash;
                 }
-
-                currentType = currentType.BaseType;
             }
 
-            throw new TypeMapException($"Failed ot get hash for type {type} or it's subtypes");
+            // No hash found, calculate
+            hash = CalculateTypeHash(type);
+
+            lock (_syncRoot)
+            {
+                _hashToTypeDictionary[hash] = type;
+                _typeToHashDictionary[type] = hash;
+            }
+
+            return hash;
         }
 
         /// <inheritdoc/>
