@@ -55,6 +55,48 @@ namespace Fenrir.Multiplayer.Network
         /// </summary>
         Type ConnectionDataType { get; }
 
+
+        /// <summary>
+        /// Time after which client is disconnected if no keep alive packets are received
+        /// </summary>
+        int DisconnectTimeout { get; set; }
+
+        /// <summary>
+        /// Delay between network ticks
+        /// </summary>
+        int UpdateTime { get; set; }
+
+        /// <summary>
+        /// Interval between KeepAlive packets.
+        /// Must be smaller than <seealso cref="DisconnectTimeout"/>
+        /// </summary>
+        int PingInterval { get; set; }
+
+        /// <summary>
+        /// If set to true, packet loss is simulated and random packets will be dropped
+        /// </summary>
+        bool SimulatePacketLoss { get; set; }
+
+        /// <summary>
+        /// If set to true, delay is added for each packet
+        /// </summary>
+        bool SimulateLatency { get; set; }
+
+        /// <summary>
+        /// Chance of packet loss when packet loss simulation is enabled.
+        /// </summary>
+        int SimulationPacketLossChance { get; set; }
+
+        /// <summary>
+        /// Minimum simulated latency
+        /// </summary>
+        int SimulationMinLatency { get; set; }
+
+        /// <summary>
+        /// Maximum simulated latency
+        /// </summary>
+        int SimulationMaxLatency { get; set; }
+
         /// <summary>
         /// Connects using protocol-specific implementation
         /// </summary>

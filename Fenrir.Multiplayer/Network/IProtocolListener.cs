@@ -22,6 +22,22 @@ namespace Fenrir.Multiplayer.Network
         ProtocolType ProtocolType { get; }
 
         /// <summary>
+        /// Time after which client is disconnected if no keep alive packets are received
+        /// </summary>
+        int DisconnectTimeout { get; set; }
+
+        /// <summary>
+        /// Delay between network ticks
+        /// </summary>
+        int UpdateTime { get; set; }
+
+        /// <summary>
+        /// Interval between KeepAlive packets.
+        /// Must be smaller than <seealso cref="DisconnectTimeout"/>
+        /// </summary>
+        int PingInterval { get; set; }
+
+        /// <summary>
         /// Starts protocol listener
         /// </summary>
         /// <returns>Task that completes when protocol listener is runnign</returns>

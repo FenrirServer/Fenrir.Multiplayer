@@ -94,6 +94,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// </summary>
         public int TickRate { get; set; } = 66;
 
+
         ///<inheritdoc/>
         public bool IsRunning => State != Network.ConnectionState.Disconnected;
 
@@ -116,9 +117,65 @@ namespace Fenrir.Multiplayer.LiteNet
                 }
             }
         }
-
         ///<inheritdoc/>
         public Type ConnectionDataType => typeof(LiteNetProtocolConnectionData);
+
+
+        ///<inheritdoc/>
+        public int DisconnectTimeout
+        {
+            get => _netManager.DisconnectTimeout;
+            set => _netManager.DisconnectTimeout = value;
+        }
+
+        ///<inheritdoc/>
+        public int UpdateTime
+        {
+            get => _netManager.UpdateTime;
+            set => _netManager.UpdateTime = value;
+        }
+
+        ///<inheritdoc/>
+        public int PingInterval
+        {
+            get => _netManager.PingInterval;
+            set => _netManager.PingInterval = value;
+        }
+
+        ///<inheritdoc/>
+        public bool SimulatePacketLoss
+        {
+            get => _netManager.SimulatePacketLoss;
+            set => _netManager.SimulatePacketLoss = value;
+        }
+
+        ///<inheritdoc/>
+        public bool SimulateLatency
+        {
+            get => _netManager.SimulateLatency;
+            set => _netManager.SimulateLatency = value;
+        }
+
+        ///<inheritdoc/>
+        public int SimulationPacketLossChance
+        {
+            get => _netManager.SimulationPacketLossChance;
+            set => _netManager.SimulationPacketLossChance = value;
+        }
+
+        ///<inheritdoc/>
+        public int SimulationMinLatency
+        {
+            get => _netManager.SimulationMinLatency;
+            set => _netManager.SimulationMinLatency = value;
+        }
+
+        ///<inheritdoc/>
+        public int SimulationMaxLatency
+        {
+            get => _netManager.SimulationMaxLatency;
+            set => _netManager.SimulationMaxLatency = value;
+        }
 
         /// <summary>
         /// TaskCompletionSource that represents connection task
@@ -141,6 +198,11 @@ namespace Fenrir.Multiplayer.LiteNet
             _messageWriter = new LiteNetMessageWriter(_serializationProvider, _typeMap, new RecyclableObjectPool<ByteStreamWriter>());
 
             _netDataWriter = new NetDataWriter();
+
+            _netManager = new NetManager(this)
+            {
+                AutoRecycle = true,
+            };
         }
 
         ///<inheritdoc/>
@@ -161,13 +223,6 @@ namespace Fenrir.Multiplayer.LiteNet
 
             // Create task completion source
             _connectionTcs = new TaskCompletionSource<ConnectionResponse>();
-
-            // Create net manager
-            _netManager = new NetManager(this)
-            {
-                AutoRecycle = true,
-                IPv6Enabled = (IPv6Mode)protocolConnectionData.IPv6Mode
-            };
 
             // Start net manager
             _netManager.Start();
@@ -207,7 +262,6 @@ namespace Fenrir.Multiplayer.LiteNet
                 _netManager.Stop();
             }
 
-            _netManager = null;
             _peer = null;
         }
 

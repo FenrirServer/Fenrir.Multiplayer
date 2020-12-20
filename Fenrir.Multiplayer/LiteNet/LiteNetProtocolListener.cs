@@ -98,7 +98,11 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Stores IPv6 mode 
         /// </summary>
-        public IPv6ProtocolMode IPv6Mode { get; set; } = IPv6ProtocolMode.Disabled;
+        public IPv6ProtocolMode IPv6Mode
+        {
+            get => (IPv6ProtocolMode)_netManager.IPv6Enabled;
+            set => _netManager.IPv6Enabled = (IPv6Mode)value;
+        }
 
         /// <summary>
         /// IPv4 endpoint at which listener should be bound
@@ -126,6 +130,27 @@ namespace Fenrir.Multiplayer.LiteNet
         /// </summary>
         public int TickRate { get; set; } = 66;
 
+        /// <inheritdoc/>
+        public int DisconnectTimeout
+        {
+            get => _netManager.DisconnectTimeout;
+            set => _netManager.DisconnectTimeout = value;
+        }
+
+        /// <inheritdoc/>
+        public int UpdateTime
+        {
+            get => _netManager.UpdateTime;
+            set => _netManager.UpdateTime = value;
+        }
+
+        /// <inheritdoc/>
+        public int PingInterval
+        {
+            get => _netManager.PingInterval;
+            set => _netManager.PingInterval = value;
+        }
+
         /// <summary>
         /// Default constructor
         /// </summary>
@@ -140,6 +165,10 @@ namespace Fenrir.Multiplayer.LiteNet
             _byteStreamReaderPool = new RecyclableObjectPool<ByteStreamReader>();
             _byteStreamWriterPool = new RecyclableObjectPool<ByteStreamWriter>();
             _netDataWriterPool = new NetDataWriterPool();
+            _netManager = new NetManager(this)
+            {
+                AutoRecycle = true,
+            };
         }
 
         /// <summary>
@@ -182,12 +211,6 @@ namespace Fenrir.Multiplayer.LiteNet
         {
             if (!_isRunning)
             {
-                _netManager = new NetManager(this)
-                {
-                    AutoRecycle = true,
-                    IPv6Enabled = (IPv6Mode)IPv6Mode
-                };
-
                 _netManager.Start(BindIPv4, BindIPv6, BindPort);
 
                 _isRunning = true;
@@ -226,7 +249,6 @@ namespace Fenrir.Multiplayer.LiteNet
             if (_isRunning)
             {
                 _netManager.Stop();
-                _netManager = null;
                 _isRunning = false;
             }
 
