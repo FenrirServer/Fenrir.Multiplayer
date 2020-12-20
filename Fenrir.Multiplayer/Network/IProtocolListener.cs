@@ -1,5 +1,6 @@
 ﻿using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Serialization;
+using Fenrir.Multiplayer.Server;
 using System;
 using System.Threading.Tasks;
 
@@ -41,11 +42,55 @@ namespace Fenrir.Multiplayer.Network
         void SetContractSerializer(IContractSerializer contractSerializer);
 
         /// <summary>
+        /// Sets custom connection request handler.
+        /// Custom connection request handler allows to dispatch server connections and check custom data
+        /// </summary>
+        /// <typeparam name="TConnectionRequestData">Type of a custom data contract</typeparam>
+        /// <param name="handler">Connection request handler</param>
+        void SetConnectionRequestHandler<TConnectionRequestData>(Func<ServerConnectionRequest<TConnectionRequestData>, Task<ConnectionResponse>> handler)
+            where TConnectionRequestData : class, new();
+
+        /// <summary>
         /// Sets Fenrir Logger. If not set, EventBasedLogger is used
         /// </summary>
         /// <param name="logger">Fenrir Logger</param>
         void SetLogger(IFenrirLogger logger);
 
+        /// <summary>
+        /// Adds request handler of a given request type, to all installed protocols
+        /// </summary>
+        /// <typeparam name="TRequest">Type of request</typeparam>
+        /// <param name="requestHandler">Request handler</param>
+        void AddRequestHandler<TRequest>(IRequestHandler<TRequest> requestHandler)
+            where TRequest : IRequest;
+
+        /// <summary>
+        /// Adds request handler for a given request and response type, to all installed protocols
+        /// </summary>
+        /// <typeparam name="TRequest">Type of request</typeparam>
+        /// <typeparam name="TResponse">Type of response</typeparam>
+        /// <param name="requestHandler">Request handler</param>
+        void AddRequestHandler<TRequest, TResponse>(IRequestHandler<TRequest, TResponse> requestHandler)
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse;
+
+        /// <summary>
+        /// Removes request handler, from all installed protocols
+        /// </summary>
+        /// <typeparam name="TRequest">Type of request</typeparam>
+        /// <param name="requestHandler">Reqeuest handler</param>
+        void RemoveRequestHandler<TRequest>(IRequestHandler<TRequest> requestHandler)
+           where TRequest : IRequest;
+
+        /// <summary>
+        /// Removes request handler, from all installed protocols
+        /// </summary>
+        /// <typeparam name="TRequest">Type of request</typeparam>
+        /// <typeparam name="TResponse">Type of response</typeparam>
+        /// <param name="requestHandler">Request handler</param>
+        void RemoveRequestHandler<TRequest, TResponse>(IRequestHandler<TRequest, TResponse> requestHandler)
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse;
 
         /// <summary>
         /// Returns protocol connection data, required to pass by the client when connecting using this protocol

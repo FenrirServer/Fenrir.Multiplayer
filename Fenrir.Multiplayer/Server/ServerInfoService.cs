@@ -1,8 +1,8 @@
 ﻿using Fenrir.Multiplayer.Network;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using WebSocketSharp.Server;
@@ -12,9 +12,10 @@ namespace Fenrir.Multiplayer.Server
 
     /// <summary>
     /// Server info web service
-    /// Returns information about the server
+    /// Server Info Service is a simple web (http) service that returns
+    /// server status as well as connection information
     /// </summary>
-    public class ServerInfoService : IServerInfoService
+    class ServerInfoService : IServerInfoService
     {
         /// <summary>
         /// Fenrir Server Info Provider
@@ -27,22 +28,36 @@ namespace Fenrir.Multiplayer.Server
         private HttpServer _httpServer;
 
         /// <inheritdoc/>
-        public short Port { get; set; } = 8080;
+        public ushort Port { get; set; } = 8080;
 
         /// <inheritdoc/>
-        public bool IsRunning { get; set; } = false;
+        public bool IsRunning => _httpServer?.IsListening ?? false;
 
         /// <summary>
-        /// Default constructor
+        /// Creates Server Info Service
         /// </summary>
         /// <param name="fenrirServerInfoProvider">
         /// Information provider for the Fenrir Server.
-        /// Usually, Fenrir Server instance
+        /// Usually, Fenrir Server instance 
         /// </param>
         public ServerInfoService(IFenrirServerInfoProvider fenrirServerInfoProvider)
         {
             _fenrirServerInfoProvider = fenrirServerInfoProvider;
         }
+
+        /// <summary>
+        /// Creates Server Info Service
+        /// </summary>
+        /// <param name="fenrirServerInfoProvider">
+        /// Information provider for the Fenrir Server.
+        /// Usually, Fenrir Server instance 
+        /// </param>
+        public ServerInfoService(IFenrirServerInfoProvider fenrirServerInfoProvider, ushort port)
+            : this(fenrirServerInfoProvider)
+        {
+            Port = port;
+        }
+
 
         /// <inheritdoc/>
         public Task Start()
@@ -101,6 +116,11 @@ namespace Fenrir.Multiplayer.Server
             response.ContentEncoding = Encoding.UTF8;
             response.ContentLength64 = contentsByte.LongLength;
             response.Close(contentsByte, true);
+        }
+
+        public void Dispose()
+        {
+            Stop().Wait();
         }
     }
 }

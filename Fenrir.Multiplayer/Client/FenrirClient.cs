@@ -97,6 +97,12 @@ namespace Fenrir.Multiplayer.Client
             return await Connect(serverInfo, connectionRequestData);
         }
 
+        /// <inheritdoc/>
+        public async Task<ConnectionResponse> Connect(string serverInfoUri, object connectionRequestData = null)
+        {
+            return await Connect(new Uri(serverInfoUri), connectionRequestData);
+        }
+
         private async Task<ServerInfo> GetServerInfo(Uri serverInfoUri)
         {
             var httpResponse = await _httpClient.GetAsync(serverInfoUri);

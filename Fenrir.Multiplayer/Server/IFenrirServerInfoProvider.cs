@@ -10,7 +10,8 @@ namespace Fenrir.Multiplayer.Server
     {
         /// <summary>
         /// Public server hostname. 
-        /// Clients will use to connect
+        /// Clients will use this hostname to connect.
+        /// By default, bind on 0.0.0.0
         /// </summary>
         string Hostname { get; set; }
 

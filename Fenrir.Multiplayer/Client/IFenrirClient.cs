@@ -38,6 +38,15 @@ namespace Fenrir.Multiplayer.Client
         Task<ConnectionResponse> Connect(Uri serverInfoUri, object connectionRequestData = null);
 
         /// <summary>
+        /// Connects using Server Info URI
+        /// Server Info URI will be queried to obtain server data
+        /// </summary>
+        /// <param name="serverInfoUri">Server Info URI to query</param>
+        /// <param name="connectionRequestData">Custom connection request data</param>
+        /// <returns>Connection Result</returns>
+        Task<ConnectionResponse> Connect(string serverInfoUri, object connectionRequestData = null);
+
+        /// <summary>
         /// Connects using Server Info object
         /// Directly connects to a server with existing Server Info object
         /// </summary>

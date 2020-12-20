@@ -28,6 +28,11 @@ namespace Fenrir.Multiplayer.Network
         public void AddRequestHandler<TRequest>(IRequestHandler<TRequest> requestHandler)
             where TRequest : IRequest
         {
+            if (requestHandler == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandler));
+            }
+
             lock (_syncRoot)
             {
                 if (_requestHandlers.ContainsKey(typeof(TRequest)))
@@ -52,6 +57,11 @@ namespace Fenrir.Multiplayer.Network
             where TRequest : IRequest<TResponse>
             where TResponse : IResponse
         {
+            if (requestHandler == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandler));
+            }
+
             lock (_syncRoot)
             {
                 if (_requestHandlers.ContainsKey(typeof(TRequest)))
@@ -86,6 +96,11 @@ namespace Fenrir.Multiplayer.Network
         public void RemoveRequestHandler<TRequest>(IRequestHandler<TRequest> requestHandler)
             where TRequest : IRequest
         {
+            if (requestHandler == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandler));
+            }
+
             lock (_syncRoot)
             {
                 if (!_requestHandlers.ContainsKey(typeof(TRequest)))
@@ -107,6 +122,11 @@ namespace Fenrir.Multiplayer.Network
             where TRequest : IRequest<TResponse>
             where TResponse : IResponse
         {
+            if (requestHandler == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandler));
+            }
+
             lock (_syncRoot)
             {
                 if (!_requestHandlers.ContainsKey(typeof(TRequest)))

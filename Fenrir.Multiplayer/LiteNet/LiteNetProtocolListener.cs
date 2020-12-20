@@ -9,6 +9,7 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using System.Text;
 
 namespace Fenrir.Multiplayer.LiteNet
 {
@@ -70,7 +71,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Stores delegate connection custom request handler if one is used
         /// </summary>
-        private Action<ConnectionRequest, string> _connectionRequestHandler = null;
+        private Func<ConnectionRequest, string, Task> _connectionRequestHandler = null;
 
         /// <summary>
         /// True if server is running
@@ -111,11 +112,11 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Port at which listener should be bound
         /// </summary>
-        public ushort Port { get; set; } = 27015;
+        public ushort BindPort { get; set; } = 27015;
 
         /// <summary>
-        /// Public port. Overrides listen <seealso cref="Port"/> when reporting to the client
-        /// Override this port if container maps <seealso cref="Port"/> to something else
+        /// Public port. Overrides listen <seealso cref="BindPort"/> when reporting to the client
+        /// Override this port if container maps <seealso cref="BindPort"/> to something else
         /// </summary>
         public ushort? PublicPort { get; set; } = null;
 
@@ -140,6 +141,41 @@ namespace Fenrir.Multiplayer.LiteNet
             _netDataWriterPool = new NetDataWriterPool();
         }
 
+        /// <summary>
+        /// Creates LiteNetProtocolListener
+        /// </summary>
+        /// <param name="port">Port</param>
+        public LiteNetProtocolListener(ushort port)
+            : this()
+        {
+            BindPort = port;
+        }
+
+        /// <summary>
+        /// Creates LiteNetProtocolListener
+        /// </summary>
+        /// <param name="port">Port</param>
+        /// <param name="bindIPv4">IPv4 listen address</param>
+        public LiteNetProtocolListener(ushort port, string bindIPv4)
+            : this(port)
+        {
+            BindIPv4 = bindIPv4;
+        }
+
+        /// <summary>
+        /// Creates LiteNetProtocolListener
+        /// </summary>
+        /// <param name="port">Port</param>
+        /// <param name="bindIPv4">IPv4 Listen Address</param>
+        /// <param name="bindIpv6">IPv6 Listen Address</param>
+        /// <param name="ipv6Mode">IPv6 Mode</param>
+        public LiteNetProtocolListener(ushort port, string bindIPv4, string bindIpv6, IPv6ProtocolMode ipv6Mode)
+            : this(port, bindIPv4)
+        {
+            BindIPv6 = bindIpv6;
+            IPv6Mode = ipv6Mode;
+        }
+
         /// <inheritdoc/>
         public Task Start()
         {
@@ -151,7 +187,7 @@ namespace Fenrir.Multiplayer.LiteNet
                     IPv6Enabled = (IPv6Mode)IPv6Mode
                 };
 
-                _netManager.Start(BindIPv4, BindIPv6, Port);
+                _netManager.Start(BindIPv4, BindIPv6, BindPort);
 
                 _isRunning = true;
 
@@ -307,9 +343,57 @@ namespace Fenrir.Multiplayer.LiteNet
         public IProtocolConnectionData GetConnectionData()
         {
             return new LiteNetProtocolConnectionData(
-                PublicPort ?? Port,
+                PublicPort ?? BindPort,
                 IPv6Mode
                 );
+        }
+
+        /// <inheritdoc/>
+        public void AddRequestHandler<TRequest>(IRequestHandler<TRequest> requestHandler) where TRequest : IRequest
+        {
+            if(requestHandler == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandler));
+            }
+
+            _requestHandlerMap.AddRequestHandler<TRequest>(requestHandler);
+        }
+
+        /// <inheritdoc/>
+        public void AddRequestHandler<TRequest, TResponse>(IRequestHandler<TRequest, TResponse> requestHandler)
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse
+        {
+            if (requestHandler == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandler));
+            }
+
+            _requestHandlerMap.AddRequestHandler<TRequest, TResponse>(requestHandler);
+        }
+
+        /// <inheritdoc/>
+        public void RemoveRequestHandler<TRequest>(IRequestHandler<TRequest> requestHandler) where TRequest : IRequest
+        {
+            if (requestHandler == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandler));
+            }
+
+            _requestHandlerMap.RemoveRequestHandler<TRequest>(requestHandler);
+        }
+
+        /// <inheritdoc/>
+        public void RemoveRequestHandler<TRequest, TResponse>(IRequestHandler<TRequest, TResponse> requestHandler)
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse
+        {
+            if (requestHandler == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandler));
+            }
+
+            _requestHandlerMap.RemoveRequestHandler<TRequest, TResponse>(requestHandler);
         }
 
         #region INetEventListener Implementation
@@ -330,7 +414,7 @@ namespace Fenrir.Multiplayer.LiteNet
             // Invoke custom connection request handler
             if (_connectionRequestHandler != null)
             {
-                _connectionRequestHandler.Invoke(request, clientId);
+                InvokeConnectionRequestHandler(request, clientId);
             }
             else // No custom connection request handler, simply accept
             {
@@ -338,6 +422,17 @@ namespace Fenrir.Multiplayer.LiteNet
             }
         }
 
+        private async void InvokeConnectionRequestHandler(ConnectionRequest request, string clientId)
+        {
+            try
+            {
+                await _connectionRequestHandler.Invoke(request, clientId);
+            }
+            catch(Exception e)
+            {
+                _logger.Error("Connection request handler failed: " + e);
+            }
+        }
 
         void INetEventListener.OnNetworkError(IPEndPoint endPoint, SocketError socketError)
         {
@@ -418,6 +513,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 Stop();
             }
         }
+
         #endregion
     }
 }

@@ -21,13 +21,12 @@ namespace Fenrir.Multiplayer.Tests
             fenrirServerMock.Setup(server => server.Status).Returns(ServerStatus.Running);
             fenrirServerMock.Setup(server => server.ServerId).Returns("test_id");
             fenrirServerMock.Setup(server => server.Listeners).Returns(new IProtocolListener[] { 
-                new LiteNetProtocolListener(){ Port = 27015 }
+                new LiteNetProtocolListener(){ BindPort = 27015 }
             });
 
             // Start service
-            var serverInfoService = new ServerInfoService(fenrirServerMock.Object);
+            using var serverInfoService = new ServerInfoService(fenrirServerMock.Object);
             await serverInfoService.Start();
-
 
             // Connect
             var httpClient = new HttpClient();
@@ -55,7 +54,8 @@ namespace Fenrir.Multiplayer.Tests
         [TestMethod]
         public async Task FenrirClient_ConnectsToFenrirServer_WithLiteNetProtocol()
         {
-            var fenrirServer = new FenrirServer();
+            using var fenrirServer = new FenrirServer();
+            fenrirServer.AddLiteNetProtocol(27018);
             await fenrirServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
@@ -67,7 +67,7 @@ namespace Fenrir.Multiplayer.Tests
                 ServerId = "test_id",
                 Protocols = new ProtocolInfo[]
                 {
-                    new ProtocolInfo(ProtocolType.LiteNet, new LiteNetProtocolConnectionData(27015))
+                    new ProtocolInfo(ProtocolType.LiteNet, new LiteNetProtocolConnectionData(27018))
                 }
             };
 
@@ -75,5 +75,24 @@ namespace Fenrir.Multiplayer.Tests
 
             Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not connected");
         }
+
+        
+        [TestMethod]
+        public async Task FenrirClient_ConnectsToFenrirServer_WithServerInfoService()
+        {
+            using var fenrirServer = new FenrirServer();
+            fenrirServer.AddLiteNetProtocol(27018);
+            fenrirServer.AddInfoService(8080);
+            await fenrirServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
+
+            var fenrirClient = new FenrirClient();
+            await fenrirClient.Connect("http://127.0.0.1:8080");
+
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not connected");
+        }
+
+
     }
 }

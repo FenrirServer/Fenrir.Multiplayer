@@ -1,8 +1,8 @@
 ﻿using Fenrir.Multiplayer.Exceptions;
-using Fenrir.Multiplayer.LiteNet;
 using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
+using Fenrir.Multiplayer.Server.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,16 +16,22 @@ namespace Fenrir.Multiplayer.Server
     public class FenrirServer : IFenrirServer
     {
         /// <inheritdoc/>
+        public event EventHandler<ServerStatusChangedEventArgs> StatusChanged;
+
+        /// <inheritdoc/>
+        public event EventHandler<ProtocolAddedEventArgs> ProtocolAdded;
+
+        /// <inheritdoc/>
         public string ServerId { get; set; }
 
         /// <inheritdoc/>
-        public string Hostname { get; set; }
+        public string Hostname { get; set; } = "127.0.0.1";
 
         /// <inheritdoc/>
         public IEnumerable<IProtocolListener> Listeners => _protocolListeners;
 
         /// <inheritdoc/>
-        public ServerStatus Status { get; private set; } = ServerStatus.Stopped;
+        public ServerStatus Status => _status;
 
         /// <inheritdoc/>
         public bool IsRunning => Status == ServerStatus.Running;
@@ -33,7 +39,12 @@ namespace Fenrir.Multiplayer.Server
         /// <summary>
         /// List of available protocols
         /// </summary>
-        private IProtocolListener[] _protocolListeners;
+        private List<IProtocolListener> _protocolListeners;
+
+        /// <summary>
+        /// List of services that this server is using
+        /// </summary>
+        private List<IFenrirService> _services;
 
         /// <summary>
         /// Fenrir Logger
@@ -41,33 +52,30 @@ namespace Fenrir.Multiplayer.Server
         private IFenrirLogger _logger;
 
         /// <summary>
-        /// Default constructor. Creates Fenrir Server with all default protocols 
+        /// Server status
+        /// </summary>
+        private volatile ServerStatus _status = ServerStatus.Stopped;
+
+        /// <summary>
+        /// Creates Fenrir Server
         /// </summary>
         public FenrirServer()
-            : this(new IProtocolListener[] { new LiteNetProtocolListener() })
+            : this(new EventBasedLogger())
         {
-            _logger = new EventBasedLogger();
         }
 
         /// <summary>
-        /// Creates Fenrir Server with specified protocols
+        /// Creates Fenrir Server
         /// </summary>
-        /// <param name="protocolListeners"></param>
-        public FenrirServer(IProtocolListener[] protocolListeners)
+        /// <param name="logger">Logger</param>
+        public FenrirServer(IFenrirLogger logger)
         {
             ServerId = Guid.NewGuid().ToString();
 
-            if(protocolListeners == null)
-            {
-                throw new ArgumentNullException(nameof(protocolListeners));
-            }
+            _logger = logger;
 
-            if (protocolListeners.Length == 0)
-            {
-                throw new ArgumentException("Protocol Listeners can not be empty", nameof(protocolListeners));
-            }
-
-            _protocolListeners = protocolListeners;
+            _protocolListeners = new List<IProtocolListener>();
+            _services = new List<IFenrirService>();
         }
 
         /// <inheritdoc/>
@@ -78,7 +86,10 @@ namespace Fenrir.Multiplayer.Server
                 throw new InvalidOperationException("Failed to start server, server is already " + Status);
             }
 
-            Status = ServerStatus.Starting;
+            SetStatus(ServerStatus.Starting);
+
+            // Start all services
+            await Task.WhenAll(_services.Select(service => service.Start()));
 
             // Start all protocol listeners
             await Task.WhenAll(_protocolListeners.Select(listener => listener.Start()));
@@ -92,7 +103,7 @@ namespace Fenrir.Multiplayer.Server
                 }
             }
 
-            Status = ServerStatus.Running;
+            SetStatus(ServerStatus.Running);
         }
 
         /// <inheritdoc/>
@@ -103,12 +114,15 @@ namespace Fenrir.Multiplayer.Server
                 throw new InvalidOperationException("Failed to stop server, server is already " + Status);
             }
 
-            Status = ServerStatus.Stopping;
+            SetStatus(ServerStatus.Stopping);
 
             // Stop all protocol listeners
             await Task.WhenAll(_protocolListeners.Select(listener => listener.Stop()));
 
-            Status = ServerStatus.Stopped;
+            // Stop all services
+            await Task.WhenAll(_services.Select(service => service.Stop()));
+
+            SetStatus(ServerStatus.Stopped);
         }
 
 
@@ -119,6 +133,10 @@ namespace Fenrir.Multiplayer.Server
             {
                 protocolListener.SetLogger(logger);
             }
+
+            ProtocolAdded += (sender, e) => {
+                e.ProtocolListener.SetLogger(logger);
+            };
         }
 
         /// <inheritdoc/>
@@ -127,6 +145,110 @@ namespace Fenrir.Multiplayer.Server
             foreach (var protocolListener in _protocolListeners)
             {
                 protocolListener.SetContractSerializer(contractSerializer);
+            }
+
+            ProtocolAdded += (sender, e) => {
+                e.ProtocolListener.SetContractSerializer(contractSerializer);
+            };
+        }
+
+        /// <inheritdoc/>
+        public void AddProtocol(IProtocolListener protocolListener)
+        {
+            if(protocolListener == null)
+            {
+                throw new ArgumentNullException(nameof(protocolListener));
+            }
+
+            _protocolListeners.Add(protocolListener);
+
+            ProtocolAdded?.Invoke(this, new ProtocolAddedEventArgs(protocolListener));
+        }
+
+        /// <inheritdoc/>
+        public void AddService(IFenrirService service)
+        {
+            if (service == null)
+            {
+                throw new ArgumentNullException(nameof(service));
+            }
+
+            _services.Add(service);
+        }
+
+        /// <summary>
+        /// Sets server status and invokes the event
+        /// </summary>
+        private void SetStatus(ServerStatus status)
+        {
+            _status = status;
+
+            StatusChanged?.Invoke(this, new ServerStatusChangedEventArgs(status));
+        }
+
+        /// <inheritdoc/>
+        public void SetConnectionRequestHandler<TConnectionRequestData>(Func<ServerConnectionRequest<TConnectionRequestData>, Task<ConnectionResponse>> handler) 
+            where TConnectionRequestData : class, new()
+        {
+            if(handler == null)
+            {
+                throw new ArgumentNullException(nameof(handler));
+            }
+
+            foreach(var protocolListener in _protocolListeners)
+            {
+                protocolListener.SetConnectionRequestHandler<TConnectionRequestData>(handler);
+            }
+
+            ProtocolAdded += (sender, e) => {
+                e.ProtocolListener.SetConnectionRequestHandler<TConnectionRequestData>(handler);
+            };
+        }
+
+        /// <inheritdoc/>
+        public void AddRequestHandler<TRequest>(IRequestHandler<TRequest> requestHandler) 
+            where TRequest : IRequest
+        {
+            if (requestHandler == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandler));
+            }
+
+            foreach (var protocolListener in _protocolListeners)
+            {
+                protocolListener.AddRequestHandler<TRequest>(requestHandler);
+            }
+
+            ProtocolAdded += (sender, e) => {
+                e.ProtocolListener.AddRequestHandler<TRequest>(requestHandler);
+            };
+        }
+
+        /// <inheritdoc/>
+        public void AddRequestHandler<TRequest, TResponse>(IRequestHandler<TRequest, TResponse> requestHandler)
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse
+        {
+            if (requestHandler == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandler));
+            }
+
+            foreach (var protocolListener in _protocolListeners)
+            {
+                protocolListener.AddRequestHandler<TRequest, TResponse>(requestHandler);
+            }
+
+            ProtocolAdded += (sender, e) => {
+                e.ProtocolListener.AddRequestHandler<TRequest, TResponse>(requestHandler);
+            };
+        }
+
+        public void Dispose()
+        {
+            if (Status == ServerStatus.Running || Status == ServerStatus.Starting)
+            {
+                Stop().Wait();
             }
         }
     }
