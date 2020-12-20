@@ -67,7 +67,7 @@ namespace Fenrir.Multiplayer.Serialization
         void ReadBytes(byte[] destination, int start, int count);
 
         /// <summary>
-        /// Reads bytes of a given length
+        /// Reads byte array preceded by it's length
         /// </summary>
         /// <returns>Value</returns>
         byte[] ReadBytesWithLength();
@@ -151,7 +151,7 @@ namespace Fenrir.Multiplayer.Serialization
         sbyte ReadSByte();
 
         /// <summary>
-        /// Reads byte array of a given length
+        /// Reads byte array preceded by it's length
         /// </summary>
         /// <returns>Value</returns>
         sbyte[] ReadSBytesWithLength();
@@ -333,7 +333,7 @@ namespace Fenrir.Multiplayer.Serialization
         bool TryReadByte(out byte result);
 
         /// <summary>
-        /// Attempts to read byte array of a given length
+        /// Attempts to read byte array preceded by it's length
         /// </summary>
         /// <param name="result">Value</param>
         /// <returns>True if read was successful, otherwise false</returns>

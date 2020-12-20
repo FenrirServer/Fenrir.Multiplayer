@@ -66,20 +66,22 @@ namespace Fenrir.Multiplayer.Network
         /// <inheritdoc/>
         public ulong GetTypeHash(Type type)
         {
+            Type currentType = type;
+
             // Walk the type tree, until we find hash for this type
-            while(type != null && type != typeof(object))
+            while(currentType != null && currentType != typeof(object))
             {
                 // Try to find type
                 lock (_syncRoot)
                 {
-                    if (_typeToHashDictionary.ContainsKey(type))
+                    if (_typeToHashDictionary.ContainsKey(currentType))
                     {
                         // Found type hash
-                        return _typeToHashDictionary[type];
+                        return _typeToHashDictionary[currentType];
                     }
                 }
 
-                type = type.BaseType;
+                currentType = currentType.BaseType;
             }
 
             throw new TypeMapException($"Failed ot get hash for type {type} or it's subtypes");

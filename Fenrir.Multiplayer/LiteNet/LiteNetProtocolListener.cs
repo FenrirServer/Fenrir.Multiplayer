@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using System.Text;
+using System.Runtime.Serialization;
 
 namespace Fenrir.Multiplayer.LiteNet
 {
@@ -270,18 +271,6 @@ namespace Fenrir.Multiplayer.LiteNet
                 var netDataReader = connectionRequest.Data;
                 if (netDataReader != null && !netDataReader.EndOfData)
                 {
-                    if(!netDataReader.TryGetULong(out ulong typeHash))
-                    {
-                        _logger.Debug("Rejected connection request from {0}, failed to read ulong type hash", connectionRequest.RemoteEndPoint);
-                        RejectConnectionRequest(connectionRequest, "Bad connection data");
-                    }
-
-                    if(netDataReader.EndOfData)
-                    {
-                        _logger.Debug("Rejected connection request from {0}, no data after type hash {1}", connectionRequest.RemoteEndPoint, typeHash);
-                        RejectConnectionRequest(connectionRequest, "Bad connection data");
-                    }
-
                     ByteStreamReader byteStreamReader = _byteStreamReaderPool.Get();
                     byteStreamReader.SetNetDataReader(connectionRequest.Data);
 
@@ -305,7 +294,17 @@ namespace Fenrir.Multiplayer.LiteNet
                 ServerConnectionRequest<TConnectionRequestData> hostConnectionRequest = new ServerConnectionRequest<TConnectionRequestData>(connectionRequest.RemoteEndPoint, clientId, connectionRequestData);
 
                 // Invoke handler
-                ConnectionResponse response = await handler(hostConnectionRequest);
+                ConnectionResponse response;
+                try
+                {
+                    response = await handler(hostConnectionRequest);
+                }
+                catch(Exception e)
+                {
+                    _logger.Error("Unhandled exception in connection request handler : {0}", e);
+                    RejectConnectionRequest(connectionRequest, "Unhandled exception in connection request handler");
+                    return;
+                }
 
                 if(!response.Success)
                 {

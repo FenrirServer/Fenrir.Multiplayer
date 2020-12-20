@@ -28,7 +28,17 @@
         public string Reason { get; set; }
 
         /// <summary>
-        /// Default constructor
+        /// Creates ConnectionResponse
+        /// </summary>
+        /// <param name="success">Indicates if connection attempt was successful</param>
+        /// <param name="reason">Failure reason</param>
+        public ConnectionResponse(bool success)
+        {
+            Success = success;
+        }
+
+        /// <summary>
+        /// Creates ConnectionResponse
         /// </summary>
         /// <param name="success">Indicates if connection attempt was successful</param>
         /// <param name="reason">Failure reason</param>

@@ -21,13 +21,13 @@ namespace Fenrir.Multiplayer.Server
         /// <summary>
         /// Custom connection request data object
         /// </summary>
-        public TConnectionRequestData ConnectionRequestData { get; private set; }
+        public TConnectionRequestData Data { get; private set; }
 
         internal ServerConnectionRequest(IPEndPoint endpoint, string clientId, TConnectionRequestData connectionRequestData)
         {
             Endpoint = endpoint;
             ClientId = clientId;
-            ConnectionRequestData = connectionRequestData;
+            Data = connectionRequestData;
         }
     }
 }

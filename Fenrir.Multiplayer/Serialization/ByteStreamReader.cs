@@ -28,7 +28,7 @@ namespace Fenrir.Multiplayer.Serialization
         private NetDataReader _netDataReader;
 
         /// <summary>
-        /// Default constructor
+        /// Creates ByteStreamReader
         /// </summary>
         public ByteStreamReader()
         {
@@ -36,7 +36,15 @@ namespace Fenrir.Multiplayer.Serialization
         }
 
         /// <summary>
-        /// Constructs Byte Stream Reader using LiteNet NetDataWriter
+        /// Creates ByteStreamReader form byte array
+        /// </summary>
+        public ByteStreamReader(byte[] bytes)
+        {
+            _netDataReader = new NetDataReader(bytes);
+        }
+
+        /// <summary>
+        /// Creates ByteStreamReader from LiteNet NetDataWriter
         /// </summary>
         /// <param name="netDataReader"></param>
         public ByteStreamReader(NetDataReader netDataReader)

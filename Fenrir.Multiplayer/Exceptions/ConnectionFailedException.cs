@@ -20,24 +20,17 @@ namespace Fenrir.Multiplayer.Exceptions
         public SocketError SocketError { get; set; }
 
         /// <summary>
-        /// If disconnected by the server, contains
-        /// additional data sent by the server (usually disconnect message)
-        /// </summary>
-        public object DisconnectData { get; set; }
-
-        /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="message">Disconnect message</param>
         /// <param name="reason">Disconnect reason</param>
         /// <param name="socketError">Socket error</param>
         /// <param name="data">Custom data sent by the server</param>
-        public ConnectionFailedException(string message, DisconnectedReason reason, SocketError socketError, object data = null)
+        public ConnectionFailedException(string message, DisconnectedReason reason, SocketError socketError)
             : base(message)
         {
             Reason = reason;
             SocketError = socketError;
-            DisconnectData = data;
         }
     }
 }

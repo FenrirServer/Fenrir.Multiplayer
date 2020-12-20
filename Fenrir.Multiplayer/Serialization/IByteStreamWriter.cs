@@ -202,7 +202,7 @@ namespace Fenrir.Multiplayer.Serialization
         void WriteArray(string[] value, int maxLength);
 
         /// <summary>
-        /// Writes array of bytes of a maximum length
+        /// Writes array of bytes, putting length before the buffer.
         /// </summary>
         /// <param name="data">Value</param>
         /// <param name="offset">Offset</param>
@@ -210,19 +210,19 @@ namespace Fenrir.Multiplayer.Serialization
         void WriteBytesWithLength(byte[] data, int offset, int length);
 
         /// <summary>
-        /// Writes array of bytes
+        /// Writes array of bytes preceding with length
         /// </summary>
         /// <param name="data">Value</param>
         void WriteBytesWithLength(byte[] data);
 
         /// <summary>
-        /// Writes array of signed bytes
+        /// Writes array of signed bytes, putting length before the buffer.
         /// </summary>
         /// <param name="data">Value</param>
         void WriteSBytesWithLength(sbyte[] data);
 
         /// <summary>
-        /// Writes array of signed bytes
+        /// Writes array of signed bytes, putting length before the buffer.
         /// </summary>
         /// <param name="data">Value</param>
         /// <param name="offset">Offset</param>

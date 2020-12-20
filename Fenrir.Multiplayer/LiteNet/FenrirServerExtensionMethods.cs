@@ -22,6 +22,16 @@ namespace Fenrir.Multiplayer.LiteNet
         /// </summary>
         /// <param name="server">Server</param>
         /// <param name="port">Port</param>
+        public static void AddLiteNetProtocol(this FenrirServer server)
+        {
+            server.AddProtocol(new LiteNetProtocolListener());
+        }
+
+        /// <summary>
+        /// Adds LiteNet Protocol support
+        /// </summary>
+        /// <param name="server">Server</param>
+        /// <param name="port">Port</param>
         public static void AddLiteNetProtocol(this FenrirServer server, ushort port)
         {
             server.AddProtocol(new LiteNetProtocolListener(port));

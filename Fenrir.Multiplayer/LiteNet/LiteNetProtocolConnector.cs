@@ -219,10 +219,6 @@ namespace Fenrir.Multiplayer.LiteNet
 
             if (connectionRequestData != null)
             {
-                // Client data type code
-                ulong typeCode = _typeMap.GetTypeHash(connectionRequestData.GetType());
-                _netDataWriter.Put(typeCode);
-
                 // Client data deserialized
                 _serializationProvider.Serialize(connectionRequestData, new ByteStreamWriter(_netDataWriter));
             }
@@ -267,7 +263,6 @@ namespace Fenrir.Multiplayer.LiteNet
 
         void INetEventListener.OnPeerDisconnected(NetPeer peer, DisconnectInfo disconnectInfo)
         {
-
             if (State == Network.ConnectionState.Disconnected)
             {
                 throw new InvalidOperationException("Received disconnected event while not connected");
@@ -275,20 +270,33 @@ namespace Fenrir.Multiplayer.LiteNet
 
             DisconnectedReason reason = (DisconnectedReason)disconnectInfo.Reason;
             SocketError socketError = disconnectInfo.SocketErrorCode;
-            object data = null;
-
-            if(disconnectInfo.AdditionalData != null && !disconnectInfo.AdditionalData.EndOfData)
-            {
-                data = _messageReader.ReadMessage(disconnectInfo.AdditionalData);
-            }
 
             if (State == Network.ConnectionState.Connecting)
             {
-                _connectionTcs.SetException(new ConnectionFailedException("Connection failed", reason, socketError, data));
+                if (reason == DisconnectedReason.ConnectionRejected)
+                {
+                    string rejectedReason = null;
+
+                    if (disconnectInfo.AdditionalData != null && !disconnectInfo.AdditionalData.EndOfData)
+                    {
+                        rejectedReason = disconnectInfo.AdditionalData.GetString();
+                    }
+
+                    var connectionTcs = _connectionTcs;
+                    _connectionTcs = null;
+                    connectionTcs.SetResult(ConnectionResponse.Failed(rejectedReason));
+                }
+                else
+                {
+                    var connectionTcs = _connectionTcs;
+                    _connectionTcs = null;
+                    connectionTcs.SetException(new ConnectionFailedException("Connection failed", reason, socketError));
+                }
             }
             else // if(State == ConnectorState.Connected)
             {
-                Disconnected?.Invoke(this, new DisconnectedEventArgs(reason, socketError, data));
+                _connectionTcs = null;
+                Disconnected?.Invoke(this, new DisconnectedEventArgs(reason, socketError));
             }
         }
 

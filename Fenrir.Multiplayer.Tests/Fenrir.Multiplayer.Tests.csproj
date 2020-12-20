@@ -15,10 +15,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Unit\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Fenrir.Multiplayer\Fenrir.Multiplayer.csproj" />
   </ItemGroup>
 
