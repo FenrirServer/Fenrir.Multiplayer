@@ -58,6 +58,12 @@ namespace Fenrir.Multiplayer.Network
         }
 
         /// <inheritdoc/>
+        public void RemoveType<T>()
+        {
+            RemoveType(typeof(T));
+        }
+
+        /// <inheritdoc/>
         public ulong GetTypeHash<T>()
         {
             return GetTypeHash(typeof(T));
@@ -100,6 +106,16 @@ namespace Fenrir.Multiplayer.Network
                 }
 
                 return _hashToTypeDictionary[hash];
+            }
+        }
+
+
+        /// <inheritdoc/>
+        public bool TryGetTypeByHash(ulong hash, out Type type)
+        {
+            lock (_syncRoot)
+            {
+                return _hashToTypeDictionary.TryGetValue(hash, out type);
             }
         }
 

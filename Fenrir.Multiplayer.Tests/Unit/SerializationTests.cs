@@ -67,6 +67,52 @@ namespace Fenrir.Multiplayer.Tests.Unit
             Assert.AreEqual(test.TestInteger, test2.TestInteger);
         }
 
+        [TestMethod]
+        public void SerializationProvider_Serialize_ThrowsSerializationException_WhenByteStreamSerializableThrows()
+        {
+            var test = new TestThrowingSerializable();
+            var serializationProvider = new SerializationProvider();
+
+            var byteStreamWriter = new ByteStreamWriter();
+            var e = Assert.ThrowsException<SerializationException>(() => serializationProvider.Serialize(test, byteStreamWriter));
+            Assert.IsInstanceOfType(e.InnerException, typeof(InvalidOperationException));
+            Assert.AreEqual("test", e.InnerException.Message);
+        }
+
+        [TestMethod]
+        public void SerializationProvider_Deserialize_ThrowsSerializationException_WhenByteStreamSerializableThrows()
+        {
+            var serializationProvider = new SerializationProvider();
+            var byteStreamReader = new ByteStreamReader();
+            var e = Assert.ThrowsException<SerializationException>(() => serializationProvider.Deserialize<TestThrowingSerializable>(byteStreamReader));
+            Assert.IsInstanceOfType(e.InnerException, typeof(InvalidOperationException));
+            Assert.AreEqual("test", e.InnerException.Message);
+        }
+
+        [TestMethod]
+        public void SerializationProvider_Serialize_ThrowsSerializationException_WhenContractSerializerThrows()
+        {
+            var test = new TestDataContract();
+            var serializationProvider = new SerializationProvider();
+            serializationProvider.SetContractSerializer(new ThrowingContractSerializer());
+
+            var byteStreamWriter = new ByteStreamWriter();
+            var e = Assert.ThrowsException<SerializationException>(() => serializationProvider.Serialize(test, byteStreamWriter));
+            Assert.IsInstanceOfType(e.InnerException, typeof(InvalidOperationException));
+            Assert.AreEqual("test", e.InnerException.Message);
+        }
+
+        [TestMethod]
+        public void SerializationProvider_Deserialize_ThrowsSerializationException_WhenContractSerializerThrows()
+        {
+            var serializationProvider = new SerializationProvider();
+            serializationProvider.SetContractSerializer(new ThrowingContractSerializer());
+            var byteStreamReader = new ByteStreamReader();
+            var e = Assert.ThrowsException<SerializationException>(() => serializationProvider.Deserialize<TestDataContract>(byteStreamReader));
+            Assert.IsInstanceOfType(e.InnerException, typeof(InvalidOperationException));
+            Assert.AreEqual("test", e.InnerException.Message);
+        }
+
         #region Test Fixtures
         class TestSerializable : IByteStreamSerializable
         {
@@ -85,6 +131,20 @@ namespace Fenrir.Multiplayer.Tests.Unit
                 writer.Write(TestInteger);
             }
         }
+
+        class TestThrowingSerializable : IByteStreamSerializable
+        {
+            public void Deserialize(IByteStreamReader reader)
+            {
+                throw new InvalidOperationException("test");
+            }
+
+            public void Serialize(IByteStreamWriter writer)
+            {
+                throw new InvalidOperationException("test");
+            }
+        }
+
 
         class TestNestedSerializable : IByteStreamSerializable
         {
@@ -132,6 +192,24 @@ namespace Fenrir.Multiplayer.Tests.Unit
 
                 byte[] objectBytes = memoryStream.ToArray();
                 byteStreamWriter.WriteBytesWithLength(objectBytes);
+            }
+        }
+
+        class ThrowingContractSerializer : IContractSerializer
+        {
+            public TData Deserialize<TData>(IByteStreamReader byteStreamReader) where TData : new()
+            {
+                throw new InvalidOperationException("test");
+            }
+
+            public object Deserialize(Type type, IByteStreamReader byteStreamReader)
+            {
+                throw new InvalidOperationException("test");
+            }
+
+            public void Serialize(object data, IByteStreamWriter byteStreamWriter)
+            {
+                throw new InvalidOperationException("test");
             }
         }
 

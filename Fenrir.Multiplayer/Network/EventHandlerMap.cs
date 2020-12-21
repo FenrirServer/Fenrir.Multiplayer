@@ -1,4 +1,5 @@
 ﻿using Fenrir.Multiplayer.Exceptions;
+using Fenrir.Multiplayer.Logging;
 using System;
 using System.Collections.Generic;
 
@@ -16,9 +17,23 @@ namespace Fenrir.Multiplayer.Network
         private readonly object _syncRoot = new object();
 
         /// <summary>
+        /// Logger
+        /// </summary>
+        private readonly IFenrirLogger _logger;
+
+        /// <summary>
         /// Bound handlers
         /// </summary>
         private Dictionary<Type, Action<IEvent>> _eventHandlers = new Dictionary<Type, Action<IEvent>>();
+
+        /// <summary>
+        /// Creates event handler map
+        /// </summary>
+        /// <param name="logger"></param>
+        public EventHandlerMap(IFenrirLogger logger)
+        {
+            _logger = logger;
+        }
 
         /// <summary>
         /// Binds event handler to an event type
@@ -76,19 +91,28 @@ namespace Fenrir.Multiplayer.Network
         {
             Type eventType = eventWrapper.MessageData.GetType();
 
+            bool hasEventHandler = false;
             Action<IEvent> handler = null;
 
             lock (_syncRoot)
             {
-                if (!_eventHandlers.ContainsKey(eventType))
-                {
-                    throw new EventHandlerException($"Failed to dispatch event of type {eventType}, handler for event type is not registered");
-                }
-
-                handler = _eventHandlers[eventType];
+                hasEventHandler = _eventHandlers.TryGetValue(eventType, out handler);
             }
 
-            handler.Invoke((IEvent)eventWrapper.MessageData);
+            if(!hasEventHandler)
+            {
+                _logger.Warning($"Failed to dispatch event of type {eventType}, handler for event type is not registered");
+                return;
+            }
+
+            try
+            {
+                handler.Invoke((IEvent)eventWrapper.MessageData);
+            }
+            catch(Exception e)
+            {
+                _logger.Error("Uncaught exception in event handler {0}: {1}", handler, e);
+            }
         }
     }
 }

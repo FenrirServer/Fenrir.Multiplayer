@@ -27,6 +27,12 @@ namespace Fenrir.Multiplayer.Network
         void RemoveType(Type type);
 
         /// <summary>
+        /// Removes type
+        /// </summary>
+        /// <typeparam name="T">Type to remove</typeparam>
+        void RemoveType<T>();
+
+        /// <summary>
         /// Calculates deterministic hash for a given type
         /// </summary>
         /// <typeparam name="T">Type</typeparam>
@@ -46,5 +52,13 @@ namespace Fenrir.Multiplayer.Network
         /// <param name="hash">Hash of the type</param>
         /// <returns>Type</returns>
         Type GetTypeByHash(ulong hash);
+
+        /// <summary>
+        /// Attempts to find type for a given hash
+        /// </summary>
+        /// <param name="hash">Hash of the type</param>
+        /// <param name="type">Out parameter for a type, if found</param>
+        /// <returns>True if type is found, otherwise false</returns>
+        bool TryGetTypeByHash(ulong hash, out Type type);
     }
 }

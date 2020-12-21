@@ -32,15 +32,30 @@ namespace Fenrir.Multiplayer.Tests.Unit
 
 
         [TestMethod]
-        public void TypeMap_AddHash_AddsHash()
+        public void TypeMap_AddType_AddsType()
         {
             var typeMap = new TypeMap();
-            typeMap.AddType<int>();
+            typeMap.AddType(typeof(int));
+
             ulong hash = typeMap.GetTypeHash<int>();
             Type type = typeMap.GetTypeByHash(hash);
 
             Assert.AreEqual(type, typeof(int));
         }
+
+
+        [TestMethod]
+        public void TypeMap_AddTypeGeneric_AddsType()
+        {
+            var typeMap = new TypeMap();
+            typeMap.AddType<int>();
+
+            ulong hash = typeMap.GetTypeHash(typeof(int));
+            Type type = typeMap.GetTypeByHash(hash);
+
+            Assert.AreEqual(type, typeof(int));
+        }
+
 
         [TestMethod]
         public void TypeMap_GetTypeHash_AutomaticallyAddsHash()
@@ -52,9 +67,57 @@ namespace Fenrir.Multiplayer.Tests.Unit
             Assert.AreEqual(type, typeof(int));
         }
 
+        [TestMethod]
+        public void TypeMap_GetTypeHash_ReturnsHash()
+        {
+            var typeMap = new TypeMap();
+            typeMap.AddType(typeof(int));
+
+            ulong hash = typeMap.GetTypeHash<int>();
+            Type type = typeMap.GetTypeByHash(hash);
+
+            Assert.AreEqual(type, typeof(int));
+        }
+
 
         [TestMethod]
-        public void TypeMap_RemoveHash_Removes()
+        public void TypeMap_GetTypeByHash_ReturnsType()
+        {
+            var typeMap = new TypeMap();
+            typeMap.AddType(typeof(int));
+
+            ulong hash = typeMap.GetTypeHash<int>();
+            typeMap.TryGetTypeByHash(hash, out Type type);
+
+            Assert.AreEqual(type, typeof(int));
+        }
+        
+
+        [TestMethod]
+        public void TypeMap_TryGetTypeByHash_ReturnsTrue()
+        {
+            var typeMap = new TypeMap();
+            typeMap.AddType(typeof(int));
+
+            ulong hash = typeMap.GetTypeHash<int>();
+            bool result = typeMap.TryGetTypeByHash(hash, out Type type);
+            Assert.IsTrue(result);
+
+            Assert.AreEqual(type, typeof(int));
+        }
+
+        [TestMethod]
+        public void TypeMap_TryGetTypeByHash_ReturnsFalse_WhenNoType()
+        {
+            var typeMap = new TypeMap();
+            bool result = typeMap.TryGetTypeByHash(12340000, out Type type);
+
+            Assert.IsFalse(result);
+        }
+
+
+        [TestMethod]
+        public void TypeMap_RemoveType_RemovesType()
         {
             var typeMap = new TypeMap();
             typeMap.AddType<int>();
@@ -65,6 +128,18 @@ namespace Fenrir.Multiplayer.Tests.Unit
             Assert.ThrowsException<TypeMapException>(() => typeMap.GetTypeByHash(hash));
         }
 
+
+        [TestMethod]
+        public void TypeMap_RemoveTypeGeneric_RemovesType()
+        {
+            var typeMap = new TypeMap();
+            typeMap.AddType<int>();
+            ulong hash = typeMap.GetTypeHash<int>();
+
+            typeMap.RemoveType<int>();
+
+            Assert.ThrowsException<TypeMapException>(() => typeMap.GetTypeByHash(hash));
+        }
 
     }
 }

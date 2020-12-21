@@ -160,8 +160,8 @@ namespace Fenrir.Multiplayer.LiteNet
             _logger = new EventBasedLogger();
 
             _typeMap = new TypeMap();
-            _requestHandlerMap = new RequestHandlerMap();
-            _messageReader = new LiteNetMessageReader(_serializationProvider, _typeMap, new RecyclableObjectPool<ByteStreamReader>());
+            _requestHandlerMap = new RequestHandlerMap(_logger);
+            _messageReader = new LiteNetMessageReader(_serializationProvider, _typeMap, _logger, new RecyclableObjectPool<ByteStreamReader>());
             _byteStreamReaderPool = new RecyclableObjectPool<ByteStreamReader>();
             _byteStreamWriterPool = new RecyclableObjectPool<ByteStreamWriter>();
             _netDataWriterPool = new NetDataWriterPool();
@@ -471,14 +471,19 @@ namespace Fenrir.Multiplayer.LiteNet
             // Get LiteNet peer
             if(netPeer.Tag == null)
             {
-                _logger.Trace("Received message from an uninitialized peer: {0}", netPeer.EndPoint);
+                _logger.Warning("Received message from an uninitialized peer: {0}", netPeer.EndPoint);
                 return;
             }
 
             var serverPeer = (LiteNetServerPeer)netPeer.Tag;
 
             // Get message
-            MessageWrapper messageWrapper = _messageReader.ReadMessage(reader);
+            int totalBytes = reader.AvailableBytes;
+            if(!_messageReader.TryReadMessage(reader, out MessageWrapper messageWrapper))
+            {
+                _logger.Warning("Failed to read message of length {0} from {1}", totalBytes, netPeer.EndPoint);
+                return;
+            }
 
             // Dispatch message
             if (messageWrapper.MessageType == MessageType.Request)
@@ -487,7 +492,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 IRequest request = messageWrapper.MessageData as IRequest;
                 if (request == null) // Someone is trying to mess with the protocol
                 {
-                    _logger.Trace("Empty request received from {0}", netPeer.EndPoint);
+                    _logger.Warning("Empty request received from {0}", netPeer.EndPoint);
                     return;
                 }
 
@@ -496,7 +501,7 @@ namespace Fenrir.Multiplayer.LiteNet
             }
             else
             {
-                _logger.Trace("Unsupported message type {0} received from {1}", messageWrapper.MessageType, netPeer.EndPoint);
+                _logger.Warning("Unsupported message type {0} received from {1}", messageWrapper.MessageType, netPeer.EndPoint);
             }
         }
 
@@ -508,7 +513,7 @@ namespace Fenrir.Multiplayer.LiteNet
         void INetEventListener.OnPeerConnected(NetPeer netPeer)
         {
             // Create host peer
-            var messageWriter = new LiteNetMessageWriter(_serializationProvider, _typeMap, _byteStreamWriterPool);
+            var messageWriter = new LiteNetMessageWriter(_serializationProvider, _typeMap, _logger, _byteStreamWriterPool);
             var hostPeer = new LiteNetServerPeer(netPeer, messageWriter);
             _connectHandler?.Invoke(hostPeer);
         }
@@ -521,6 +526,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 _disconnectHandler?.Invoke(hostPeer);
             }
         }
+
         void INetEventListener.OnNetworkLatencyUpdate(NetPeer netPeer, int latency)
         {
             if (netPeer.Tag != null)

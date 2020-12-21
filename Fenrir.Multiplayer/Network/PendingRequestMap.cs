@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Fenrir.Multiplayer.Logging;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -21,10 +22,17 @@ namespace Fenrir.Multiplayer.Network
         private object _syncRoot = new object();
 
         /// <summary>
-        /// Default constructor
+        /// Logger
         /// </summary>
-        public PendingRequestMap()
+        private readonly IFenrirLogger _logger;
+
+        /// <summary>
+        /// Creates pending request map
+        /// </summary>
+        /// <param name="logger">Logger</param>
+        public PendingRequestMap(IFenrirLogger logger)
         {
+            _logger = logger;
         }
 
         /// <summary>
@@ -50,17 +58,32 @@ namespace Fenrir.Multiplayer.Network
         /// <param name="responseWrapper">Response wrapper</param>
         public void OnReceiveResponse(int requestId, MessageWrapper responseWrapper)
         {
+            bool foundResponseTcs = false;
             TaskCompletionSource<MessageWrapper> tcs = null;
+
             lock (_syncRoot)
             {
-                if(!_requestTcsMap.TryGetValue(requestId, out tcs))
+                foundResponseTcs = _requestTcsMap.TryGetValue(requestId, out tcs);
+                if (foundResponseTcs) 
                 {
-                    return;
+                    _requestTcsMap.Remove(requestId);
                 }
-                _requestTcsMap.Remove(requestId);
             }
 
-            tcs.SetResult(responseWrapper);
+            if(!foundResponseTcs)
+            {
+                _logger.Warning("Received response but no pending request is found with id {0}", requestId);
+                return;
+            }
+
+            try
+            {
+                tcs.SetResult(responseWrapper);
+            }
+            catch(Exception e)
+            {
+                _logger.Error("Uncaught exception in a continuation for request: {0}", e);
+            }
         }
     }
 }

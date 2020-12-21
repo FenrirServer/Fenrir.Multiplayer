@@ -1,4 +1,5 @@
 ﻿using Fenrir.Multiplayer.Exceptions;
+using Fenrir.Multiplayer.Logging;
 using System;
 using System.Collections.Generic;
 
@@ -14,11 +15,25 @@ namespace Fenrir.Multiplayer.Network
         /// Sync root
         /// </summary>
         private readonly object _syncRoot = new object();
+        
+        /// <summary>
+        /// Logger
+        /// </summary>
+        private readonly IFenrirLogger _logger;
 
         /// <summary>
         /// Request handlers bound to a request type
         /// </summary>
         private Dictionary<Type, Action<MessageWrapper>> _requestHandlers = new Dictionary<Type, Action<MessageWrapper>>();
+
+        /// <summary>
+        /// Creates RequestHandlerMap
+        /// </summary>
+        /// <param name="logger">Logger</param>
+        public RequestHandlerMap(IFenrirLogger logger)
+        {
+            _logger = logger;
+        }
 
         /// <summary>
         /// Adds request handler of a given request type
@@ -148,20 +163,19 @@ namespace Fenrir.Multiplayer.Network
             Type requestType = requestWrapper.MessageData.GetType();
 
             // Try to get request handler
+            bool hasRequestHandler = false;
             Action<MessageWrapper> requestHandler = null;
 
             lock (_syncRoot)
             {
-                if (_requestHandlers.ContainsKey(requestType))
-                {
-                    requestHandler = _requestHandlers[requestType];
-                }
+                hasRequestHandler = _requestHandlers.TryGetValue(requestType, out requestHandler);
             }
 
             // If found, invoke
-            if (requestHandler == null)
+            if (!hasRequestHandler)
             {
-                throw new RequestHandlerException($"Failed to dispatch request of type {requestType}, handler for request type is not registered");
+                _logger.Warning($"Failed to dispatch request of type {0}, handler for request type is not registered", requestType);
+                return;
             }
 
             requestHandler.Invoke(requestWrapper);

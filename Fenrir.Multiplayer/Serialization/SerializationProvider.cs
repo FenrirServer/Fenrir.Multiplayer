@@ -100,13 +100,29 @@ namespace Fenrir.Multiplayer.Serialization
             if (typeof(IByteStreamSerializable).IsAssignableFrom(type))
             {
                 IByteStreamSerializable byteStreamSerializable = (IByteStreamSerializable)Activator.CreateInstance(type);
-                byteStreamSerializable.Deserialize(byteStreamReader);
+
+                try
+                {
+                    byteStreamSerializable.Deserialize(byteStreamReader);
+                }
+                catch (Exception e)
+                {
+                    throw new SerializationException($"Failed to deserialize {type.Name} using {nameof(IByteStreamSerializable)}.{nameof(IByteStreamSerializable.Deserialize)}: " + e.Message, e);
+                }
+
                 return byteStreamSerializable;
             }
 
             if (ContractSerializer != null)
             {
-                return ContractSerializer.Deserialize(type, byteStreamReader);
+                try
+                {
+                    return ContractSerializer.Deserialize(type, byteStreamReader);
+                }
+                catch (Exception e)
+                {
+                    throw new SerializationException($"Failed to deserialize {type.Name} using {ContractSerializer.GetType().Name}: " + e.Message, e);
+                }
             }
             else
             {

@@ -192,10 +192,10 @@ namespace Fenrir.Multiplayer.LiteNet
             _serializationProvider = new SerializationProvider();
             _logger = new EventBasedLogger();
             _typeMap = new TypeMap();
-            _eventHandlerMap = new EventHandlerMap();
-            _pendingRequestMap = new PendingRequestMap();
-            _messageReader = new LiteNetMessageReader(_serializationProvider, _typeMap, new RecyclableObjectPool<ByteStreamReader>());
-            _messageWriter = new LiteNetMessageWriter(_serializationProvider, _typeMap, new RecyclableObjectPool<ByteStreamWriter>());
+            _eventHandlerMap = new EventHandlerMap(_logger);
+            _pendingRequestMap = new PendingRequestMap(_logger);
+            _messageReader = new LiteNetMessageReader(_serializationProvider, _typeMap, _logger, new RecyclableObjectPool<ByteStreamReader>());
+            _messageWriter = new LiteNetMessageWriter(_serializationProvider, _typeMap, _logger, new RecyclableObjectPool<ByteStreamWriter>());
 
             _netDataWriter = new NetDataWriter();
 
@@ -362,19 +362,25 @@ namespace Fenrir.Multiplayer.LiteNet
         void INetEventListener.OnNetworkReceive(NetPeer peer, NetPacketReader reader, DeliveryMethod deliveryMethod)
         {
             // Get message
-            MessageWrapper messageWrapper = _messageReader.ReadMessage(reader);
+            int totalBytes = reader.AvailableBytes;
+            if(!_messageReader.TryReadMessage(reader, out MessageWrapper messageWrapper))
+            {
+                _logger.Warning("Failed to read message of length {0} from {1}", totalBytes, peer.EndPoint);
+                return;
+            }
 
             // Dispatch message
             if(messageWrapper.MessageType == MessageType.Event)
             {
                 // Event
                 IEvent evt = messageWrapper.MessageData as IEvent;
-                if(evt == null) // Someone is trying to mess with the protocol
+                if(evt == null) // Someone is trying to tampter the protocol
                 {
-                    _logger.Trace("Empty event received from {0}", peer.EndPoint);
+                    _logger.Warning("Empty event received from {0}", peer.EndPoint);
                     return;
                 }
 
+                // Invoke custom event handler
                 _eventHandlerMap.OnReceiveEvent(messageWrapper);
             }
             else if(messageWrapper.MessageType == MessageType.Response)
@@ -383,15 +389,16 @@ namespace Fenrir.Multiplayer.LiteNet
                 IResponse response = messageWrapper.MessageData as IResponse;
                 if (response == null) // Someone is trying to mess with the protocol
                 {
-                    _logger.Trace("Empty response received from {0}", peer.EndPoint);
+                    _logger.Warning("Empty response received from {0}", peer.EndPoint);
                     return;
                 }
 
+                // Invoke custom response hanlder
                 _pendingRequestMap.OnReceiveResponse(messageWrapper.RequestId, messageWrapper);
             }
             else
             {
-                _logger.Trace("Unsupported message type {0} received from {1}", messageWrapper.MessageType, peer.EndPoint);
+                _logger.Warning("Unsupported message type {0} received from {1}", messageWrapper.MessageType, peer.EndPoint);
             }
         }
 
