@@ -17,14 +17,20 @@ namespace Fenrir.Multiplayer.LiteNet
         public int Latency => _latency;
 
         /// <summary>
+        /// Version of the peer protocol
+        /// </summary>
+        public int ProtocolVersion { get; private set; }
+
+        /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="netPeer">LiteNet NetPeer</param>
+        /// <param name="protocolVersion">Peer protocol version</param>
         /// <param name="messageWriter">Message Writer</param>
-        public LiteNetServerPeer(NetPeer netPeer, LiteNetMessageWriter messageWriter)
+        public LiteNetServerPeer(NetPeer netPeer, int protocolVersion, LiteNetMessageWriter messageWriter)
             : base(netPeer, messageWriter)
         {
-            NetPeer.Tag = this;
+            ProtocolVersion = protocolVersion;
         }
 
         /// <inheritdoc/>
