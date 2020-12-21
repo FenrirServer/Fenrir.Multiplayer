@@ -32,7 +32,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Type map - stores type hashes
         /// </summary>
-        private readonly TypeMap _typeMap;
+        private readonly TypeHashMap _typeHashMap;
 
         /// <summary>
         /// Request handler - stores event handlers bound to event types
@@ -159,9 +159,9 @@ namespace Fenrir.Multiplayer.LiteNet
             _serializationProvider = new SerializationProvider();
             _logger = new EventBasedLogger();
 
-            _typeMap = new TypeMap();
+            _typeHashMap = new TypeHashMap();
             _requestHandlerMap = new RequestHandlerMap(_logger);
-            _messageReader = new LiteNetMessageReader(_serializationProvider, _typeMap, _logger, new RecyclableObjectPool<ByteStreamReader>());
+            _messageReader = new LiteNetMessageReader(_serializationProvider, _typeHashMap, _logger, new RecyclableObjectPool<ByteStreamReader>());
             _byteStreamReaderPool = new RecyclableObjectPool<ByteStreamReader>();
             _byteStreamWriterPool = new RecyclableObjectPool<ByteStreamWriter>();
             _netDataWriterPool = new NetDataWriterPool();
@@ -262,7 +262,7 @@ namespace Fenrir.Multiplayer.LiteNet
             NetPeer netPeer = connectionRequest.Accept();
 
             // Create server peer
-            var messageWriter = new LiteNetMessageWriter(_serializationProvider, _typeMap, _logger, _byteStreamWriterPool);
+            var messageWriter = new LiteNetMessageWriter(_serializationProvider, _typeHashMap, _logger, _byteStreamWriterPool);
             netPeer.Tag = new LiteNetServerPeer(netPeer, peerProtocolVersion, messageWriter);
         }
 
@@ -292,7 +292,7 @@ namespace Fenrir.Multiplayer.LiteNet
             }
 
             // Add type to the type map
-            _typeMap.AddType<TConnectionRequestData>();
+            _typeHashMap.AddType<TConnectionRequestData>();
 
             // Set handler
             _connectionRequestHandler = async (connectionRequest, clientId, protocolVersion) =>
@@ -387,7 +387,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 throw new ArgumentNullException(nameof(requestHandler));
             }
 
-            _typeMap.AddType<TRequest>();
+            _typeHashMap.AddType<TRequest>();
 
             _requestHandlerMap.AddRequestHandler<TRequest>(requestHandler);
         }
@@ -402,8 +402,8 @@ namespace Fenrir.Multiplayer.LiteNet
                 throw new ArgumentNullException(nameof(requestHandler));
             }
 
-            _typeMap.AddType<TRequest>();
-            _typeMap.AddType<TResponse>();
+            _typeHashMap.AddType<TRequest>();
+            _typeHashMap.AddType<TResponse>();
 
             _requestHandlerMap.AddRequestHandler<TRequest, TResponse>(requestHandler);
         }

@@ -1,7 +1,6 @@
 ﻿using Fenrir.Multiplayer.Exceptions;
 using Fenrir.Multiplayer.Network;
 using LiteNetLib;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.LiteNet
@@ -14,12 +13,17 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Numeric id of the last request
         /// </summary>
-        private int _requestId = 0;
+        private ushort _requestId = 0;
 
         /// <summary>
         /// Map of pending requests, that are waiting for a response from the server
         /// </summary>
         private readonly PendingRequestMap _pendingRequestMap;
+
+        /// <summary>
+        /// Sync root for incrementing request id
+        /// </summary>
+        private object _syncRoot = new object();
 
         /// <summary>
         /// Default constructor
@@ -36,7 +40,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <inheritdoc/>
         public void SendRequest<TRequest>(TRequest request, byte channel = 0, MessageDeliveryMethod deliveryMethod = MessageDeliveryMethod.ReliableOrdered) where TRequest : IRequest
         {
-            int requestId = Interlocked.Increment(ref _requestId);
+            ushort requestId = GetNextRequestId();
 
             var messageWrapper = new MessageWrapper()
             {
@@ -56,7 +60,7 @@ namespace Fenrir.Multiplayer.LiteNet
             where TRequest : IRequest<TResponse>
             where TResponse : IResponse
         {
-            int requestId = Interlocked.Increment(ref _requestId);
+            ushort requestId = GetNextRequestId();
 
             var messageWrapper = new MessageWrapper()
             {
@@ -82,6 +86,21 @@ namespace Fenrir.Multiplayer.LiteNet
             }
 
             return response;
+        }
+
+        private ushort GetNextRequestId()
+        {
+            lock(_syncRoot)
+            {
+                _requestId++;
+                ushort maxRequestId = 2 ^ 12; // First 4 bits of ushort is used for MessageFlags
+                if(_requestId == maxRequestId)
+                {
+                    _requestId = 0; // Manually roll-over
+                }
+
+                return _requestId;
+            }
         }
     }
 }

@@ -20,7 +20,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Type map - contians list of types and hashes
         /// </summary>
-        private readonly ITypeMap _typeMap;
+        private readonly ITypeHashMap _typeHashMap;
 
         /// <summary>
         /// Logger
@@ -36,13 +36,13 @@ namespace Fenrir.Multiplayer.LiteNet
         /// Default constructor
         /// </summary>
         /// <param name="serializationProvider">Serialization Provider</param>
-        /// <param name="typeMap">Type Map</param>
+        /// <param name="typeHashMap">Type Hash Map</param>
         /// <param name="logger">Logger</param>
         /// <param name="byteStreamWriterPool">Object pool of Byte Stream Writers</param>
-        public LiteNetMessageWriter(ISerializationProvider serializationProvider, ITypeMap typeMap, IFenrirLogger logger, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool)
+        public LiteNetMessageWriter(ISerializationProvider serializationProvider, ITypeHashMap typeHashMap, IFenrirLogger logger, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool)
         {
             _serializationProvider = serializationProvider;
-            _typeMap = typeMap;
+            _typeHashMap = typeHashMap;
             _logger = logger;
             _byteStreamWriterPool = byteStreamWriterPool;
         }
@@ -54,21 +54,33 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <param name="messageWrapper">Message Wrapper - outgoing message</param>
         public void WriteMessage(NetDataWriter netDataWriter, MessageWrapper messageWrapper)
         {
-            // 1. [byte] Type of the message
-            netDataWriter.Put((byte)messageWrapper.MessageType); // Type of the message
+            // Message format: 
+            // [8 bytes long message type hash]
+            // [2 bytes short flags]
+            //    [1 bit encrypted yes/no]
+            //    [1 bit reserved for MessageFlags]
+            //    [1 bit reserved for MessageFlags]
+            //    [1 bit reserved for MessageFlags]
+            //    [12 bit request id]
+            // [N bytes serialized message]
 
-            // 2. [int] Request Id (if message type is request)
-            if (messageWrapper.MessageType == MessageType.Request || messageWrapper.MessageType == MessageType.Response)
-            {
-                netDataWriter.Put(messageWrapper.RequestId); // Request id
-            }
-
-            // 3. [ulong] Message type hash
-            ulong messageTypeHash = _typeMap.GetTypeHash(messageWrapper.MessageData.GetType());
-
+            // 1. ulong Message type hash
+            ulong messageTypeHash = _typeHashMap.GetTypeHash(messageWrapper.MessageData.GetType());
             netDataWriter.Put(messageTypeHash); // Type hash
 
-            // 4. [byte[]] Serialized message
+            // 2. short Flags + request id
+            MessageFlags messageFlags = MessageFlags.None;
+            if(messageWrapper.IsEncrypted)
+            {
+                messageFlags |= MessageFlags.Encrypted;
+            }
+            ushort flags = 0;
+            flags |= (ushort)(messageWrapper.RequestId << 4);
+            flags |= (ushort)messageFlags;
+
+            netDataWriter.Put(flags);
+
+            // 3. byte[] Serialized message
             ByteStreamWriter byteStreamWriter = _byteStreamWriterPool.Get();
             byteStreamWriter.SetNetDataWriter(netDataWriter);
 

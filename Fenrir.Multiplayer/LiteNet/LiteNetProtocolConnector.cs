@@ -61,7 +61,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Type map - stores type hashes
         /// </summary>
-        private readonly TypeMap _typeMap;
+        private readonly TypeHashMap _typeHashMap;
 
         /// <summary>
         /// Logger
@@ -191,11 +191,11 @@ namespace Fenrir.Multiplayer.LiteNet
         {
             _serializationProvider = new SerializationProvider();
             _logger = new EventBasedLogger();
-            _typeMap = new TypeMap();
+            _typeHashMap = new TypeHashMap();
             _eventHandlerMap = new EventHandlerMap(_logger);
             _pendingRequestMap = new PendingRequestMap(_logger);
-            _messageReader = new LiteNetMessageReader(_serializationProvider, _typeMap, _logger, new RecyclableObjectPool<ByteStreamReader>());
-            _messageWriter = new LiteNetMessageWriter(_serializationProvider, _typeMap, _logger, new RecyclableObjectPool<ByteStreamWriter>());
+            _messageReader = new LiteNetMessageReader(_serializationProvider, _typeHashMap, _logger, new RecyclableObjectPool<ByteStreamReader>());
+            _messageWriter = new LiteNetMessageWriter(_serializationProvider, _typeHashMap, _logger, new RecyclableObjectPool<ByteStreamWriter>());
 
             _netDataWriter = new NetDataWriter();
 

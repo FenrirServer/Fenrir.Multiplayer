@@ -10,22 +10,37 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
 
     [TestClass]
     public class LiteNetMessageWriterTests
-    {
+    {           
+        // Message format: 
+        // [8 bytes long message type hash]
+        // [2 bytes ushort flags]
+        //    [1 bit encrypted yes/no]
+        //    [1 bit reserved]
+        //    [1 bit reserved]
+        //    [1 bit reserved]
+        //    [12 bit request id]
+        // [N bytes serialized message]
+
         [TestMethod]
         public void LiteNetMessageWriter_WriteMessage_WritesEvent()
         {
-            var typeMap = new TypeMap();
+            var typeHashMap = new TypeHashMap();
             var serializationProvider = new SerializationProvider();
-            var messageWriter = new LiteNetMessageWriter(serializationProvider, typeMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamWriter>());
+            var messageWriter = new LiteNetMessageWriter(serializationProvider, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamWriter>());
 
             var netDataWriter = new NetDataWriter();
-            var messageWrapper = new MessageWrapper() { MessageType = MessageType.Event, MessageData = new TestEvent() { Value = "test" } };
+            var messageWrapper = new MessageWrapper() { MessageType = MessageType.Event, MessageData = new TestEvent() { Value = "test" }, IsEncrypted = true };
             messageWriter.WriteMessage(netDataWriter, messageWrapper);
 
-            // Validate
+            // Validate 
+            // Get hash
             var netDataReader = new NetDataReader(netDataWriter.Data);
-            Assert.AreEqual(MessageType.Event, (MessageType)netDataReader.GetByte()); // [byte] message type
-            Assert.AreEqual(typeMap.GetTypeHash<TestEvent>(), netDataReader.GetULong()); // [ulong] type hash
+            Assert.AreEqual(typeHashMap.GetTypeHash<TestEvent>(), netDataReader.GetULong()); // [ulong] type hash
+            
+            // Get flags
+            ushort flags = netDataReader.GetUShort();
+            MessageFlags messageFlags = (MessageFlags)flags;
+            Assert.IsTrue(messageFlags.HasFlag(MessageFlags.Encrypted));
 
             var testEvent = serializationProvider.Deserialize<TestEvent>(new ByteStreamReader(netDataReader));
 

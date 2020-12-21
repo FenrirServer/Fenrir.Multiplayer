@@ -21,7 +21,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Type map - contians list of types and hashes
         /// </summary>
-        private readonly ITypeMap _typeMap;
+        private readonly ITypeHashMap _typeHashMap;
 
         /// <summary>
         /// Logger
@@ -37,13 +37,13 @@ namespace Fenrir.Multiplayer.LiteNet
         /// Default constructor
         /// </summary>
         /// <param name="serializationProvider">Serialization Provider</param>
-        /// <param name="typeMap">Type Map</param>
+        /// <param name="typeHashMap">Type Hash Map</param>
         /// <param name="logger">Logger</param>
         /// <param name="byteStreamReaderPool">Object pool of Byte Stream Readers</param>
-        public LiteNetMessageReader(ISerializationProvider serializationProvider, ITypeMap typeMap, IFenrirLogger logger, RecyclableObjectPool<ByteStreamReader> byteStreamReaderPool)
+        public LiteNetMessageReader(ISerializationProvider serializationProvider, ITypeHashMap typeHashMap, IFenrirLogger logger, RecyclableObjectPool<ByteStreamReader> byteStreamReaderPool)
         {
             _serializationProvider = serializationProvider;
-            _typeMap = typeMap;
+            _typeHashMap = typeHashMap;
             _logger = logger;
             _byteStreamReaderPool = byteStreamReaderPool;
         }
@@ -56,48 +56,44 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <returns>True if message could be read, false otherwise</returns>
         public bool TryReadMessage(NetDataReader netDataReader, out MessageWrapper messageWrapper)
         {
+            // Message format: 
+            // [8 bytes long message type hash]
+            // [2 bytes ushort flags]
+            //    [1 bit encrypted yes/no]
+            //    [1 bit reserved]
+            //    [1 bit reserved]
+            //    [1 bit reserved]
+            //    [12 bit request id]
+            // [N bytes serialized message]
+
             messageWrapper = default(MessageWrapper);
 
-            // 1. [byte] Type of the message
-            if (!netDataReader.TryGetByte(out byte messageTypeByte))
-            {
-                _logger.Warning("Malformed message: no message type [byte]");
-                return false;
-            }
-            if(!Enum.IsDefined(typeof(MessageType), messageTypeByte))
-            {
-                _logger.Warning("Malformed message: failed {0} is not a valid {1}", messageTypeByte, nameof(MessageType));
-                return false;
-            }
-
-            MessageType messageType = (MessageType)messageTypeByte;
-
-            // 2. [int] Request Id (if message type is request)
-            int requestId = 0;
-            if(messageType == MessageType.Request || messageType == MessageType.Response)
-            {
-                if(!netDataReader.TryGetInt(out requestId))
-                {
-                    _logger.Warning("Malformed message: no request id [int]");
-                    return false;
-                }
-            }
-
-            // 3. [ulong] Message type hash
-            if(!netDataReader.TryGetULong(out ulong messageTypeHash))
+            // 1. ulong Message type hash
+            if (!netDataReader.TryGetULong(out ulong messageTypeHash))
             {
                 _logger.Warning("Malformed message: no message type hash [long]");
                 return false;
             }
 
             // Find message type
-            if(!_typeMap.TryGetTypeByHash(messageTypeHash, out Type dataType))
+            if(!_typeHashMap.TryGetTypeByHash(messageTypeHash, out Type dataType))
             {
-                _logger.Warning("Malformed message: no message type with hash {0} in type map", messageTypeHash);
+                _logger.Warning("Malformed message: no message type with hash {0} in type hash map", messageTypeHash);
                 return false;
             }
 
-            // 4. [byte[]] Serialized message
+            // 2. ushort (flags + request id)
+            if(!netDataReader.TryGetUShort(out ushort flags))
+            {
+                _logger.Warning("Malformed message: no flags section");
+                return false;
+            }
+
+            MessageFlags messageFlags = (MessageFlags)flags; // Flags enum
+
+            ushort requestId = (ushort)(flags >> 4); // Request id
+
+            // 3. byte[] Serialized message
             ByteStreamReader byteStreamReader = _byteStreamReaderPool.Get();
             byteStreamReader.SetNetDataReader(netDataReader);
 
@@ -118,12 +114,33 @@ namespace Fenrir.Multiplayer.LiteNet
                 _byteStreamReaderPool.Return(byteStreamReader);
             }
 
+            // Check data type
+            MessageType messageType;
+            if(data is IEvent)
+            {
+                messageType = MessageType.Event;
+            }
+            else if(data is IRequest)
+            {
+                messageType = MessageType.Request;
+            }
+            else if(data is IResponse)
+            {
+                messageType = MessageType.Response;
+            }
+            else
+            {
+                _logger.Warning("Malformed message: unknown message type {0}, must be Event, Request or Response", dataType.Name);
+                return false;
+            }
+
             // Return message
             messageWrapper = new MessageWrapper()
             {
                 MessageType = messageType,
                 RequestId = requestId,
-                MessageData = data
+                MessageData = data,
+                IsEncrypted = messageFlags.HasFlag(MessageFlags.Encrypted)
             };
 
             return true;

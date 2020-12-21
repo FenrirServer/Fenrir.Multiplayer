@@ -5,9 +5,9 @@ using System.Collections.Generic;
 namespace Fenrir.Multiplayer.Network
 {
     /// <summary>
-    /// Type map - calculates and stores deterministic hash code for each System.Type
+    /// Type hash map - calculates and stores deterministic hash code for each System.Type
     /// </summary>
-    public class TypeMap : ITypeMap
+    public class TypeHashMap : ITypeHashMap
     {
         private Dictionary<ulong, Type> _hashToTypeDictionary = new Dictionary<ulong, Type>();
         private Dictionary<Type, ulong> _typeToHashDictionary = new Dictionary<Type, ulong>();
@@ -102,7 +102,7 @@ namespace Fenrir.Multiplayer.Network
             {
                 if (!_hashToTypeDictionary.ContainsKey(hash))
                 {
-                    throw new TypeMapException($"Failed ot get type for the hash {hash}, type not found");
+                    throw new TypeHashMapException($"Failed ot get type for the hash {hash}, type not found");
                 }
 
                 return _hashToTypeDictionary[hash];

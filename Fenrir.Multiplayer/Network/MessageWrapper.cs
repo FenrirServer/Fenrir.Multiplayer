@@ -11,9 +11,14 @@
         public MessageType MessageType;
 
         /// <summary>
+        /// True if message is encrypted
+        /// </summary>
+        public bool IsEncrypted;
+
+        /// <summary>
         /// Id of the requet, if message type is <see cref="IRequest"/>
         /// </summary>
-        public int RequestId;
+        public ushort RequestId;
 
         /// <summary>
         /// Message data object
@@ -26,12 +31,12 @@
         public IPeerInternal Peer;
 
         /// <summary>
-        /// Channel of the message
+        /// Channel of the message. Only set for outgoing messages
         /// </summary>
         public byte Channel;
         
         /// <summary>
-        /// Delivery method of the message
+        /// Delivery method of the message. Only set for outgoing messages
         /// </summary>
         public MessageDeliveryMethod DeliveryMethod;
     }

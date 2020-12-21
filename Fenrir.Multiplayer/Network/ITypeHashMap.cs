@@ -6,7 +6,7 @@ namespace Fenrir.Multiplayer.Network
     /// Type map stores deterministic type hashes used for dispatching
     /// and serialization/deserialization of messages
     /// </summary>
-    interface ITypeMap
+    interface ITypeHashMap
     {
         /// <summary>
         /// Adds type to the type map
