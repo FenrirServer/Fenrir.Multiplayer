@@ -48,6 +48,18 @@ namespace Fenrir.Multiplayer.Network
                 throw new InvalidOperationException("Attempting to add event handler for IEvent. Please specify generic type <TEvent> explicitly.");
             }
 
+            Action<IEvent> handlerAction = evt =>
+            {
+                try
+                {
+                    eventHandler.OnReceiveEvent((TEvent)evt);
+                }
+                catch(Exception e)
+                {
+                    _logger.Error("Uncaught exception in event {0} handler {1}: {2}", typeof(TEvent).Name, eventHandler, e.ToString());
+                }
+            };
+
             lock(_syncRoot)
             {
                 if(_eventHandlers.ContainsKey(typeof(TEvent)))
@@ -55,7 +67,7 @@ namespace Fenrir.Multiplayer.Network
                     throw new EventHandlerException($"Failed to add event handler {eventHandler.GetType()}, handler for event type {typeof(TEvent).Name} is already registered");
                 }
 
-                _eventHandlers.Add(typeof(TEvent), evt => eventHandler.OnReceiveEvent((TEvent)evt));
+                _eventHandlers.Add(typeof(TEvent), handlerAction);
             }
         }
 
@@ -105,14 +117,7 @@ namespace Fenrir.Multiplayer.Network
                 return;
             }
 
-            try
-            {
-                handler.Invoke((IEvent)eventWrapper.MessageData);
-            }
-            catch(Exception e)
-            {
-                _logger.Error("Uncaught exception in event handler {0}: {1}", handler, e);
-            }
+            handler.Invoke((IEvent)eventWrapper.MessageData);
         }
     }
 }

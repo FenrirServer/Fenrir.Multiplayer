@@ -1,4 +1,5 @@
 ﻿using Fenrir.Multiplayer.Network;
+using Fenrir.Multiplayer.Serialization;
 using LiteNetLib;
 
 namespace Fenrir.Multiplayer.LiteNet
@@ -27,24 +28,50 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <param name="netPeer">LiteNet NetPeer</param>
         /// <param name="protocolVersion">Peer protocol version</param>
         /// <param name="messageWriter">Message Writer</param>
-        public LiteNetServerPeer(NetPeer netPeer, int protocolVersion, LiteNetMessageWriter messageWriter)
-            : base(netPeer, messageWriter)
+        /// <param name="byteStreamWriterPool">Byte Stream Writer Object Pool</param>
+        public LiteNetServerPeer(NetPeer netPeer, int protocolVersion, MessageWriter messageWriter, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool)
+            : base(netPeer, messageWriter, byteStreamWriterPool)
         {
             ProtocolVersion = protocolVersion;
         }
 
         /// <inheritdoc/>
-        public void SendEvent<TEvent>(TEvent evt, byte channel = 0, MessageDeliveryMethod deliveryMethod = MessageDeliveryMethod.ReliableOrdered) where TEvent : IEvent
+        public void SendEvent<TEvent>(TEvent evt, byte channel = 0, MessageDeliveryMethod deliveryMethod = MessageDeliveryMethod.ReliableOrdered)
+            where TEvent : IEvent
         {
-            var messageWrapper = new MessageWrapper()
-            {
-                MessageType = MessageType.Event,
-                MessageData = evt,
-                Peer = this,
-                Channel = channel,
-                DeliveryMethod = deliveryMethod,
-            };
+            // By default, all reliable messages are encrypted
+            bool encrypted = deliveryMethod == MessageDeliveryMethod.ReliableOrdered || deliveryMethod == MessageDeliveryMethod.ReliableUnordered;         
+            
+            SendEvent<TEvent>(evt, encrypted, channel, deliveryMethod);
+        }
 
+
+        /// <inheritdoc/>
+        public void SendEvent<TEvent>(TEvent evt, bool encrypted, byte channel = 0, MessageDeliveryMethod deliveryMethod = MessageDeliveryMethod.ReliableOrdered) 
+            where TEvent : IEvent
+        {
+            MessageFlags flags = encrypted ? MessageFlags.IsEncrypted : MessageFlags.None; // other flags are ignored for events
+            MessageWrapper messageWrapper = MessageWrapper.WrapEvent(evt, channel, flags, deliveryMethod);
+            Send(messageWrapper);
+        }
+
+        /// <inheritdoc/>
+        public void SendResponse<TResponse>(TResponse response, short requestId, bool encrypted = true, byte channel = 0, bool ordered = true)
+            where TResponse : IResponse
+        {
+            MessageDeliveryMethod deliveryMethod = ordered ? MessageDeliveryMethod.ReliableOrdered : MessageDeliveryMethod.ReliableUnordered; // Responses are always reliable
+
+            MessageFlags flags = MessageFlags.HasRequestId; // Responses always have request id
+            if(encrypted)
+            {
+                flags |= MessageFlags.IsEncrypted;
+            }
+            if(ordered)
+            {
+                flags |= MessageFlags.IsOrdered;
+            }
+
+            MessageWrapper messageWrapper = MessageWrapper.WrapResponse(response, requestId, channel, flags, deliveryMethod);
             Send(messageWrapper);
         }
 
@@ -56,5 +83,6 @@ namespace Fenrir.Multiplayer.LiteNet
         {
             _latency = latency;
         }
+
     }
 }

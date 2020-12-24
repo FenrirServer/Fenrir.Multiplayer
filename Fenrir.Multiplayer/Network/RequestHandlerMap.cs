@@ -24,7 +24,7 @@ namespace Fenrir.Multiplayer.Network
         /// <summary>
         /// Request handlers bound to a request type
         /// </summary>
-        private Dictionary<Type, Action<MessageWrapper>> _requestHandlers = new Dictionary<Type, Action<MessageWrapper>>();
+        private Dictionary<Type, Action<MessageWrapper, IServerPeer>> _requestHandlers = new Dictionary<Type, Action<MessageWrapper, IServerPeer>>();
 
         /// <summary>
         /// Creates RequestHandlerMap
@@ -48,6 +48,18 @@ namespace Fenrir.Multiplayer.Network
                 throw new ArgumentNullException(nameof(requestHandler));
             }
 
+            Action<MessageWrapper, IServerPeer> handlerAction = (requestWrapper, serverPeer) =>
+            {
+                try
+                {
+                    requestHandler.HandleRequest((TRequest)requestWrapper.MessageData, serverPeer);
+                }
+                catch(Exception e)
+                {
+                    _logger.Error("Uncaught exception in request {0} handler {1}: {2}", typeof(TRequest).Name, requestHandler, e.ToString());
+                }
+            };
+
             lock (_syncRoot)
             {
                 if (_requestHandlers.ContainsKey(typeof(TRequest)))
@@ -55,10 +67,7 @@ namespace Fenrir.Multiplayer.Network
                     throw new RequestHandlerException($"Failed to add request handler {requestHandler.GetType()}, handler for request type {typeof(TRequest).Name} is already registered");
                 }
 
-                _requestHandlers.Add(typeof(TRequest), requestWrapper =>
-                {
-                    requestHandler.HandleRequest((TRequest)requestWrapper.MessageData, (IServerPeer)requestWrapper.Peer);
-                });
+                _requestHandlers.Add(typeof(TRequest), handlerAction);
             }
         }
 
@@ -77,6 +86,34 @@ namespace Fenrir.Multiplayer.Network
                 throw new ArgumentNullException(nameof(requestHandler));
             }
 
+            Action<MessageWrapper, IServerPeer> handlerAction = async (requestWrapper, serverPeer) =>
+            {
+                short requestId = requestWrapper.RequestId;
+                bool isEncrypted = requestWrapper.Flags.HasFlag(MessageFlags.IsEncrypted);
+                bool isOrdered = requestWrapper.Flags.HasFlag(MessageFlags.IsOrdered);
+                byte channel = requestWrapper.Channel;
+
+                TResponse response = default;
+                    
+                try
+                {
+                    response = await requestHandler.HandleRequest((TRequest)requestWrapper.MessageData, serverPeer);
+                }
+                catch (Exception e)
+                {
+                    _logger.Error("Uncaught exception in request {0} handler {1}: {2}", typeof(TRequest).Name, requestHandler, e.ToString());
+                }
+
+                if (response == null)
+                {
+                    serverPeer.SendResponse<ErrorResponse>(new ErrorResponse(), requestId, isEncrypted, channel, isOrdered);
+                    return;
+                }
+
+                serverPeer.SendResponse<TResponse>(response, requestId, isEncrypted, channel, isOrdered);
+
+            };
+
             lock (_syncRoot)
             {
                 if (_requestHandlers.ContainsKey(typeof(TRequest)))
@@ -84,22 +121,7 @@ namespace Fenrir.Multiplayer.Network
                     throw new RequestHandlerException($"Failed to add request handler {requestHandler.GetType()}, handler for request type {typeof(TRequest).Name} is already registered");
                 }
 
-                _requestHandlers.Add(typeof(TRequest), async requestWrapper =>
-                {
-                    TResponse response = await requestHandler.HandleRequest((TRequest)requestWrapper.MessageData, (IServerPeer)requestWrapper.Peer);
-
-                    if(response != null)
-                    {
-                        var peer = requestWrapper.Peer;
-                        peer.Send(new MessageWrapper() 
-                        { 
-                            MessageType = MessageType.Response,
-                            RequestId = requestWrapper.RequestId, 
-                            Peer = requestWrapper.Peer, 
-                            MessageData = response 
-                        });
-                    }
-                });
+                _requestHandlers.Add(typeof(TRequest), handlerAction);
             }
         }
 
@@ -164,7 +186,7 @@ namespace Fenrir.Multiplayer.Network
 
             // Try to get request handler
             bool hasRequestHandler = false;
-            Action<MessageWrapper> requestHandler = null;
+            Action<MessageWrapper, IServerPeer> requestHandler = null;
 
             lock (_syncRoot)
             {
@@ -178,7 +200,7 @@ namespace Fenrir.Multiplayer.Network
                 return;
             }
 
-            requestHandler.Invoke(requestWrapper);
+            requestHandler.Invoke(requestWrapper, serverPeer);
         }
     }
 }

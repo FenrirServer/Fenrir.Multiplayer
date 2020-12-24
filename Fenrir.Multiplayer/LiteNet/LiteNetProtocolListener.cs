@@ -42,7 +42,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Message reader, used to dispatch incoming messages
         /// </summary>
-        private readonly LiteNetMessageReader _messageReader;
+        private readonly MessageReader _messageReader;
 
         /// <summary>
         /// Object pool of NetDataWriters used to write outgoing messages
@@ -158,12 +158,13 @@ namespace Fenrir.Multiplayer.LiteNet
         {
             _serializationProvider = new SerializationProvider();
             _logger = new EventBasedLogger();
-
             _typeHashMap = new TypeHashMap();
             _requestHandlerMap = new RequestHandlerMap(_logger);
-            _messageReader = new LiteNetMessageReader(_serializationProvider, _typeHashMap, _logger, new RecyclableObjectPool<ByteStreamReader>());
+
             _byteStreamReaderPool = new RecyclableObjectPool<ByteStreamReader>();
             _byteStreamWriterPool = new RecyclableObjectPool<ByteStreamWriter>();
+
+            _messageReader = new MessageReader(_serializationProvider, _typeHashMap, _logger, _byteStreamReaderPool);
             _netDataWriterPool = new NetDataWriterPool();
             _netManager = new NetManager(this)
             {
@@ -262,8 +263,8 @@ namespace Fenrir.Multiplayer.LiteNet
             NetPeer netPeer = connectionRequest.Accept();
 
             // Create server peer
-            var messageWriter = new LiteNetMessageWriter(_serializationProvider, _typeHashMap, _logger, _byteStreamWriterPool);
-            netPeer.Tag = new LiteNetServerPeer(netPeer, peerProtocolVersion, messageWriter);
+            var messageWriter = new MessageWriter(_serializationProvider, _typeHashMap, _logger);
+            netPeer.Tag = new LiteNetServerPeer(netPeer, peerProtocolVersion, messageWriter, _byteStreamWriterPool);
         }
 
         private void RejectConnectionRequest(ConnectionRequest connectionRequest, string reason)
@@ -476,7 +477,7 @@ namespace Fenrir.Multiplayer.LiteNet
         }
 
 
-        void INetEventListener.OnNetworkReceive(NetPeer netPeer, NetPacketReader reader, DeliveryMethod deliveryMethod)
+        void INetEventListener.OnNetworkReceive(NetPeer netPeer, NetPacketReader netPacketReader, DeliveryMethod deliveryMethod)
         {
             // Get LiteNet peer
             if(netPeer.Tag == null)
@@ -487,9 +488,25 @@ namespace Fenrir.Multiplayer.LiteNet
 
             var serverPeer = (LiteNetServerPeer)netPeer.Tag;
 
-            // Get message
-            int totalBytes = reader.AvailableBytes;
-            if(!_messageReader.TryReadMessage(reader, out MessageWrapper messageWrapper))
+            // Read message
+            MessageWrapper messageWrapper;
+            bool didReadMessage;
+            int totalBytes = netPacketReader.AvailableBytes;
+
+            ByteStreamReader byteStreamReader = _byteStreamReaderPool.Get();
+            byteStreamReader.SetNetDataReader(netPacketReader);
+
+            try
+            {
+                didReadMessage = _messageReader.TryReadMessage(byteStreamReader, out messageWrapper);
+            }
+            finally
+            {
+                byteStreamReader.SetNetDataReader(null); // Since netDataReader is pooled within LiteNet library, it's important to make sure we reset it.
+                _byteStreamReaderPool.Return(byteStreamReader); // Calling Return will simply reset NetPacketReader but not free up so it will exist in both pools
+            }
+
+            if (!didReadMessage)
             {
                 _logger.Warning("Failed to read message of length {0} from {1}", totalBytes, netPeer.EndPoint);
                 return;

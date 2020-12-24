@@ -9,6 +9,7 @@ using Moq;
 using Newtonsoft.Json;
 using System;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.Tests
@@ -202,7 +203,7 @@ namespace Fenrir.Multiplayer.Tests
 
 
         [TestMethod, Timeout(TestTimeout)]
-        public async Task FenrirClient_SendRequest()
+        public async Task FenrirClient_SendRequest_SendsRequest()
         {
             using var fenrirServer = new FenrirServer();
             fenrirServer.AddLiteNetProtocol();
@@ -229,6 +230,38 @@ namespace Fenrir.Multiplayer.Tests
         }
 
 
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task FenrirClient_SendRequestResponse_SendsRequestWithResponse()
+        {
+            using var fenrirServer = new FenrirServer();
+            fenrirServer.AddLiteNetProtocol();
+            fenrirServer.AddInfoService();
+
+            fenrirServer.AddRequestHandler(new TcsRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
+            {
+                Assert.AreEqual("request_test", request.Value);
+                return Task.FromResult(new TestResponse() { Value = "response_test" });
+            }));
+
+            await fenrirServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
+
+            using var fenrirClient = new FenrirClient();
+            var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
+
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            var response = await fenrirClient.Peer.SendRequest<TestRequestWithResponse, TestResponse>(new TestRequestWithResponse() { Value = "request_test" });
+
+            Assert.AreEqual(response.Value, "response_test");
+        }
+
+        // BIG TODO: TEST if request fails, client should get an exception on the response (or failed response)
+
+        // TODO: Tests with options for send, reliable, encryption, ordered/unordered deliveyr method for requests and events
+        // TODO: Exception in event handler, request handlers
 
         #region Fixtures
         class CustomConnectionRequestData : IByteStreamSerializable
@@ -249,8 +282,6 @@ namespace Fenrir.Multiplayer.Tests
 
         class RequestDataFailingToDeserialize : IByteStreamSerializable
         {
-            public string Token;
-
             public void Deserialize(IByteStreamReader reader)
             {
                 throw new InvalidOperationException("Error in byte stream serializable");
@@ -258,11 +289,41 @@ namespace Fenrir.Multiplayer.Tests
 
             public void Serialize(IByteStreamWriter writer)
             {
-                writer.Write(Token);
             }
         }
 
         class TestRequest : IRequest, IByteStreamSerializable
+        {
+            public string Value;
+
+            public void Deserialize(IByteStreamReader reader)
+            {
+                Value = reader.ReadString();
+            }
+
+            public void Serialize(IByteStreamWriter writer)
+            {
+                writer.Write(Value);
+            }
+        }
+
+        class TestResponse : IResponse, IByteStreamSerializable
+        {
+            public string Value;
+
+            public void Deserialize(IByteStreamReader reader)
+            {
+                Value = reader.ReadString();
+            }
+
+            public void Serialize(IByteStreamWriter writer)
+            {
+                writer.Write(Value);
+            }
+        }
+
+
+        class TestRequestWithResponse : IRequest<TestResponse>, IByteStreamSerializable
         {
             public string Value;
 
@@ -290,6 +351,23 @@ namespace Fenrir.Multiplayer.Tests
             public void HandleRequest(TRequest request, IServerPeer peer)
             {
                 _tcs.SetResult(request);
+            }
+        }
+
+        class TcsRequestResponseHandler<TRequest, TResponse> : IRequestHandler<TRequest, TResponse>
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse
+        {
+            private Func<TRequest, Task<TResponse>> _callback;
+
+            public TcsRequestResponseHandler(Func<TRequest, Task<TResponse>> callback)
+            {
+                _callback = callback;
+            }
+
+            public async Task<TResponse> HandleRequest(TRequest request, IServerPeer peer)
+            {
+                return await _callback(request);
             }
         }
         #endregion

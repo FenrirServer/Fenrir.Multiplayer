@@ -2,6 +2,10 @@
 
 namespace Fenrir.Multiplayer.Exceptions
 {
+    /// <summary>
+    /// Base Fenrir Client exception
+    /// Thrown on the client
+    /// </summary>
     public class FenrirClientException : FenrirException
     {
         public FenrirClientException()

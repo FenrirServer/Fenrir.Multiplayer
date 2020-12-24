@@ -10,25 +10,34 @@ namespace Fenrir.Multiplayer.Serialization
     class ByteStreamWriter : IByteStreamWriter, IRecyclable
     {
         ///<inheritdoc/>
-        public int Capacity => _netDataWriter.Capacity;
+        public int Capacity => NetDataWriter.Capacity;
 
         ///<inheritdoc/>
-        public byte[] Bytes => _netDataWriter.Data;
+        public byte[] Bytes => NetDataWriter.Data;
 
         ///<inheritdoc/>
-        public int Length => _netDataWriter.Length;
+        public int Length => NetDataWriter.Length;
 
         /// <summary>
         /// Net Data Writer
         /// </summary>
-        private NetDataWriter _netDataWriter;
+        public NetDataWriter NetDataWriter { get; private set; }
 
         /// <summary>
-        /// Default constructor
+        /// Creates Byte Stream Writer
         /// </summary>
         public ByteStreamWriter()
         {
-            _netDataWriter = new NetDataWriter();
+            NetDataWriter = new NetDataWriter();
+        }
+
+        /// <summary>
+        /// Creates Byte Stream Writer
+        /// </summary>
+        /// <param name="byteStreamReader">Byte stream reader</param>
+        public ByteStreamWriter(ByteStreamReader byteStreamReader)
+        {
+            NetDataWriter = new NetDataWriter();
         }
 
         /// <summary>
@@ -37,116 +46,116 @@ namespace Fenrir.Multiplayer.Serialization
         /// <param name="netDataWriter">Net Data Writer</param>
         public ByteStreamWriter(NetDataWriter netDataWriter)
         {
-            _netDataWriter = netDataWriter;
+            NetDataWriter = netDataWriter;
         }
 
         ///<inheritdoc/>
         public void SetNetDataWriter(NetDataWriter netDataWriter)
         {
-            _netDataWriter = netDataWriter;
+            NetDataWriter = netDataWriter;
         }
 
         ///<inheritdoc/>
-        void IRecyclable.Recycle() => _netDataWriter?.Reset();
+        void IRecyclable.Recycle() => NetDataWriter?.Reset();
 
         ///<inheritdoc/>
         public void Write(IByteStreamSerializable serializable) => serializable.Serialize(this);
 
         ///<inheritdoc/>
-        public void Write(byte[] data, int offset, int length) => _netDataWriter.Put(data, offset, length);
+        public void Write(byte[] data, int offset, int length) => NetDataWriter.Put(data, offset, length);
 
         ///<inheritdoc/>
-        public void Write(bool value) => _netDataWriter.Put(value);
+        public void Write(bool value) => NetDataWriter.Put(value);
 
         ///<inheritdoc/>
-        public void Write(IPEndPoint endPoint) => _netDataWriter.Put(endPoint);
+        public void Write(IPEndPoint endPoint) => NetDataWriter.Put(endPoint);
 
         ///<inheritdoc/>
-        public void Write(string value) => _netDataWriter.Put(value);
+        public void Write(string value) => NetDataWriter.Put(value);
 
         ///<inheritdoc/>
-        public void Write(string value, int maxLength) => _netDataWriter.Put(value, maxLength);
+        public void Write(string value, int maxLength) => NetDataWriter.Put(value, maxLength);
 
         ///<inheritdoc/>
-        public void Write(byte value) => _netDataWriter.Put(value);
+        public void Write(byte value) => NetDataWriter.Put(value);
 
         ///<inheritdoc/>
-        public void Write(sbyte value) => _netDataWriter.Put(value);
+        public void Write(sbyte value) => NetDataWriter.Put(value);
 
         ///<inheritdoc/>
-        public void Write(short value) => _netDataWriter.Put(value);
+        public void Write(short value) => NetDataWriter.Put(value);
 
         ///<inheritdoc/>
-        public void Write(byte[] data) => _netDataWriter.Put(data);
+        public void Write(byte[] data) => NetDataWriter.Put(data);
 
         ///<inheritdoc/>
-        public void Write(char value) => _netDataWriter.Put(value);
+        public void Write(char value) => NetDataWriter.Put(value);
 
         ///<inheritdoc/>
-        public void Write(uint value) => _netDataWriter.Put(value);
+        public void Write(uint value) => NetDataWriter.Put(value);
 
         ///<inheritdoc/>
-        public void Write(int value) => _netDataWriter.Put(value);
+        public void Write(int value) => NetDataWriter.Put(value);
 
         ///<inheritdoc/>
-        public void Write(ulong value) => _netDataWriter.Put(value);
+        public void Write(ulong value) => NetDataWriter.Put(value);
 
         ///<inheritdoc/>
-        public void Write(long value) => _netDataWriter.Put(value);
+        public void Write(long value) => NetDataWriter.Put(value);
 
         ///<inheritdoc/>
-        public void Write(double value) => _netDataWriter.Put(value);
+        public void Write(double value) => NetDataWriter.Put(value);
 
         ///<inheritdoc/>
-        public void Write(float value) => _netDataWriter.Put(value);
+        public void Write(float value) => NetDataWriter.Put(value);
 
         ///<inheritdoc/>
-        public void Write(ushort value) => _netDataWriter.Put(value);
+        public void Write(ushort value) => NetDataWriter.Put(value);
 
         ///<inheritdoc/>
-        public void WriteArray(bool[] value) => _netDataWriter.PutArray(value);
+        public void WriteArray(bool[] value) => NetDataWriter.PutArray(value);
 
         ///<inheritdoc/>
-        public void WriteArray(short[] value) => _netDataWriter.PutArray(value);
+        public void WriteArray(short[] value) => NetDataWriter.PutArray(value);
 
         ///<inheritdoc/>
-        public void WriteArray(ushort[] value) => _netDataWriter.PutArray(value);
+        public void WriteArray(ushort[] value) => NetDataWriter.PutArray(value);
 
         ///<inheritdoc/>
-        public void WriteArray(uint[] value) => _netDataWriter.PutArray(value);
+        public void WriteArray(uint[] value) => NetDataWriter.PutArray(value);
 
         ///<inheritdoc/>
-        public void WriteArray(float[] value) => _netDataWriter.PutArray(value);
+        public void WriteArray(float[] value) => NetDataWriter.PutArray(value);
 
         ///<inheritdoc/>
-        public void WriteArray(ulong[] value) => _netDataWriter.PutArray(value);
+        public void WriteArray(ulong[] value) => NetDataWriter.PutArray(value);
 
         ///<inheritdoc/>
-        public void WriteArray(long[] value) => _netDataWriter.PutArray(value);
+        public void WriteArray(long[] value) => NetDataWriter.PutArray(value);
 
         ///<inheritdoc/>
-        public void WriteArray(double[] value) => _netDataWriter.PutArray(value);
+        public void WriteArray(double[] value) => NetDataWriter.PutArray(value);
 
         ///<inheritdoc/>
-        public void WriteArray(string[] value) => _netDataWriter.PutArray(value);
+        public void WriteArray(string[] value) => NetDataWriter.PutArray(value);
 
         ///<inheritdoc/>
-        public void WriteArray(int[] value) => _netDataWriter.PutArray(value);
+        public void WriteArray(int[] value) => NetDataWriter.PutArray(value);
 
         ///<inheritdoc/>
-        public void WriteArray(string[] value, int maxLength) => _netDataWriter.PutArray(value, maxLength);
+        public void WriteArray(string[] value, int maxLength) => NetDataWriter.PutArray(value, maxLength);
 
         ///<inheritdoc/>
-        public void WriteBytesWithLength(byte[] data, int offset, int length) => _netDataWriter.PutBytesWithLength(data, offset, length);
+        public void WriteBytesWithLength(byte[] data, int offset, int length) => NetDataWriter.PutBytesWithLength(data, offset, length);
 
         ///<inheritdoc/>
-        public void WriteBytesWithLength(byte[] data) => _netDataWriter.PutBytesWithLength(data);
+        public void WriteBytesWithLength(byte[] data) => NetDataWriter.PutBytesWithLength(data);
 
         ///<inheritdoc/>
-        public void WriteSBytesWithLength(sbyte[] data) => _netDataWriter.PutSBytesWithLength(data);
+        public void WriteSBytesWithLength(sbyte[] data) => NetDataWriter.PutSBytesWithLength(data);
 
         ///<inheritdoc/>
-        public void WriteSBytesWithLength(sbyte[] data, int offset, int length) => _netDataWriter.PutSBytesWithLength(data, offset, length);
+        public void WriteSBytesWithLength(sbyte[] data, int offset, int length) => NetDataWriter.PutSBytesWithLength(data, offset, length);
 
     }
 }

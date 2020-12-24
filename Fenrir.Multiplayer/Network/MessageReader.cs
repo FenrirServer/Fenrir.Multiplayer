@@ -1,17 +1,15 @@
 ﻿using Fenrir.Multiplayer.Logging;
-using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
-using LiteNetLib.Utils;
 using System;
 using System.Runtime.Serialization;
 
-namespace Fenrir.Multiplayer.LiteNet
+namespace Fenrir.Multiplayer.Network
 {
     /// <summary>
     /// LiteNet Message reader
     /// Reads incoming messages and deserializes them into a message wrapper
     /// </summary>
-    class LiteNetMessageReader
+    class MessageReader
     {
         /// <summary>
         /// Serialization provider - used for serializing and deserializing messages
@@ -40,7 +38,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <param name="typeHashMap">Type Hash Map</param>
         /// <param name="logger">Logger</param>
         /// <param name="byteStreamReaderPool">Object pool of Byte Stream Readers</param>
-        public LiteNetMessageReader(ISerializationProvider serializationProvider, ITypeHashMap typeHashMap, IFenrirLogger logger, RecyclableObjectPool<ByteStreamReader> byteStreamReaderPool)
+        public MessageReader(ISerializationProvider serializationProvider, ITypeHashMap typeHashMap, IFenrirLogger logger, RecyclableObjectPool<ByteStreamReader> byteStreamReaderPool)
         {
             _serializationProvider = serializationProvider;
             _typeHashMap = typeHashMap;
@@ -51,25 +49,24 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Reads an incoming message from byte stream (NetDataReader) and creates a message wrapper
         /// </summary>
-        /// <param name="netDataReader">LiteNet NetDataReader</param>
+        /// <param name="byteStreamReader">Byte stream reader with message data</param>
         /// <param name="messageWrapper">Message Wrapper that will be written if message can be read</param>
         /// <returns>True if message could be read, false otherwise</returns>
-        public bool TryReadMessage(NetDataReader netDataReader, out MessageWrapper messageWrapper)
+        public bool TryReadMessage(ByteStreamReader byteStreamReader, out MessageWrapper messageWrapper)
         {
-            // Message format: 
-            // [8 bytes long message type hash]
-            // [2 bytes ushort flags]
-            //    [1 bit encrypted yes/no]
-            //    [1 bit reserved]
-            //    [1 bit reserved]
-            //    [1 bit reserved]
-            //    [12 bit request id]
-            // [N bytes serialized message]
+            // TODO: Encryption
 
-            messageWrapper = default(MessageWrapper);
+            // Message format: 
+            // 1. [8 bytes long message type hash]
+            // 2. [1 byte flags]
+            // 3. [1 byte channel number]
+            // 4. [2 bytes short requestId] - optional, if flags has HasRequestId
+            // 5. [N bytes serialized message]
+
+            messageWrapper = default;
 
             // 1. ulong Message type hash
-            if (!netDataReader.TryGetULong(out ulong messageTypeHash))
+            if (!byteStreamReader.TryReadULong(out ulong messageTypeHash))
             {
                 _logger.Warning("Malformed message: no message type hash [long]");
                 return false;
@@ -82,26 +79,38 @@ namespace Fenrir.Multiplayer.LiteNet
                 return false;
             }
 
-            // 2. ushort (flags + request id)
-            if(!netDataReader.TryGetUShort(out ushort flags))
+            // 2. byte Flags
+            if(!byteStreamReader.TryReadByte(out byte flagBytes))
             {
                 _logger.Warning("Malformed message: no flags section");
                 return false;
             }
 
-            MessageFlags messageFlags = (MessageFlags)flags; // Flags enum
+            MessageFlags messageFlags = (MessageFlags)flagBytes; // Flags enum
 
-            ushort requestId = (ushort)(flags >> 4); // Request id
+            // 3. byte Channel Id
+            if (!byteStreamReader.TryReadByte(out byte channel))
+            {
+                _logger.Warning("Malformed message: no channel id section");
+                return false;
+            }
 
-            // 3. byte[] Serialized message
-            ByteStreamReader byteStreamReader = _byteStreamReaderPool.Get();
-            byteStreamReader.SetNetDataReader(netDataReader);
+            // 4. short request id
+            short requestId = 0;
+            if (messageFlags.HasFlag(MessageFlags.HasRequestId))
+            {
+                if (!byteStreamReader.TryReadShort(out requestId))
+                {
+                    _logger.Warning("Malformed message: no requestId section");
+                    return false;
+                }
+            }
 
-            object data;
-
+            // 5. byte[] Serialized message data
+            object messageData;
             try
             {
-                data = _serializationProvider.Deserialize(dataType, byteStreamReader); 
+                messageData = _serializationProvider.Deserialize(dataType, byteStreamReader); 
             }
             catch(SerializationException e)
             {
@@ -116,15 +125,15 @@ namespace Fenrir.Multiplayer.LiteNet
 
             // Check data type
             MessageType messageType;
-            if(data is IEvent)
+            if(messageData is IEvent)
             {
                 messageType = MessageType.Event;
             }
-            else if(data is IRequest)
+            else if(messageData is IRequest)
             {
                 messageType = MessageType.Request;
             }
-            else if(data is IResponse)
+            else if(messageData is IResponse)
             {
                 messageType = MessageType.Response;
             }
@@ -134,14 +143,8 @@ namespace Fenrir.Multiplayer.LiteNet
                 return false;
             }
 
-            // Return message
-            messageWrapper = new MessageWrapper()
-            {
-                MessageType = messageType,
-                RequestId = requestId,
-                MessageData = data,
-                IsEncrypted = messageFlags.HasFlag(MessageFlags.Encrypted)
-            };
+            // Create message wrapper
+            messageWrapper = new MessageWrapper(messageType, messageData, requestId, channel, messageFlags);
 
             return true;
         }

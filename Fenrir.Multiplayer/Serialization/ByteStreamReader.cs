@@ -11,51 +11,61 @@ namespace Fenrir.Multiplayer.Serialization
     class ByteStreamReader : IByteStreamReader, IRecyclable
     {
         /// <inheritdoc/>
-        public int Position => _netDataReader.Position;
+        public int Position => NetDataReader.Position;
 
         /// <inheritdoc/>
-        public bool IsNull => _netDataReader.IsNull;
+        public bool IsNull => NetDataReader.IsNull;
 
         /// <inheritdoc/>
-        public bool EndOfData => _netDataReader.EndOfData;
+        public bool EndOfData => NetDataReader.EndOfData;
 
         /// <inheritdoc/>
-        public int AvailableBytes => _netDataReader.AvailableBytes;
+        public int AvailableBytes => NetDataReader.AvailableBytes;
 
         /// <summary>
         /// Net Data Reader
         /// </summary>
-        private NetDataReader _netDataReader;
+        public NetDataReader NetDataReader { get; private set; }
 
         /// <summary>
         /// Creates ByteStreamReader
         /// </summary>
         public ByteStreamReader()
         {
-            _netDataReader = new NetDataReader();
+            NetDataReader = new NetDataReader();
+        }
+
+        /// <summary>
+        /// Creates byte stream reader from byte stream writer
+        /// </summary>
+        /// <param name="byteStreamWriter">Byte stream writer</param>
+        public ByteStreamReader(ByteStreamWriter byteStreamWriter)
+        {
+            NetDataReader = new NetDataReader(byteStreamWriter.NetDataWriter);
         }
 
         /// <summary>
         /// Creates ByteStreamReader form byte array
         /// </summary>
+        /// <param name="bytes">Bytes</param>
         public ByteStreamReader(byte[] bytes)
         {
-            _netDataReader = new NetDataReader(bytes);
+            NetDataReader = new NetDataReader(bytes);
         }
 
         /// <summary>
         /// Creates ByteStreamReader from LiteNet NetDataWriter
         /// </summary>
-        /// <param name="netDataReader"></param>
+        /// <param name="netDataReader">Net data reader</param>
         public ByteStreamReader(NetDataReader netDataReader)
         {
-            _netDataReader = netDataReader;
+            NetDataReader = netDataReader;
         }
 
         /// <inheritdoc/>
         public void SetNetDataReader(NetDataReader netDataReader)
         {
-            _netDataReader = netDataReader;
+            NetDataReader = netDataReader;
         }
 
         /// <inheritdoc/>
@@ -67,206 +77,206 @@ namespace Fenrir.Multiplayer.Serialization
         }
 
         /// <inheritdoc/>
-        void IRecyclable.Recycle() => _netDataReader?.Clear();
+        void IRecyclable.Recycle() => NetDataReader?.Clear();
 
         /// <inheritdoc/>
-        public bool ReadBool() => _netDataReader.GetBool();
+        public bool ReadBool() => NetDataReader.GetBool();
 
         /// <inheritdoc/>
-        public bool[] ReadBoolArray() => _netDataReader.GetBoolArray();
+        public bool[] ReadBoolArray() => NetDataReader.GetBoolArray();
 
         /// <inheritdoc/>
-        public byte ReadByte() => _netDataReader.GetByte();
+        public byte ReadByte() => NetDataReader.GetByte();
 
         /// <inheritdoc/>
-        public void ReadBytes(byte[] destination, int count) => _netDataReader.GetBytes(destination, count);
+        public void ReadBytes(byte[] destination, int count) => NetDataReader.GetBytes(destination, count);
 
         /// <inheritdoc/>
-        public void ReadBytes(byte[] destination, int start, int count) => _netDataReader.GetBytes(destination, start, count);
+        public void ReadBytes(byte[] destination, int start, int count) => NetDataReader.GetBytes(destination, start, count);
 
         /// <inheritdoc/>
-        public byte[] ReadBytesWithLength() => _netDataReader.GetBytesWithLength();
+        public byte[] ReadBytesWithLength() => NetDataReader.GetBytesWithLength();
 
         /// <inheritdoc/>
-        public char ReadChar() => _netDataReader.GetChar();
+        public char ReadChar() => NetDataReader.GetChar();
 
         /// <inheritdoc/>
-        public double ReadDouble() => _netDataReader.GetDouble();
+        public double ReadDouble() => NetDataReader.GetDouble();
 
         /// <inheritdoc/>
-        public double[] ReadDoubleArray() => _netDataReader.GetDoubleArray();
+        public double[] ReadDoubleArray() => NetDataReader.GetDoubleArray();
 
         /// <inheritdoc/>
-        public float ReadFloat() => _netDataReader.GetFloat();
+        public float ReadFloat() => NetDataReader.GetFloat();
 
         /// <inheritdoc/>
-        public float[] ReadFloatArray() => _netDataReader.GetFloatArray();
+        public float[] ReadFloatArray() => NetDataReader.GetFloatArray();
 
         /// <inheritdoc/>
-        public int ReadInt() => _netDataReader.GetInt();
+        public int ReadInt() => NetDataReader.GetInt();
 
         /// <inheritdoc/>
-        public int[] ReadIntArray() => _netDataReader.GetIntArray();
+        public int[] ReadIntArray() => NetDataReader.GetIntArray();
 
         /// <inheritdoc/>
-        public long ReadLong() => _netDataReader.GetLong();
+        public long ReadLong() => NetDataReader.GetLong();
 
         /// <inheritdoc/>
-        public long[] ReadLongArray() => _netDataReader.GetLongArray();
+        public long[] ReadLongArray() => NetDataReader.GetLongArray();
 
         /// <inheritdoc/>
-        public IPEndPoint ReadNetEndPoint() => _netDataReader.GetNetEndPoint();
+        public IPEndPoint ReadNetEndPoint() => NetDataReader.GetNetEndPoint();
 
         /// <inheritdoc/>
-        public byte[] ReadRemainingBytes() => _netDataReader.GetRemainingBytes();
+        public byte[] ReadRemainingBytes() => NetDataReader.GetRemainingBytes();
 
         /// <inheritdoc/>
-        public ArraySegment<byte> ReadRemainingBytesSegment() => _netDataReader.GetRemainingBytesSegment();
+        public ArraySegment<byte> ReadRemainingBytesSegment() => NetDataReader.GetRemainingBytesSegment();
 
         /// <inheritdoc/>
-        public sbyte ReadSByte() => _netDataReader.GetSByte();
+        public sbyte ReadSByte() => NetDataReader.GetSByte();
 
         /// <inheritdoc/>
-        public sbyte[] ReadSBytesWithLength() => _netDataReader.GetSBytesWithLength();
+        public sbyte[] ReadSBytesWithLength() => NetDataReader.GetSBytesWithLength();
 
         /// <inheritdoc/>
-        public short ReadShort() => _netDataReader.GetShort();
+        public short ReadShort() => NetDataReader.GetShort();
 
         /// <inheritdoc/>
-        public short[] ReadShortArray() => _netDataReader.GetShortArray();
+        public short[] ReadShortArray() => NetDataReader.GetShortArray();
 
         /// <inheritdoc/>
-        public string ReadString(int maxLength) => _netDataReader.GetString(maxLength);
+        public string ReadString(int maxLength) => NetDataReader.GetString(maxLength);
 
         /// <inheritdoc/>
-        public string ReadString() => _netDataReader.GetString();
+        public string ReadString() => NetDataReader.GetString();
 
         /// <inheritdoc/>
-        public string[] ReadStringArray(int maxStringLength) => _netDataReader.GetStringArray(maxStringLength);
+        public string[] ReadStringArray(int maxStringLength) => NetDataReader.GetStringArray(maxStringLength);
 
         /// <inheritdoc/>
-        public string[] ReadStringArray() => _netDataReader.GetStringArray();
+        public string[] ReadStringArray() => NetDataReader.GetStringArray();
 
         /// <inheritdoc/>
-        public uint ReadUInt() => _netDataReader.GetUInt();
+        public uint ReadUInt() => NetDataReader.GetUInt();
 
         /// <inheritdoc/>
-        public uint[] ReadUIntArray() => _netDataReader.GetUIntArray();
+        public uint[] ReadUIntArray() => NetDataReader.GetUIntArray();
 
         /// <inheritdoc/>
-        public ulong ReadULong() => _netDataReader.GetULong();
+        public ulong ReadULong() => NetDataReader.GetULong();
 
         /// <inheritdoc/>
-        public ulong[] ReadULongArray() => _netDataReader.GetULongArray();
+        public ulong[] ReadULongArray() => NetDataReader.GetULongArray();
 
         /// <inheritdoc/>
-        public ushort ReadUShort() => _netDataReader.GetUShort();
+        public ushort ReadUShort() => NetDataReader.GetUShort();
 
         /// <inheritdoc/>
-        public ushort[] ReadUShortArray() => _netDataReader.GetUShortArray();
+        public ushort[] ReadUShortArray() => NetDataReader.GetUShortArray();
 
         /// <inheritdoc/>
-        public bool PeekBool() => _netDataReader.PeekBool();
+        public bool PeekBool() => NetDataReader.PeekBool();
 
         /// <inheritdoc/>
-        public byte PeekByte() => _netDataReader.PeekByte();
+        public byte PeekByte() => NetDataReader.PeekByte();
 
         /// <inheritdoc/>
-        public char PeekChar() => _netDataReader.PeekChar();
+        public char PeekChar() => NetDataReader.PeekChar();
 
         /// <inheritdoc/>
-        public double PeekDouble() => _netDataReader.PeekDouble();
+        public double PeekDouble() => NetDataReader.PeekDouble();
 
         /// <inheritdoc/>
-        public float PeekFloat() => _netDataReader.PeekFloat();
+        public float PeekFloat() => NetDataReader.PeekFloat();
 
         /// <inheritdoc/>
-        public int PeekInt() => _netDataReader.PeekInt();
+        public int PeekInt() => NetDataReader.PeekInt();
 
         /// <inheritdoc/>
 
         /// <inheritdoc/>
-        public long PeekLong() => _netDataReader.PeekLong();
+        public long PeekLong() => NetDataReader.PeekLong();
 
         /// <inheritdoc/>
-        public sbyte PeekSByte() => _netDataReader.PeekSByte();
+        public sbyte PeekSByte() => NetDataReader.PeekSByte();
 
         /// <inheritdoc/>
-        public short PeekShort() => _netDataReader.PeekShort();
+        public short PeekShort() => NetDataReader.PeekShort();
 
         /// <inheritdoc/>
-        public string PeekString() => _netDataReader.PeekString();
+        public string PeekString() => NetDataReader.PeekString();
 
         /// <inheritdoc/>
-        public string PeekString(int maxLength) => _netDataReader.PeekString(maxLength);
+        public string PeekString(int maxLength) => NetDataReader.PeekString(maxLength);
 
         /// <inheritdoc/>
-        public uint PeekUInt() => _netDataReader.PeekUInt();
+        public uint PeekUInt() => NetDataReader.PeekUInt();
 
         /// <inheritdoc/>
-        public ulong PeekULong() => _netDataReader.PeekULong();
+        public ulong PeekULong() => NetDataReader.PeekULong();
 
         /// <inheritdoc/>
-        public ushort PeekUShort() => _netDataReader.PeekUShort();
+        public ushort PeekUShort() => NetDataReader.PeekUShort();
 
         /// <inheritdoc/>
 
-        public void SetSource(byte[] source) => _netDataReader.SetSource(source);
+        public void SetSource(byte[] source) => NetDataReader.SetSource(source);
 
         /// <inheritdoc/>
-        public void SetSource(byte[] source, int offset) => _netDataReader.SetSource(source, offset);
+        public void SetSource(byte[] source, int offset) => NetDataReader.SetSource(source, offset);
 
         /// <inheritdoc/>
-        public void SetSource(byte[] source, int offset, int maxSize) => _netDataReader.SetSource(source, offset, maxSize);
+        public void SetSource(byte[] source, int offset, int maxSize) => NetDataReader.SetSource(source, offset, maxSize);
 
         /// <inheritdoc/>
-        public void SkipBytes(int count) => _netDataReader.SkipBytes(count);
+        public void SkipBytes(int count) => NetDataReader.SkipBytes(count);
 
         /// <inheritdoc/>
-        public bool TryReadBool(out bool result) => _netDataReader.TryGetBool(out result);
+        public bool TryReadBool(out bool result) => NetDataReader.TryGetBool(out result);
 
         /// <inheritdoc/>
 
         /// <inheritdoc/>
-        public bool TryReadByte(out byte result) => _netDataReader.TryGetByte(out result);
+        public bool TryReadByte(out byte result) => NetDataReader.TryGetByte(out result);
 
         /// <inheritdoc/>
-        public bool TryReadBytesWithLength(out byte[] result) => _netDataReader.TryGetBytesWithLength(out result);
+        public bool TryReadBytesWithLength(out byte[] result) => NetDataReader.TryGetBytesWithLength(out result);
 
         /// <inheritdoc/>
-        public bool TryReadChar(out char result) => _netDataReader.TryGetChar(out result);
+        public bool TryReadChar(out char result) => NetDataReader.TryGetChar(out result);
 
         /// <inheritdoc/>
-        public bool TryReadDouble(out double result) => _netDataReader.TryGetDouble(out result);
+        public bool TryReadDouble(out double result) => NetDataReader.TryGetDouble(out result);
 
         /// <inheritdoc/>
-        public bool TryReadFloat(out float result) => _netDataReader.TryGetFloat(out result);
+        public bool TryReadFloat(out float result) => NetDataReader.TryGetFloat(out result);
 
         /// <inheritdoc/>
-        public bool TryReadInt(out int result) => _netDataReader.TryGetInt(out result);
+        public bool TryReadInt(out int result) => NetDataReader.TryGetInt(out result);
 
         /// <inheritdoc/>
-        public bool TryReadLong(out long result) => _netDataReader.TryGetLong(out result);
+        public bool TryReadLong(out long result) => NetDataReader.TryGetLong(out result);
 
         /// <inheritdoc/>
-        public bool TryReadSByte(out sbyte result) => _netDataReader.TryGetSByte(out result);
+        public bool TryReadSByte(out sbyte result) => NetDataReader.TryGetSByte(out result);
 
         /// <inheritdoc/>
-        public bool TryReadShort(out short result) => _netDataReader.TryGetShort(out result);
+        public bool TryReadShort(out short result) => NetDataReader.TryGetShort(out result);
 
         /// <inheritdoc/>
-        public bool TryReadString(out string result) => _netDataReader.TryGetString(out result);
+        public bool TryReadString(out string result) => NetDataReader.TryGetString(out result);
 
         /// <inheritdoc/>
-        public bool TryReadStringArray(out string[] result) => _netDataReader.TryGetStringArray(out result);
+        public bool TryReadStringArray(out string[] result) => NetDataReader.TryGetStringArray(out result);
 
         /// <inheritdoc/>
-        public bool TryReadUInt(out uint result) => _netDataReader.TryGetUInt(out result);
+        public bool TryReadUInt(out uint result) => NetDataReader.TryGetUInt(out result);
 
         /// <inheritdoc/>
-        public bool TryReadULong(out ulong result) => _netDataReader.TryGetULong(out result);
+        public bool TryReadULong(out ulong result) => NetDataReader.TryGetULong(out result);
 
         /// <inheritdoc/>
-        public bool TryReadUShort(out ushort result) => _netDataReader.TryGetUShort(out result);
+        public bool TryReadUShort(out ushort result) => NetDataReader.TryGetUShort(out result);
     }
 }
