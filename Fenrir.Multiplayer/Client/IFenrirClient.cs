@@ -56,6 +56,11 @@ namespace Fenrir.Multiplayer.Client
         Task<ConnectionResponse> Connect(ServerInfo serverInfo, object connectionRequestData = null);
 
         /// <summary>
+        /// Disconnects from the Server
+        /// </summary>
+        void Disconnect();
+
+        /// <summary>
         /// Adds event handler to the client
         /// Event handler will be invoked when event of type TEvent is received from the server
         /// </summary>

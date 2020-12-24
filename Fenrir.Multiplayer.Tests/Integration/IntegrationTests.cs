@@ -258,10 +258,92 @@ namespace Fenrir.Multiplayer.Tests
             Assert.AreEqual(response.Value, "response_test");
         }
 
-        // BIG TODO: TEST if request fails, client should get an exception on the response (or failed response)
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task FenrirClient_SendRequestResponse_ThrowsRequestFailedException_IfRequestHandlerFails()
+        {
+            using var fenrirServer = new FenrirServer();
+            fenrirServer.AddLiteNetProtocol();
+            fenrirServer.AddInfoService();
 
-        // TODO: Tests with options for send, reliable, encryption, ordered/unordered deliveyr method for requests and events
-        // TODO: Exception in event handler, request handlers
+            fenrirServer.AddRequestHandler(new TcsRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
+            {
+                return Task.FromException<TestResponse>(new InvalidOperationException("test"));
+            }));
+
+            await fenrirServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
+
+            using var fenrirClient = new FenrirClient();
+            var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
+
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            await Assert.ThrowsExceptionAsync<RequestFailedException>(async () => 
+            {
+                await fenrirClient.Peer.SendRequest<TestRequestWithResponse, TestResponse>(new TestRequestWithResponse() { Value = "request_test" });
+            });
+        }
+
+
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task FenrirClient_SendRequestResponse_ThrowsRequestFailedException_IfRequestHandlerReturnsNull()
+        {
+            using var fenrirServer = new FenrirServer();
+            fenrirServer.AddLiteNetProtocol();
+            fenrirServer.AddInfoService();
+
+            fenrirServer.AddRequestHandler(new TcsRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
+            {
+                return null;
+            }));
+
+            await fenrirServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
+
+            using var fenrirClient = new FenrirClient();
+            var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
+
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            await Assert.ThrowsExceptionAsync<RequestFailedException>(async () =>
+            {
+                await fenrirClient.Peer.SendRequest<TestRequestWithResponse, TestResponse>(new TestRequestWithResponse() { Value = "request_test" });
+            });
+        }
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task FenrirClient_SendRequestResponse_ThrowsRequestFailedException_IfRequestHandlerTimesOut()
+        {
+            using var fenrirServer = new FenrirServer();
+            fenrirServer.AddLiteNetProtocol();
+            fenrirServer.AddInfoService();
+
+            fenrirServer.AddRequestHandler(new TcsRequestResponseHandler<TestRequestWithResponse, TestResponse>(async request =>
+            {
+                await Task.Delay(1000);
+                return new TestResponse() { Value = "response_test" }; // Should not get here
+            }));
+
+            await fenrirServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
+
+            using var fenrirClient = new FenrirClient(
+                new IProtocolConnector[] { new LiteNetProtocolConnector() { RequestTimeoutMs = 100 } }
+            );
+            var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
+
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            await Assert.ThrowsExceptionAsync<RequestTimeoutException>(async () =>
+            {
+                await fenrirClient.Peer.SendRequest<TestRequestWithResponse, TestResponse>(new TestRequestWithResponse() { Value = "request_test" });
+            });
+        }
 
         #region Fixtures
         class CustomConnectionRequestData : IByteStreamSerializable

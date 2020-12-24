@@ -159,6 +159,15 @@ namespace Fenrir.Multiplayer.Client
         }
 
         /// <inheritdoc/>
+        public void Disconnect()
+        {
+            if (State != ConnectionState.Disconnected)
+            {
+                _protocolConnector?.Disconnect();
+            }
+        }
+
+        /// <inheritdoc/>
         public void AddEventHandler<TEvent>(IEventHandler<TEvent> eventHandler) where TEvent : IEvent
         {
             foreach(var protocolConnector in _supportedProtocolConnectors)
@@ -194,9 +203,11 @@ namespace Fenrir.Multiplayer.Client
             }
         }
 
+
         public void Dispose()
         {
-            _protocolConnector.Dispose();
+            // Dispose existing protocol connector
+            _protocolConnector?.Dispose();
             _protocolConnector = null;
         }
     }
