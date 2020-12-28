@@ -65,7 +65,7 @@ namespace Fenrir.Multiplayer.Server
         /// </summary>
         /// <typeparam name="TConnectionRequestData">Type of connection request</typeparam>
         /// <param name="handler">Connection request handler</param>
-        void SetConnectionRequestHandler<TConnectionRequestData>(Func<ServerConnectionRequest<TConnectionRequestData>, Task<ConnectionResponse>> handler)
+        void SetConnectionRequestHandler<TConnectionRequestData>(Func<IServerConnectionRequest<TConnectionRequestData>, Task<ConnectionResponse>> handler)
             where TConnectionRequestData : class, new();
 
         /// <summary>
@@ -83,6 +83,17 @@ namespace Fenrir.Multiplayer.Server
         /// <typeparam name="TResponse">Type of response</typeparam>
         /// <param name="requestHandler">Request handler</param>
         void AddRequestHandler<TRequest, TResponse>(IRequestHandler<TRequest, TResponse> requestHandler)
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse;
+
+
+        /// <summary>
+        /// Adds asynchronous request handler for a given request and response type, to all installed protocols
+        /// </summary>
+        /// <typeparam name="TRequest">Type of request</typeparam>
+        /// <typeparam name="TResponse">Type of response</typeparam>
+        /// <param name="requestHandler">Request handler</param>
+        void AddRequestHandlerAsync<TRequest, TResponse>(IRequestHandlerAsync<TRequest, TResponse> requestHandler)
             where TRequest : IRequest<TResponse>
             where TResponse : IResponse;
     }

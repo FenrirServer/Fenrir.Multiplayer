@@ -17,8 +17,8 @@ namespace Fenrir.Multiplayer.Network
         /// </summary>
         /// <param name="request">Request object</param>
         /// <param name="peer">Remote peer</param>
-        /// <returns>Task that must complete with a response for a given request</returns>
-        Task<TResponse> HandleRequest(TRequest request, IServerPeer peer);
+        /// <returns>Response for a given request</returns>
+        TResponse HandleRequest(TRequest request, IServerPeer peer);
     }
 
     /// <summary>

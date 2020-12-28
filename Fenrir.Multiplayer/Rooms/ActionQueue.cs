@@ -27,6 +27,11 @@ namespace Fenrir.Multiplayer.Rooms
         private volatile bool _isRunning = false;
 
         /// <summary>
+        /// Set to true when object is disposed
+        /// </summary>
+        private volatile bool _isDisposed = false;
+
+        /// <summary>
         /// Running lock
         /// </summary>
         private object _isRunningLock = new object();
@@ -81,6 +86,11 @@ namespace Fenrir.Multiplayer.Rooms
         /// </summary>
         public async void Run()
         {
+            if(_isDisposed)
+            {
+                throw new InvalidOperationException("Failed to run Action queue after it was disposed");
+            }
+
             IsRunning = true;
 
             while(IsRunning)
@@ -162,6 +172,12 @@ namespace Fenrir.Multiplayer.Rooms
         public async void Schedule(Action action, int delayMs)
         {
             await Task.Delay(delayMs);
+
+            if(_isDisposed)
+            {
+                return;
+            }
+
             Enqueue(action);
         }
 
@@ -173,13 +189,26 @@ namespace Fenrir.Multiplayer.Rooms
         public async void Schedule(Action action, TimeSpan delay)
         {
             await Task.Delay(delay);
+
+            if (_isDisposed)
+            {
+                return;
+            }
+
             Enqueue(action);
         }
 
         #region IDisposable Implementation
         public void Dispose()
         {
+            _isDisposed = true;
+
             Stop();
+
+            lock (_actions)
+            {
+                _actions.Clear();
+            }
         }
         #endregion
     }

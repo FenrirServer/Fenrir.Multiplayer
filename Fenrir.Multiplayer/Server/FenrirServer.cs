@@ -187,7 +187,7 @@ namespace Fenrir.Multiplayer.Server
         }
 
         /// <inheritdoc/>
-        public void SetConnectionRequestHandler<TConnectionRequestData>(Func<ServerConnectionRequest<TConnectionRequestData>, Task<ConnectionResponse>> handler) 
+        public void SetConnectionRequestHandler<TConnectionRequestData>(Func<IServerConnectionRequest<TConnectionRequestData>, Task<ConnectionResponse>> handler) 
             where TConnectionRequestData : class, new()
         {
             if(handler == null)
@@ -243,6 +243,27 @@ namespace Fenrir.Multiplayer.Server
                 e.ProtocolListener.AddRequestHandler<TRequest, TResponse>(requestHandler);
             };
         }
+
+        /// <inheritdoc/>
+        public void AddRequestHandlerAsync<TRequest, TResponse>(IRequestHandlerAsync<TRequest, TResponse> requestHandler)
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse
+        {
+            if (requestHandler == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandler));
+            }
+
+            foreach (var protocolListener in _protocolListeners)
+            {
+                protocolListener.AddRequestHandlerAsync<TRequest, TResponse>(requestHandler);
+            }
+
+            ProtocolAdded += (sender, e) => {
+                e.ProtocolListener.AddRequestHandlerAsync<TRequest, TResponse>(requestHandler);
+            };
+        }
+
 
         public void Dispose()
         {

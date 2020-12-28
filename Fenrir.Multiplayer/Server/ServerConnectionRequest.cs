@@ -3,29 +3,35 @@
 namespace Fenrir.Multiplayer.Server
 {
     /// <summary>
-    /// Represents incoming server connection
+    /// Server Connection Request
     /// </summary>
-    /// <typeparam name="TConnectionRequestData">Custom request data object</typeparam>
-    public class ServerConnectionRequest<TConnectionRequestData>
+    /// <typeparam name="TConnectionRequestData">Custom data</typeparam>
+    class ServerConnectionRequest<TConnectionRequestData> : IServerConnectionRequest<TConnectionRequestData>
     {
-        /// <summary>
-        /// IP Endpoint of the incoming connection
-        /// </summary>
+        /// <inheritdoc/>
         public IPEndPoint Endpoint { get; private set; }
 
-        /// <summary>
-        /// Client Id of the incoming connection
-        /// </summary>
+        /// <inheritdoc/>
+        public int ProtocolVersion { get; private set; }
+
+        /// <inheritdoc/>
         public string ClientId { get; private set; }
 
-        /// <summary>
-        /// Custom connection request data object
-        /// </summary>
+        /// <inheritdoc/>
+
         public TConnectionRequestData Data { get; private set; }
 
-        internal ServerConnectionRequest(IPEndPoint endpoint, string clientId, TConnectionRequestData connectionRequestData)
+        /// <summary>
+        /// Creates new server connection request
+        /// </summary>
+        /// <param name="endpoint">Remote endpoint</param>
+        /// <param name="protocolVersion">Version of the protocol used by this client</param>
+        /// <param name="clientId">Client id</param>
+        /// <param name="connectionRequestData">Custom Connection Request data object</param>
+        public ServerConnectionRequest(IPEndPoint endpoint, int protocolVersion, string clientId, TConnectionRequestData connectionRequestData)
         {
             Endpoint = endpoint;
+            ProtocolVersion = protocolVersion;
             ClientId = clientId;
             Data = connectionRequestData;
         }

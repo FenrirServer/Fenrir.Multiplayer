@@ -2,6 +2,7 @@
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
 using LiteNetLib;
+using System;
 using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.LiteNet
@@ -39,12 +40,13 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Default constructor
         /// </summary>
+        /// <param name="peerId">Unique id of this client to server connection</param>
         /// <param name="netPeer">LiteNet NetPeer</param>
         /// <param name="messageWriter">Message Writer</param>
         /// <param name="pendingRequestMap">Pending Request Map</param>
         /// <param name="byteStreamWriterPool">Byte Stream Writer Object Pool</param>
-        public LiteNetClientPeer(NetPeer netPeer, MessageWriter messageWriter, PendingRequestMap pendingRequestMap, TypeHashMap typeHashMap, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool, int requestTimeoutMs)
-            : base(netPeer, messageWriter, byteStreamWriterPool)
+        public LiteNetClientPeer(string peerId, NetPeer netPeer, MessageWriter messageWriter, PendingRequestMap pendingRequestMap, TypeHashMap typeHashMap, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool, int requestTimeoutMs)
+            : base(peerId, netPeer, messageWriter, byteStreamWriterPool)
         {
             _pendingRequestMap = pendingRequestMap;
             _requestTimeoutMs = requestTimeoutMs;

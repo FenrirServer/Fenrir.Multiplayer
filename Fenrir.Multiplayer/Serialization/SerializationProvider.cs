@@ -14,7 +14,7 @@ namespace Fenrir.Multiplayer.Serialization
         public IContractSerializer ContractSerializer { get; private set; }
 
         /// <summary>
-        /// Default constructor
+        /// Creates serializaton provider
         /// </summary>
         public SerializationProvider()
         {

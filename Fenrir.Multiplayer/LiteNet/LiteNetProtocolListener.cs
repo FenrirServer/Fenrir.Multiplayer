@@ -256,15 +256,15 @@ namespace Fenrir.Multiplayer.LiteNet
             return Task.CompletedTask;
         }
 
-        private void AcceptConnectionRequest(ConnectionRequest connectionRequest, int peerProtocolVersion)
+        private void AcceptConnectionRequest(ConnectionRequest liteNetConnectionRequest, int protocolVersion, string clientId)
         {
-            _logger.Trace("Accepting connection request from {0}", connectionRequest.RemoteEndPoint);
+            _logger.Trace("Accepting connection request from {0}", liteNetConnectionRequest.RemoteEndPoint);
 
-            NetPeer netPeer = connectionRequest.Accept();
+            NetPeer netPeer = liteNetConnectionRequest.Accept();
 
             // Create server peer
             var messageWriter = new MessageWriter(_serializationProvider, _typeHashMap, _logger);
-            netPeer.Tag = new LiteNetServerPeer(netPeer, peerProtocolVersion, messageWriter, _byteStreamWriterPool);
+            netPeer.Tag = new LiteNetServerPeer(clientId, protocolVersion, netPeer, messageWriter, _byteStreamWriterPool);
         }
 
         private void RejectConnectionRequest(ConnectionRequest connectionRequest, string reason)
@@ -284,7 +284,7 @@ namespace Fenrir.Multiplayer.LiteNet
         }
 
         /// <inheritdoc/>
-        public void SetConnectionRequestHandler<TConnectionRequestData>(Func<ServerConnectionRequest<TConnectionRequestData>, Task<ConnectionResponse>> handler)
+        public void SetConnectionRequestHandler<TConnectionRequestData>(Func<IServerConnectionRequest<TConnectionRequestData>, Task<ConnectionResponse>> handler)
             where TConnectionRequestData : class, new()
         {
             if(handler == null)
@@ -325,13 +325,13 @@ namespace Fenrir.Multiplayer.LiteNet
                 }
 
                 // Create connection request object
-                ServerConnectionRequest<TConnectionRequestData> hostConnectionRequest = new ServerConnectionRequest<TConnectionRequestData>(connectionRequest.RemoteEndPoint, clientId, connectionRequestData);
+                ServerConnectionRequest<TConnectionRequestData> serverConnectionRequest = new ServerConnectionRequest<TConnectionRequestData>(connectionRequest.RemoteEndPoint, protocolVersion, clientId, connectionRequestData);
 
                 // Invoke handler
                 ConnectionResponse response;
                 try
                 {
-                    response = await handler(hostConnectionRequest);
+                    response = await handler(serverConnectionRequest);
                 }
                 catch(Exception e)
                 {
@@ -347,7 +347,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 else
                 {
                     _logger.Trace("Accepted connection request from {0}, client id {1}", connectionRequest.RemoteEndPoint, clientId);
-                    AcceptConnectionRequest(connectionRequest, protocolVersion);
+                    AcceptConnectionRequest(connectionRequest, protocolVersion, clientId);
                 }
             };
         }
@@ -410,6 +410,22 @@ namespace Fenrir.Multiplayer.LiteNet
         }
 
         /// <inheritdoc/>
+        public void AddRequestHandlerAsync<TRequest, TResponse>(IRequestHandlerAsync<TRequest, TResponse> requestHandler)
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse
+        {
+            if (requestHandler == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandler));
+            }
+
+            _typeHashMap.AddType<TRequest>();
+            _typeHashMap.AddType<TResponse>();
+
+            _requestHandlerMap.AddRequestHandlerAsync<TRequest, TResponse>(requestHandler);
+        }
+
+        /// <inheritdoc/>
         public void RemoveRequestHandler<TRequest>(IRequestHandler<TRequest> requestHandler) where TRequest : IRequest
         {
             if (requestHandler == null)
@@ -431,6 +447,19 @@ namespace Fenrir.Multiplayer.LiteNet
             }
 
             _requestHandlerMap.RemoveRequestHandler<TRequest, TResponse>(requestHandler);
+        }
+
+        /// <inheritdoc/>
+        public void RemoveRequestHandlerAsync<TRequest, TResponse>(IRequestHandlerAsync<TRequest, TResponse> requestHandler)
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse
+        {
+            if (requestHandler == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandler));
+            }
+
+            _requestHandlerMap.RemoveRequestHandlerAsync<TRequest, TResponse>(requestHandler);
         }
 
         #region INetEventListener Implementation
@@ -455,7 +484,7 @@ namespace Fenrir.Multiplayer.LiteNet
             }
             else // No custom connection request handler, simply accept
             {
-                AcceptConnectionRequest(connectionRequest, protocolVersion);
+                AcceptConnectionRequest(connectionRequest, protocolVersion, clientId);
             }
         }
 

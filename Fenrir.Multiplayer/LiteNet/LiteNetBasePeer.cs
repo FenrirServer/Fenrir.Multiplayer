@@ -1,6 +1,7 @@
 ﻿using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
 using LiteNetLib;
+using System.Net;
 
 namespace Fenrir.Multiplayer.LiteNet
 {
@@ -25,13 +26,23 @@ namespace Fenrir.Multiplayer.LiteNet
         protected RecyclableObjectPool<ByteStreamWriter> ByteStreamWriterPool { get; private set; }
 
         /// <summary>
+        /// Peer id
+        /// </summary>
+        public string Id { get; private set; }
+
+        /// <inheritdoc/>
+        public EndPoint EndPoint => NetPeer.EndPoint;
+
+        /// <summary>
         /// Default constructor
         /// </summary>
+        /// <param name="id">Unique peer id</param>
         /// <param name="netPeer">LiteNet NetPeer</param>
         /// <param name="messageWriter">Message Writer</param>
         /// <param name="byteStreamWriterPool">Byte Stream Writer object pool</param>
-        public LiteNetBasePeer(NetPeer netPeer, MessageWriter messageWriter, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool)
+        public LiteNetBasePeer(string id, NetPeer netPeer, MessageWriter messageWriter, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool)
         {
+            Id = id;
             NetPeer = netPeer;
             MessageWriter = messageWriter;
             ByteStreamWriterPool = byteStreamWriterPool;

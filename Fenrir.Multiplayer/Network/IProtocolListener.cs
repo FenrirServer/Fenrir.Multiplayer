@@ -63,7 +63,7 @@ namespace Fenrir.Multiplayer.Network
         /// </summary>
         /// <typeparam name="TConnectionRequestData">Type of a custom data contract</typeparam>
         /// <param name="handler">Connection request handler</param>
-        void SetConnectionRequestHandler<TConnectionRequestData>(Func<ServerConnectionRequest<TConnectionRequestData>, Task<ConnectionResponse>> handler)
+        void SetConnectionRequestHandler<TConnectionRequestData>(Func<IServerConnectionRequest<TConnectionRequestData>, Task<ConnectionResponse>> handler)
             where TConnectionRequestData : class, new();
 
         /// <summary>
@@ -91,6 +91,16 @@ namespace Fenrir.Multiplayer.Network
             where TResponse : IResponse;
 
         /// <summary>
+        /// Adds asynchronous request handler for a given request and response type, to all installed protocols
+        /// </summary>
+        /// <typeparam name="TRequest">Type of request</typeparam>
+        /// <typeparam name="TResponse">Type of response</typeparam>
+        /// <param name="requestHandler">Request handler</param>
+        void AddRequestHandlerAsync<TRequest, TResponse>(IRequestHandlerAsync<TRequest, TResponse> requestHandler)
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse;
+
+        /// <summary>
         /// Removes request handler, from all installed protocols
         /// </summary>
         /// <typeparam name="TRequest">Type of request</typeparam>
@@ -105,6 +115,16 @@ namespace Fenrir.Multiplayer.Network
         /// <typeparam name="TResponse">Type of response</typeparam>
         /// <param name="requestHandler">Request handler</param>
         void RemoveRequestHandler<TRequest, TResponse>(IRequestHandler<TRequest, TResponse> requestHandler)
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse;
+
+        /// <summary>
+        /// Removes asynchronous request handler, from all installed protocols
+        /// </summary>
+        /// <typeparam name="TRequest">Type of request</typeparam>
+        /// <typeparam name="TResponse">Type of response</typeparam>
+        /// <param name="requestHandler">Request handler</param>
+        void RemoveRequestHandlerAsync<TRequest, TResponse>(IRequestHandlerAsync<TRequest, TResponse> requestHandler)
             where TRequest : IRequest<TResponse>
             where TResponse : IResponse;
 

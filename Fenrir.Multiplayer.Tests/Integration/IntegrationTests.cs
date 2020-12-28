@@ -237,10 +237,10 @@ namespace Fenrir.Multiplayer.Tests
             fenrirServer.AddLiteNetProtocol();
             fenrirServer.AddInfoService();
 
-            fenrirServer.AddRequestHandler(new TcsRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
+            fenrirServer.AddRequestHandler(new TestRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
             {
                 Assert.AreEqual("request_test", request.Value);
-                return Task.FromResult(new TestResponse() { Value = "response_test" });
+                return new TestResponse() { Value = "response_test" };
             }));
 
             await fenrirServer.Start();
@@ -265,9 +265,9 @@ namespace Fenrir.Multiplayer.Tests
             fenrirServer.AddLiteNetProtocol();
             fenrirServer.AddInfoService();
 
-            fenrirServer.AddRequestHandler(new TcsRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
+            fenrirServer.AddRequestHandler(new TestRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
             {
-                return Task.FromException<TestResponse>(new InvalidOperationException("test"));
+                throw new InvalidOperationException("test");
             }));
 
             await fenrirServer.Start();
@@ -294,7 +294,7 @@ namespace Fenrir.Multiplayer.Tests
             fenrirServer.AddLiteNetProtocol();
             fenrirServer.AddInfoService();
 
-            fenrirServer.AddRequestHandler(new TcsRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
+            fenrirServer.AddRequestHandler(new TestRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
             {
                 return null;
             }));
@@ -314,6 +314,94 @@ namespace Fenrir.Multiplayer.Tests
                 await fenrirClient.Peer.SendRequest<TestRequestWithResponse, TestResponse>(new TestRequestWithResponse() { Value = "request_test" });
             });
         }
+
+
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task FenrirClient_SendRequestResponse_SendsRequestWithAsyncResponse()
+        {
+            using var fenrirServer = new FenrirServer();
+            fenrirServer.AddLiteNetProtocol();
+            fenrirServer.AddInfoService();
+
+            fenrirServer.AddRequestHandlerAsync(new TestAsyncRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
+            {
+                Assert.AreEqual("request_test", request.Value);
+                return Task.FromResult(new TestResponse() { Value = "response_test" });
+            }));
+
+            await fenrirServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
+
+            using var fenrirClient = new FenrirClient();
+            var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
+
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            var response = await fenrirClient.Peer.SendRequest<TestRequestWithResponse, TestResponse>(new TestRequestWithResponse() { Value = "request_test" });
+
+            Assert.AreEqual(response.Value, "response_test");
+        }
+
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task FenrirClient_SendRequestResponse_ThrowsRequestFailedException_IfAsyncRequestHandlerFails()
+        {
+            using var fenrirServer = new FenrirServer();
+            fenrirServer.AddLiteNetProtocol();
+            fenrirServer.AddInfoService();
+
+            fenrirServer.AddRequestHandlerAsync(new TestAsyncRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
+            {
+                return Task.FromException<TestResponse>(new InvalidOperationException("test"));
+            }));
+
+            await fenrirServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
+
+            using var fenrirClient = new FenrirClient();
+            var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
+
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            await Assert.ThrowsExceptionAsync<RequestFailedException>(async () =>
+            {
+                await fenrirClient.Peer.SendRequest<TestRequestWithResponse, TestResponse>(new TestRequestWithResponse() { Value = "request_test" });
+            });
+        }
+
+
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task FenrirClient_SendRequestResponse_ThrowsRequestFailedException_IfAsyncRequestHandlerReturnsNull()
+        {
+            using var fenrirServer = new FenrirServer();
+            fenrirServer.AddLiteNetProtocol();
+            fenrirServer.AddInfoService();
+
+            fenrirServer.AddRequestHandlerAsync(new TestAsyncRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
+            {
+                return null;
+            }));
+
+            await fenrirServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
+
+            using var fenrirClient = new FenrirClient();
+            var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
+
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            await Assert.ThrowsExceptionAsync<RequestFailedException>(async () =>
+            {
+                await fenrirClient.Peer.SendRequest<TestRequestWithResponse, TestResponse>(new TestRequestWithResponse() { Value = "request_test" });
+            });
+        }
+
+
         [TestMethod, Timeout(TestTimeout)]
         public async Task FenrirClient_SendRequestResponse_ThrowsRequestFailedException_IfRequestHandlerTimesOut()
         {
@@ -321,7 +409,7 @@ namespace Fenrir.Multiplayer.Tests
             fenrirServer.AddLiteNetProtocol();
             fenrirServer.AddInfoService();
 
-            fenrirServer.AddRequestHandler(new TcsRequestResponseHandler<TestRequestWithResponse, TestResponse>(async request =>
+            fenrirServer.AddRequestHandlerAsync(new TestAsyncRequestResponseHandler<TestRequestWithResponse, TestResponse>(async request =>
             {
                 await Task.Delay(1000);
                 return new TestResponse() { Value = "response_test" }; // Should not get here
@@ -436,18 +524,35 @@ namespace Fenrir.Multiplayer.Tests
             }
         }
 
-        class TcsRequestResponseHandler<TRequest, TResponse> : IRequestHandler<TRequest, TResponse>
+        class TestRequestResponseHandler<TRequest, TResponse> : IRequestHandler<TRequest, TResponse>
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse
+        {
+            private Func<TRequest, TResponse> _callback;
+
+            public TestRequestResponseHandler(Func<TRequest, TResponse> callback)
+            {
+                _callback = callback;
+            }
+
+            public TResponse HandleRequest(TRequest request, IServerPeer peer)
+            {
+                return _callback(request);
+            }
+        }
+
+        class TestAsyncRequestResponseHandler<TRequest, TResponse> : IRequestHandlerAsync<TRequest, TResponse>
             where TRequest : IRequest<TResponse>
             where TResponse : IResponse
         {
             private Func<TRequest, Task<TResponse>> _callback;
 
-            public TcsRequestResponseHandler(Func<TRequest, Task<TResponse>> callback)
+            public TestAsyncRequestResponseHandler(Func<TRequest, Task<TResponse>> callback)
             {
                 _callback = callback;
             }
 
-            public async Task<TResponse> HandleRequest(TRequest request, IServerPeer peer)
+            public async Task<TResponse> HandleRequestAsync(TRequest request, IServerPeer peer)
             {
                 return await _callback(request);
             }

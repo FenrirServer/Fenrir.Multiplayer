@@ -86,7 +86,7 @@ namespace Fenrir.Multiplayer.Network
                 throw new ArgumentNullException(nameof(requestHandler));
             }
 
-            Action<MessageWrapper, IServerPeer> handlerAction = async (requestWrapper, serverPeer) =>
+            Action<MessageWrapper, IServerPeer> handlerAction = (requestWrapper, serverPeer) =>
             {
                 short requestId = requestWrapper.RequestId;
                 bool isEncrypted = requestWrapper.Flags.HasFlag(MessageFlags.IsEncrypted);
@@ -97,7 +97,7 @@ namespace Fenrir.Multiplayer.Network
                     
                 try
                 {
-                    response = await requestHandler.HandleRequest((TRequest)requestWrapper.MessageData, serverPeer);
+                    response = requestHandler.HandleRequest((TRequest)requestWrapper.MessageData, serverPeer);
                 }
                 catch (Exception e)
                 {
@@ -125,6 +125,59 @@ namespace Fenrir.Multiplayer.Network
             }
         }
 
+        /// <summary>
+        /// Adds asynchronous request handler for a given request and response type
+        /// </summary>
+        /// <typeparam name="TRequest">Type of request</typeparam>
+        /// <typeparam name="TResponse">Type of response</typeparam>
+        /// <param name="requestHandler">Request handler</param>
+        public void AddRequestHandlerAsync<TRequest, TResponse>(IRequestHandlerAsync<TRequest, TResponse> requestHandler)
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse
+        {
+            if (requestHandler == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandler));
+            }
+
+            Action<MessageWrapper, IServerPeer> handlerAction = async (requestWrapper, serverPeer) =>
+            {
+                short requestId = requestWrapper.RequestId;
+                bool isEncrypted = requestWrapper.Flags.HasFlag(MessageFlags.IsEncrypted);
+                bool isOrdered = requestWrapper.Flags.HasFlag(MessageFlags.IsOrdered);
+                byte channel = requestWrapper.Channel;
+
+                TResponse response = default;
+
+                try
+                {
+                    response = await requestHandler.HandleRequestAsync((TRequest)requestWrapper.MessageData, serverPeer);
+                }
+                catch (Exception e)
+                {
+                    _logger.Error("Uncaught exception in request {0} handler {1}: {2}", typeof(TRequest).Name, requestHandler, e.ToString());
+                }
+
+                if (response == null)
+                {
+                    serverPeer.SendResponse<ErrorResponse>(new ErrorResponse(), requestId, isEncrypted, channel, isOrdered);
+                    return;
+                }
+
+                serverPeer.SendResponse<TResponse>(response, requestId, isEncrypted, channel, isOrdered);
+
+            };
+
+            lock (_syncRoot)
+            {
+                if (_requestHandlers.ContainsKey(typeof(TRequest)))
+                {
+                    throw new RequestHandlerException($"Failed to add request handler {requestHandler.GetType()}, handler for request type {typeof(TRequest).Name} is already registered");
+                }
+
+                _requestHandlers.Add(typeof(TRequest), handlerAction);
+            }
+        }
         /// <summary>
         /// Removes request handler
         /// </summary>
@@ -156,6 +209,32 @@ namespace Fenrir.Multiplayer.Network
         /// <typeparam name="TResponse">Type of response</typeparam>
         /// <param name="requestHandler">Request handler</param>
         public void RemoveRequestHandler<TRequest, TResponse>(IRequestHandler<TRequest, TResponse> requestHandler)
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse
+        {
+            if (requestHandler == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandler));
+            }
+
+            lock (_syncRoot)
+            {
+                if (!_requestHandlers.ContainsKey(typeof(TRequest)))
+                {
+                    throw new RequestHandlerException($"Failed to remove request handler {requestHandler.GetType()}, handler for request type {typeof(TRequest).Name} is not registered");
+                }
+
+                _requestHandlers.Remove(typeof(TRequest));
+            }
+        }
+
+        /// <summary>
+        /// Removes request handler
+        /// </summary>
+        /// <typeparam name="TRequest">Type of request</typeparam>
+        /// <typeparam name="TResponse">Type of response</typeparam>
+        /// <param name="requestHandler">Request handler</param>
+        public void RemoveRequestHandlerAsync<TRequest, TResponse>(IRequestHandlerAsync<TRequest, TResponse> requestHandler)
             where TRequest : IRequest<TResponse>
             where TResponse : IResponse
         {

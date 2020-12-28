@@ -25,14 +25,15 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Default constructor
         /// </summary>
-        /// <param name="netPeer">LiteNet NetPeer</param>
+        /// <param name="peerId">Unique id of the client</param>
         /// <param name="protocolVersion">Peer protocol version</param>
+        /// <param name="netPeer">LiteNet NetPeer</param>
         /// <param name="messageWriter">Message Writer</param>
         /// <param name="byteStreamWriterPool">Byte Stream Writer Object Pool</param>
-        public LiteNetServerPeer(NetPeer netPeer, int protocolVersion, MessageWriter messageWriter, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool)
-            : base(netPeer, messageWriter, byteStreamWriterPool)
+        public LiteNetServerPeer(string peerId, int protocolVersion, NetPeer netPeer, MessageWriter messageWriter, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool)
+            : base(peerId, netPeer, messageWriter, byteStreamWriterPool)
         {
-            ProtocolVersion = protocolVersion;
+            ProtocolVersion = protocolVersion; 
         }
 
         /// <inheritdoc/>
@@ -84,5 +85,11 @@ namespace Fenrir.Multiplayer.LiteNet
             _latency = latency;
         }
 
+
+        /// <inheritdoc/>
+        public void Disconnect()
+        {
+            NetPeer.Disconnect();
+        }
     }
 }

@@ -44,5 +44,10 @@
         /// <param name="ordered">If true, messages in the specified channel will arrive in order.</param>
         void SendResponse<TResponse>(TResponse response, short requestId, bool encrypted = true, byte channel = 0, bool ordered = true)
             where TResponse : IResponse;
+
+        /// <summary>
+        /// Disconnects the peer
+        /// </summary>
+        void Disconnect();
     }
 }

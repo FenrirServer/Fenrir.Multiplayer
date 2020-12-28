@@ -337,7 +337,11 @@ namespace Fenrir.Multiplayer.LiteNet
                 throw new InvalidOperationException("Connection succeeeded during wrong state: " + State);
             }
 
-            _peer = new LiteNetClientPeer(peer, _messageWriter, _pendingRequestMap, _typeHashMap, _byteStreamWriterPool, RequestTimeoutMs);
+            // Unfortunately right now there is no way for us to know the actual id of the server, it has to be communicated
+            // We need to add Accept(NetDataWriter) in LiteNet similar to Reject to send over connection result to the client
+            string peerId = Guid.NewGuid().ToString(); 
+
+            _peer = new LiteNetClientPeer(peerId, peer, _messageWriter, _pendingRequestMap, _typeHashMap, _byteStreamWriterPool, RequestTimeoutMs);
             _connectionTcs.SetResult(ConnectionResponse.Successful);
         }
 
