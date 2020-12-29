@@ -34,26 +34,26 @@ namespace Fenrir.Multiplayer.Rooms
         protected bool IsRunning => _actionQueue.IsRunning;
 
         /// <summary>
+        /// Peers that joined this room, by peer id
+        /// </summary>
+        protected Dictionary<string, IServerPeer> Peers = new Dictionary<string, IServerPeer>();
+
+        /// <summary>
         /// Unique room id
         /// </summary>
         public string Id { get; private set; }
 
         /// <summary>
-        /// Peers that joined this room, by peer id
-        /// </summary>
-        private Dictionary<string, IServerPeer> _peers = new Dictionary<string, IServerPeer>();
-
-
-        /// <summary>
         /// Creates Server Room
         /// </summary>
         /// <param name="logger">Logger</param>
-        public ServerRoom(IFenrirLogger logger)
+        /// <param name="roomId">Unique id</param>
+        public ServerRoom(IFenrirLogger logger, string roomId)
         {
             Logger = logger;
             _actionQueue = new ActionQueue(logger);
             _actionQueue.Run();
-            Id = Guid.NewGuid().ToString();
+            Id = roomId;
         }
 
         /// <summary>
@@ -112,16 +112,16 @@ namespace Fenrir.Multiplayer.Rooms
         /// <param name="peer">Peer</param>
         protected void RemovePeer(IServerPeer peer)
         {
-            if (!_peers.ContainsKey(peer.Id))
+            if (!Peers.ContainsKey(peer.Id))
             {
                 throw new InvalidOperationException(string.Format("Failed to remove peer {0} from the room {1}, no such peer", peer.Id, Id));
             }
 
-            _peers.Remove(peer.Id);
+            Peers.Remove(peer.Id);
 
             OnPeerLeave(peer);
 
-            if(_peers.Count == 0)
+            if(Peers.Count == 0)
             {
                 Terminate();
             }
@@ -130,7 +130,7 @@ namespace Fenrir.Multiplayer.Rooms
         protected void BroadcastEvent<TEvent>(TEvent evt)
             where TEvent : IEvent
         {
-            foreach(var peer in _peers.Values)
+            foreach(var peer in Peers.Values)
             {
                 peer.SendEvent(evt);
             }
@@ -147,12 +147,12 @@ namespace Fenrir.Multiplayer.Rooms
         {
             Enqueue(() =>
             {
-                if (_peers.ContainsKey(peer.Id))
+                if (Peers.ContainsKey(peer.Id))
                 {
                     return; // Already joined, do nothing
                 }
 
-                _peers.Add(peer.Id, peer);
+                Peers.Add(peer.Id, peer);
                 OnPeerJoin(peer, joinToken);
             });
         }

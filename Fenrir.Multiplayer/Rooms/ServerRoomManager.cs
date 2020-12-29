@@ -23,9 +23,8 @@ namespace Fenrir.Multiplayer.Rooms
         /// <param name="peer">Peer that creates a room</param>
         /// <param name="roomId">Room id</param>
         /// <param name="joinToken">(optional) custom token supplied by the peer</param>
-        /// <param name="room">Newly created room</param>
-        /// <returns>True if room can be created, otherwise false</returns>
-        public delegate bool CreateRoomHandler(IServerPeer peer, string roomId, string joinToken, out TRoom room);
+        /// <returns>Newly created room</returns>
+        public delegate TRoom CreateRoomHandler(IServerPeer peer, string roomId, string joinToken);
 
         /// <summary>
         /// Logger
@@ -46,7 +45,7 @@ namespace Fenrir.Multiplayer.Rooms
         /// Creates room manager
         /// </summary>
         /// <param name="logger">Logger</param>
-        public ServerRoomManager(IFenrirLogger logger)
+        private ServerRoomManager(IFenrirLogger logger)
         {
             _logger = logger;
         }
@@ -65,7 +64,7 @@ namespace Fenrir.Multiplayer.Rooms
                 throw new ArgumentNullException(nameof(roomFactory));
             }
 
-            _roomFactoryMethod = roomFactory.TryCreate;
+            _roomFactoryMethod = roomFactory.Create;
         }
 
         /// <summary>
@@ -116,10 +115,7 @@ namespace Fenrir.Multiplayer.Rooms
 
             try
             {
-                if (!_roomFactoryMethod(peer, roomId, token, out room))
-                {
-                    return false;
-                }
+                room = _roomFactoryMethod(peer, roomId, token);
             }
             catch(Exception e)
             {
