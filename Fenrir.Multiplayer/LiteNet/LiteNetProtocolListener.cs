@@ -24,10 +24,6 @@ namespace Fenrir.Multiplayer.LiteNet
         /// </summary>
         private const int _minSupportedProtocolVersion = 1;
 
-        /// <summary>
-        /// Serializer. Used for serialization of messages
-        /// </summary>
-        private readonly FenrirSerializer _serializer;
 
         /// <summary>
         /// Type map - stores type hashes
@@ -59,10 +55,6 @@ namespace Fenrir.Multiplayer.LiteNet
         /// </summary>
         private readonly RecyclableObjectPool<ByteStreamWriter> _byteStreamWriterPool;
 
-        /// <summary>
-        /// Logger
-        /// </summary>
-        private IFenrirLogger _logger;
 
         /// <summary>
         /// LiteNet NetManager
@@ -94,6 +86,12 @@ namespace Fenrir.Multiplayer.LiteNet
 
         /// <inheritdoc/>
         public bool IsRunning => _isRunning;
+
+        /// <inheritdoc/>
+        public IFenrirSerializer Serializer { get; set; }
+
+        /// <inheritdoc/>
+        public IFenrirLogger Logger { get; set; }
 
         /// <summary>
         /// Stores IPv6 mode 
@@ -156,15 +154,15 @@ namespace Fenrir.Multiplayer.LiteNet
         /// </summary>
         public LiteNetProtocolListener()
         {
-            _serializer = new FenrirSerializer();
-            _logger = new EventBasedLogger();
+            Serializer = new FenrirSerializer();
+            Logger = new EventBasedLogger();
             _typeHashMap = new TypeHashMap();
-            _requestHandlerMap = new RequestHandlerMap(_logger);
+            _requestHandlerMap = new RequestHandlerMap(Logger);
 
-            _byteStreamReaderPool = new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(_serializer));
-            _byteStreamWriterPool = new RecyclableObjectPool<ByteStreamWriter>(() => new ByteStreamWriter(_serializer));
+            _byteStreamReaderPool = new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(Serializer));
+            _byteStreamWriterPool = new RecyclableObjectPool<ByteStreamWriter>(() => new ByteStreamWriter(Serializer));
 
-            _messageReader = new MessageReader(_serializer, _typeHashMap, _logger, _byteStreamReaderPool);
+            _messageReader = new MessageReader(Serializer, _typeHashMap, Logger, _byteStreamReaderPool);
             _netDataWriterPool = new NetDataWriterPool();
             _netManager = new NetManager(this)
             {
@@ -236,7 +234,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 }
                 catch (Exception e)
                 {
-                    _logger?.Error("Error during server tick: " + e);
+                    Logger?.Error("Error during server tick: " + e);
                 }
 
                 float delaySeconds = 1f / TickRate;
@@ -258,18 +256,18 @@ namespace Fenrir.Multiplayer.LiteNet
 
         private void AcceptConnectionRequest(ConnectionRequest liteNetConnectionRequest, int protocolVersion, string clientId)
         {
-            _logger.Trace("Accepting connection request from {0}", liteNetConnectionRequest.RemoteEndPoint);
+            Logger.Trace("Accepting connection request from {0}", liteNetConnectionRequest.RemoteEndPoint);
 
             NetPeer netPeer = liteNetConnectionRequest.Accept();
 
             // Create server peer
-            var messageWriter = new MessageWriter(_serializer, _typeHashMap, _logger);
+            var messageWriter = new MessageWriter(Serializer, _typeHashMap, Logger);
             netPeer.Tag = new LiteNetServerPeer(clientId, protocolVersion, netPeer, messageWriter, _byteStreamWriterPool);
         }
 
         private void RejectConnectionRequest(ConnectionRequest connectionRequest, string reason)
         {
-            _logger.Trace("Rejecting connection request from {0} with reason {1}", connectionRequest.RemoteEndPoint, reason);
+            Logger.Trace("Rejecting connection request from {0} with reason {1}", connectionRequest.RemoteEndPoint, reason);
 
             NetDataWriter netDataWriter = _netDataWriterPool.Get();
             try
@@ -298,7 +296,7 @@ namespace Fenrir.Multiplayer.LiteNet
             // Set handler
             _connectionRequestHandler = async (connectionRequest, clientId, protocolVersion) =>
             {
-                _logger.Trace("Received connection request from {0}, client id {1}", connectionRequest.RemoteEndPoint, clientId);
+                Logger.Trace("Received connection request from {0}, client id {1}", connectionRequest.RemoteEndPoint, clientId);
 
                 // Read connection request data, if present
                 TConnectionRequestData connectionRequestData = null;
@@ -310,11 +308,11 @@ namespace Fenrir.Multiplayer.LiteNet
 
                     try
                     {
-                        connectionRequestData = _serializer.Deserialize<TConnectionRequestData>(byteStreamReader);
+                        connectionRequestData = Serializer.Deserialize<TConnectionRequestData>(byteStreamReader);
                     }
                     catch(SerializationException e)
                     {
-                        _logger.Debug("Rejected connection request from {0}, failed to deserialize connection data: {1}", connectionRequest.RemoteEndPoint, e);
+                        Logger.Debug("Rejected connection request from {0}, failed to deserialize connection data: {1}", connectionRequest.RemoteEndPoint, e);
 
                         RejectConnectionRequest(connectionRequest, "Bad connection data");
                     }
@@ -335,7 +333,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 }
                 catch(Exception e)
                 {
-                    _logger.Error("Unhandled exception in connection request handler : {0}", e);
+                    Logger.Error("Unhandled exception in connection request handler : {0}", e);
                     RejectConnectionRequest(connectionRequest, "Unhandled exception in connection request handler");
                     return;
                 }
@@ -346,7 +344,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 }
                 else
                 {
-                    _logger.Trace("Accepted connection request from {0}, client id {1}", connectionRequest.RemoteEndPoint, clientId);
+                    Logger.Trace("Accepted connection request from {0}, client id {1}", connectionRequest.RemoteEndPoint, clientId);
                     AcceptConnectionRequest(connectionRequest, protocolVersion, clientId);
                 }
             };
@@ -356,19 +354,6 @@ namespace Fenrir.Multiplayer.LiteNet
         public void SetConnectionHandler(Action<IServerPeer> handler)
         {
             _connectHandler = handler;
-        }
-
-        ///<inheritdoc/>
-        public void SetContractSerializer(ITypeSerializer contractSerializer)
-        {
-            _serializer.SetTypeSerializer(contractSerializer);
-        }
-
-
-        ///<inheritdoc/>
-        public void SetLogger(IFenrirLogger logger)
-        {
-            _logger = logger;
         }
 
         /// <inheritdoc/>
@@ -470,7 +455,7 @@ namespace Fenrir.Multiplayer.LiteNet
             int protocolVersion = netDataReader.GetInt(); // Protocol Version
             if (protocolVersion < _minSupportedProtocolVersion)
             {
-                _logger.Debug("Rejected connection request from {0}, protocol version {1} is less than supported protocol version {2}", connectionRequest.RemoteEndPoint, protocolVersion, _minSupportedProtocolVersion);
+                Logger.Debug("Rejected connection request from {0}, protocol version {1} is less than supported protocol version {2}", connectionRequest.RemoteEndPoint, protocolVersion, _minSupportedProtocolVersion);
                 RejectConnectionRequest(connectionRequest, "Outdated protocol");
                 return;
             }
@@ -496,13 +481,13 @@ namespace Fenrir.Multiplayer.LiteNet
             }
             catch(Exception e)
             {
-                _logger.Error("Connection request handler failed: " + e);
+                Logger.Error("Connection request handler failed: " + e);
             }
         }
 
         void INetEventListener.OnNetworkError(IPEndPoint endPoint, SocketError socketError)
         {
-            _logger.Debug("Socket error from {0}: {1}", endPoint, socketError);
+            Logger.Debug("Socket error from {0}: {1}", endPoint, socketError);
         }
 
 
@@ -511,7 +496,7 @@ namespace Fenrir.Multiplayer.LiteNet
             // Get LiteNet peer
             if(netPeer.Tag == null)
             {
-                _logger.Warning("Received message from an uninitialized peer: {0}", netPeer.EndPoint);
+                Logger.Warning("Received message from an uninitialized peer: {0}", netPeer.EndPoint);
                 return;
             }
 
@@ -537,7 +522,7 @@ namespace Fenrir.Multiplayer.LiteNet
 
             if (!didReadMessage)
             {
-                _logger.Warning("Failed to read message of length {0} from {1}", totalBytes, netPeer.EndPoint);
+                Logger.Warning("Failed to read message of length {0} from {1}", totalBytes, netPeer.EndPoint);
                 return;
             }
 
@@ -548,7 +533,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 IRequest request = messageWrapper.MessageData as IRequest;
                 if (request == null) // Someone is trying to mess with the protocol
                 {
-                    _logger.Warning("Empty request received from {0}", netPeer.EndPoint);
+                    Logger.Warning("Empty request received from {0}", netPeer.EndPoint);
                     return;
                 }
 
@@ -557,7 +542,7 @@ namespace Fenrir.Multiplayer.LiteNet
             }
             else
             {
-                _logger.Warning("Unsupported message type {0} received from {1}", messageWrapper.MessageType, netPeer.EndPoint);
+                Logger.Warning("Unsupported message type {0} received from {1}", messageWrapper.MessageType, netPeer.EndPoint);
             }
         }
 
@@ -570,7 +555,7 @@ namespace Fenrir.Multiplayer.LiteNet
         {
             if(netPeer.Tag == null)
             {
-                _logger.Error("Peer connected before connection was accepted: " + netPeer.EndPoint);
+                Logger.Error("Peer connected before connection was accepted: " + netPeer.EndPoint);
                 return;
             }
 

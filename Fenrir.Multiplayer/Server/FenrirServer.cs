@@ -19,7 +19,7 @@ namespace Fenrir.Multiplayer.Server
         public event EventHandler<ServerStatusChangedEventArgs> StatusChanged;
 
         /// <inheritdoc/>
-        public event EventHandler<ProtocolAddedEventArgs> ProtocolAdded;
+        public event EventHandler<ServerProtocolAddedEventArgs> ProtocolAdded;
 
         /// <inheritdoc/>
         public string ServerId { get; set; }
@@ -125,33 +125,6 @@ namespace Fenrir.Multiplayer.Server
             SetStatus(ServerStatus.Stopped);
         }
 
-
-        /// <inheritdoc/>
-        public void SetLogger(IFenrirLogger logger)
-        {
-            foreach (var protocolListener in _protocolListeners)
-            {
-                protocolListener.SetLogger(logger);
-            }
-
-            ProtocolAdded += (sender, e) => {
-                e.ProtocolListener.SetLogger(logger);
-            };
-        }
-
-        /// <inheritdoc/>
-        public void SetContractSerializer(ITypeSerializer contractSerializer)
-        {
-            foreach (var protocolListener in _protocolListeners)
-            {
-                protocolListener.SetContractSerializer(contractSerializer);
-            }
-
-            ProtocolAdded += (sender, e) => {
-                e.ProtocolListener.SetContractSerializer(contractSerializer);
-            };
-        }
-
         /// <inheritdoc/>
         public void AddProtocol(IProtocolListener protocolListener)
         {
@@ -162,7 +135,7 @@ namespace Fenrir.Multiplayer.Server
 
             _protocolListeners.Add(protocolListener);
 
-            ProtocolAdded?.Invoke(this, new ProtocolAddedEventArgs(protocolListener));
+            ProtocolAdded?.Invoke(this, new ServerProtocolAddedEventArgs(protocolListener));
         }
 
         /// <inheritdoc/>

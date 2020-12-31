@@ -14,7 +14,14 @@ namespace Fenrir.Multiplayer.Rooms
         public string RoomId { get; set; }
 
         /// <summary>
-        /// Creates a request to leave the room
+        /// Creates Room Leave Request
+        /// </summary>
+        public RoomLeaveRequest()
+        {
+        }
+
+        /// <summary>
+        /// Creates Room Leave Request
         /// </summary>
         /// <param name="roomId"></param>
         public RoomLeaveRequest(string roomId)

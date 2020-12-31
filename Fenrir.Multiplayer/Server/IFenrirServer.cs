@@ -20,7 +20,7 @@ namespace Fenrir.Multiplayer.Server
         /// <summary>
         /// Invoked protocol is added
         /// </summary>
-        event EventHandler<ProtocolAddedEventArgs> ProtocolAdded;
+        event EventHandler<ServerProtocolAddedEventArgs> ProtocolAdded;
 
         /// <summary>
         /// Starts the server
@@ -33,20 +33,6 @@ namespace Fenrir.Multiplayer.Server
         /// </summary>
         /// <returns>Task that completes when server has stopped</returns>
         Task Stop();
-
-        /// <summary>
-        /// Sets contract serializer. 
-        /// If not set, IByteStreamSerializable is the only supported way of serialization.
-        /// If set, any data contract will be serialized using that contract serializer,
-        /// with IByteStreamSerializable used as a fall back.
-        /// </summary>
-        void SetContractSerializer(ITypeSerializer contractSerializer);
-
-        /// <summary>
-        /// Sets Fenrir Logger. If not set, EventBasedLogger is used
-        /// </summary>
-        /// <param name="logger">Fenrir Logger</param>
-        void SetLogger(IFenrirLogger logger);
 
         /// <summary>
         /// Adds server protocol

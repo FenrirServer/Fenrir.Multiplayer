@@ -44,7 +44,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Rooms
                 return room;
             };
 
-            var roomManager = new ServerRoomManager<TestRoom>(logger, roomFactoryMethod);
+            var roomManager = new ServerRoomManager<TestRoom>(roomFactoryMethod, logger);
 
             var joinRequestHandler = (IRequestHandler<RoomJoinRequest, RoomJoinResponse>)roomManager;
             var leaveRequestHandler = (IRequestHandler<RoomLeaveRequest, RoomLeaveResponse>)roomManager;
@@ -86,7 +86,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Rooms
 
             var roomFactory = new TestRoomFactory(logger, onJoin, onLeave);
 
-            var roomManager = new ServerRoomManager<TestRoom>(logger, roomFactory);
+            var roomManager = new ServerRoomManager<TestRoom>(roomFactory, logger);
 
             var joinRequestHandler = (IRequestHandler<RoomJoinRequest, RoomJoinResponse>)roomManager;
             var leaveRequestHandler = (IRequestHandler<RoomLeaveRequest, RoomLeaveResponse>)roomManager;

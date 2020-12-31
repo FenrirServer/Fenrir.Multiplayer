@@ -67,19 +67,9 @@ namespace Fenrir.Multiplayer.LiteNet
         private readonly EventHandlerMap _eventHandlerMap;
 
         /// <summary>
-        /// Serializer. Used for serialization of messages
-        /// </summary>
-        private readonly FenrirSerializer _serializer;
-
-        /// <summary>
         /// Type map - stores type hashes
         /// </summary>
         private readonly TypeHashMap _typeHashMap;
-
-        /// <summary>
-        /// Logger
-        /// </summary>
-        private IFenrirLogger _logger;
 
         /// <summary>
         /// LiteNet Data Writer to write outgoing data
@@ -95,6 +85,17 @@ namespace Fenrir.Multiplayer.LiteNet
         /// LiteNet peer
         /// </summary>
         private LiteNetClientPeer _peer;
+
+
+        /// <summary>
+        /// Serializer. Used for serialization of messages
+        /// </summary>
+        public IFenrirSerializer Serializer { get; set; }
+
+        /// <summary>
+        /// Logger
+        /// </summary>
+        public IFenrirLogger Logger { get; set; }
 
         ///<inheritdoc/>
         public IClientPeer Peer => _peer;
@@ -203,22 +204,40 @@ namespace Fenrir.Multiplayer.LiteNet
         private TaskCompletionSource<ConnectionResponse> _connectionTcs = null;
 
         /// <summary>
-        /// Default constructor
+        /// Creates <see cref="LiteNetProtocolConnector"/>
         /// </summary>
-        /// <param name="serializationProvider">Serialization Provider</param>
-        /// <param name="logger">Logger</param>
         public LiteNetProtocolConnector()
+            : this(new FenrirSerializer(), new EventBasedLogger())
         {
-            _serializer = new FenrirSerializer();
-            _logger = new EventBasedLogger();
-            _typeHashMap = new TypeHashMap();
-            _eventHandlerMap = new EventHandlerMap(_logger);
-            _pendingRequestMap = new PendingRequestMap(_logger);
-            _byteStreamWriterPool = new RecyclableObjectPool<ByteStreamWriter>(() => new ByteStreamWriter(_serializer));
-            _byteStreamReaderPool = new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(_serializer));
+        }
 
-            _messageReader = new MessageReader(_serializer, _typeHashMap, _logger, _byteStreamReaderPool);
-            _messageWriter = new MessageWriter(_serializer, _typeHashMap, _logger);
+        /// <summary>
+        /// Creates <see cref="LiteNetProtocolConnector"/>
+        /// </summary>
+        /// <param name="serializer">Serializer, used for serialization/deserialization of messages</param>
+        public LiteNetProtocolConnector(IFenrirSerializer serializer)
+            : this(serializer, new EventBasedLogger())
+        {
+        }
+
+        /// <summary>
+        /// Creates <see cref="LiteNetProtocolConnector"/>
+        /// </summary>
+        /// <param name="serializer">Serializer, used for serialization/deserialization of messages</param>
+        /// <param name="logger">Logger</param>
+        public LiteNetProtocolConnector(IFenrirSerializer serializer, IFenrirLogger logger)
+        {
+            Serializer = serializer;
+            Logger = logger;
+
+            _typeHashMap = new TypeHashMap();
+            _eventHandlerMap = new EventHandlerMap(Logger);
+            _pendingRequestMap = new PendingRequestMap(Logger);
+            _byteStreamWriterPool = new RecyclableObjectPool<ByteStreamWriter>(() => new ByteStreamWriter(Serializer));
+            _byteStreamReaderPool = new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(Serializer));
+
+            _messageReader = new MessageReader(Serializer, _typeHashMap, Logger, _byteStreamReaderPool);
+            _messageWriter = new MessageWriter(Serializer, _typeHashMap, Logger);
 
             _netDataWriter = new NetDataWriter();
 
@@ -272,7 +291,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 }
                 catch(Exception e)
                 {
-                    _logger?.Error("Error during server tick: " + e);
+                    Logger?.Error("Error during server tick: " + e);
                 }
 
                 float delaySeconds = 1f / TickRate;
@@ -300,7 +319,7 @@ namespace Fenrir.Multiplayer.LiteNet
             if (connectionRequestData != null)
             {
                 // Client data deserialized
-                _serializer.Serialize(connectionRequestData, new ByteStreamWriter(_netDataWriter, _serializer));
+                Serializer.Serialize(connectionRequestData, new ByteStreamWriter(_netDataWriter, Serializer));
             }
 
             return _netDataWriter;
@@ -309,6 +328,7 @@ namespace Fenrir.Multiplayer.LiteNet
         ///<inheritdoc/>
         public void AddEventHandler<TEvent>(IEventHandler<TEvent> eventHandler) where TEvent : IEvent
         {
+            _typeHashMap.AddType<TEvent>();
             _eventHandlerMap.AddEventHandler<TEvent>(eventHandler);
         }
 
@@ -316,17 +336,7 @@ namespace Fenrir.Multiplayer.LiteNet
         public void RemoveEventHandler<TEvent>(IEventHandler<TEvent> eventHandler) where TEvent : IEvent
         {
             _eventHandlerMap.RemoveEventHandler<TEvent>(eventHandler);
-        }
-
-        ///<inheritdoc/>
-        public void SetContractSerializer(ITypeSerializer contractSerializer)
-        {
-            _serializer.SetTypeSerializer(contractSerializer);
-        }
-
-        public void SetLogger(IFenrirLogger logger)
-        {
-            _logger = logger;
+            _typeHashMap.RemoveType<TEvent>();
         }
 
         #region INetEventListener Implementation
@@ -411,7 +421,7 @@ namespace Fenrir.Multiplayer.LiteNet
 
             if (!didReadMessage)
             {
-                _logger.Warning("Failed to read message of length {0} from {1}", totalBytes, netPeer.EndPoint);
+                Logger.Warning("Failed to read message of length {0} from {1}", totalBytes, netPeer.EndPoint);
                 return;
             }
 
@@ -422,7 +432,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 IEvent evt = messageWrapper.MessageData as IEvent;
                 if(evt == null) // Someone is trying to tampter the protocol
                 {
-                    _logger.Warning("Empty event received from {0}", netPeer.EndPoint);
+                    Logger.Warning("Empty event received from {0}", netPeer.EndPoint);
                     return;
                 }
 
@@ -435,7 +445,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 IResponse response = messageWrapper.MessageData as IResponse;
                 if (response == null) // Someone is trying to mess with the protocol
                 {
-                    _logger.Warning("Empty response received from {0}", netPeer.EndPoint);
+                    Logger.Warning("Empty response received from {0}", netPeer.EndPoint);
                     return;
                 }
 
@@ -444,7 +454,7 @@ namespace Fenrir.Multiplayer.LiteNet
             }
             else
             {
-                _logger.Warning("Unsupported message type {0} received from {1}", messageWrapper.MessageType, netPeer.EndPoint);
+                Logger.Warning("Unsupported message type {0} received from {1}", messageWrapper.MessageType, netPeer.EndPoint);
             }
         }
 

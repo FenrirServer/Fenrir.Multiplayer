@@ -38,6 +38,16 @@ namespace Fenrir.Multiplayer.Network
         int PingInterval { get; set; }
 
         /// <summary>
+        /// Serializer. Used for serialization/deserialization of messages
+        /// </summary>
+        IFenrirSerializer Serializer { get; set; }
+
+        /// <summary>
+        /// Logger
+        /// </summary>
+        IFenrirLogger Logger { get; set; }
+
+        /// <summary>
         /// Starts protocol listener
         /// </summary>
         /// <returns>Task that completes when protocol listener is runnign</returns>
@@ -49,13 +59,6 @@ namespace Fenrir.Multiplayer.Network
         /// <returns>Task that completes when protocol listener is stopped</returns>
         Task Stop();
 
-        /// <summary>
-        /// Sets contract serializer. 
-        /// If not set, IByteStreamSerializable is the only supported way of serialization.
-        /// If set, any data contract will be serialized using that contract serializer,
-        /// with IByteStreamSerializable used as a fall back.
-        /// </summary>
-        void SetContractSerializer(ITypeSerializer contractSerializer);
 
         /// <summary>
         /// Sets custom connection request handler.
@@ -65,12 +68,6 @@ namespace Fenrir.Multiplayer.Network
         /// <param name="handler">Connection request handler</param>
         void SetConnectionRequestHandler<TConnectionRequestData>(Func<IServerConnectionRequest<TConnectionRequestData>, Task<ConnectionResponse>> handler)
             where TConnectionRequestData : class, new();
-
-        /// <summary>
-        /// Sets Fenrir Logger. If not set, EventBasedLogger is used
-        /// </summary>
-        /// <param name="logger">Fenrir Logger</param>
-        void SetLogger(IFenrirLogger logger);
 
         /// <summary>
         /// Adds request handler of a given request type, to all installed protocols

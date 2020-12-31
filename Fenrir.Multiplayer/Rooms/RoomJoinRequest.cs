@@ -20,6 +20,13 @@ namespace Fenrir.Multiplayer.Rooms
         public string Token { get; set; }
 
         /// <summary>
+        /// Creates room Join Request
+        /// </summary>
+        public RoomJoinRequest()
+        {
+        }
+
+        /// <summary>
         /// Creates Room Join Request
         /// </summary>
         /// <param name="roomId">Unique id of the room</param>

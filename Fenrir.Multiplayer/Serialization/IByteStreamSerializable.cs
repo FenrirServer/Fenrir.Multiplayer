@@ -8,13 +8,13 @@
         /// <summary>
         /// Serializes object into a byte stream
         /// </summary>
-        /// <param name="serializer">Byte stream serializer. Use byte stream writer to write values from your class into a byte stream.</param>
-        void Serialize(IByteStreamWriter serializer);
+        /// <param name="writer">Byte stream writer. Use byte stream writer to write values from your class into a byte stream.</param>
+        void Serialize(IByteStreamWriter writer);
 
         /// <summary>
         /// Deserializes object from a byte stream
         /// </summary>
-        /// <param name="deserializer">Byte stream deserializer. Use byte stream reader to read values from byte stream into your class.</param>
-        void Deserialize(IByteStreamReader deserializer);
+        /// <param name="reader">Byte stream reader. Use byte stream reader to read values from byte stream into your class.</param>
+        void Deserialize(IByteStreamReader reader);
     }
 }

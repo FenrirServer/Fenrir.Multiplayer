@@ -55,6 +55,15 @@ namespace Fenrir.Multiplayer.Network
         /// </summary>
         Type ConnectionDataType { get; }
 
+        /// <summary>
+        /// Serializer used for message serialization / deserialization
+        /// </summary>
+        IFenrirSerializer Serializer { get; set; }
+
+        /// <summary>
+        /// Logger
+        /// </summary>
+        IFenrirLogger Logger { get; set; }
 
         /// <summary>
         /// Time after which client is disconnected if no keep alive packets are received
@@ -125,20 +134,5 @@ namespace Fenrir.Multiplayer.Network
         /// <param name="eventHandler">Event handler</param>
         void RemoveEventHandler<TEvent>(IEventHandler<TEvent> eventHandler)
             where TEvent : IEvent;
-
-
-        /// <summary>
-        /// Sets contract serializer. 
-        /// If not set, IByteStreamSerializable is the only supported way of serialization.
-        /// If set, any data contract will be serialized using that contract serializer,
-        /// with IByteStreamSerializable used as a fall back.
-        /// </summary>
-        void SetContractSerializer(ITypeSerializer contractSerializer);
-
-        /// <summary>
-        /// Sets Fenrir Logger. If not set, EventBasedLogger is used
-        /// </summary>
-        /// <param name="logger">Fenrir Logger</param>
-        void SetLogger(IFenrirLogger logger);
     }
 }

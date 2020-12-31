@@ -4,9 +4,9 @@ using System;
 namespace Fenrir.Multiplayer.Server.Events
 {
     /// <summary>
-    /// Invoked when protocol listener is added to Fenrir Server
+    /// Invoked when protocol listener is added to <seealso cref="FenrirServer"/>
     /// </summary>
-    public class ProtocolAddedEventArgs : EventArgs
+    public class ServerProtocolAddedEventArgs : EventArgs
     {
         /// <summary>
         /// Protocol listener added
@@ -17,7 +17,7 @@ namespace Fenrir.Multiplayer.Server.Events
         /// Default constructor
         /// </summary>
         /// <param name="protocolListener">Protocol Listener</param>
-        public ProtocolAddedEventArgs(IProtocolListener protocolListener)
+        public ServerProtocolAddedEventArgs(IProtocolListener protocolListener)
         {
             ProtocolListener = protocolListener;
         }

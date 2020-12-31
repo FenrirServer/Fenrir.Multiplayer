@@ -1,8 +1,6 @@
 ﻿using Fenrir.Multiplayer.Exceptions;
-using Fenrir.Multiplayer.LiteNet;
 using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Serialization;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -41,6 +39,10 @@ namespace Fenrir.Multiplayer.Client
         /// <inheritdoc/>
         public ConnectionState State => _protocolConnector?.State ?? ConnectionState.Disconnected;
 
+        /// <summary>
+        /// Used to install event handlers when new protocol is added
+        /// </summary>
+        private Dictionary<Type, Action<IProtocolConnector>> _eventHandlerInstallers = new Dictionary<Type, Action<IProtocolConnector>>();
 
         /// <summary>
         /// Creates new Fenrir Client
@@ -150,45 +152,60 @@ namespace Fenrir.Multiplayer.Client
         /// <inheritdoc/>
         public void AddEventHandler<TEvent>(IEventHandler<TEvent> eventHandler) where TEvent : IEvent
         {
-            foreach(var protocolConnector in _supportedProtocolConnectors)
+            if (eventHandler == null)
+            {
+                throw new ArgumentNullException(nameof(eventHandler));
+            }
+
+            if (_eventHandlerInstallers.ContainsKey(typeof(TEvent)))
+            {
+                throw new FenrirServerException($"Event {typeof(TEvent)} handler {eventHandler.ToString()} is already installed");
+            }
+
+            foreach (var protocolConnector in _supportedProtocolConnectors)
             {
                 protocolConnector.AddEventHandler<TEvent>(eventHandler);
             }
+
+            _eventHandlerInstallers.Add(typeof(TEvent), connector => connector.AddEventHandler<TEvent>(eventHandler));
         }
 
         /// <inheritdoc/>
         public void RemoveEventHandler<TEvent>(IEventHandler<TEvent> eventHandler) where TEvent : IEvent
         {
+            if (eventHandler == null)
+            {
+                throw new ArgumentNullException(nameof(eventHandler));
+            }
+
+            if (!_eventHandlerInstallers.ContainsKey(typeof(TEvent)))
+            {
+                throw new FenrirServerException($"Event {typeof(TEvent)} handler {eventHandler.ToString()} is not yet installed");
+            }
+
             foreach (var protocolConnector in _supportedProtocolConnectors)
             {
                 protocolConnector.RemoveEventHandler<TEvent>(eventHandler);
             }
+
+            _eventHandlerInstallers.Add(typeof(TEvent), connector => connector.RemoveEventHandler<TEvent>(eventHandler));
         }
 
         /// <inheritdoc/>
         public void AddProtocol(IProtocolConnector protocolConnector)
         {
+            if(protocolConnector == null)
+            {
+                throw new ArgumentNullException(nameof(protocolConnector));
+            }
+
             _supportedProtocolConnectors.Add(protocolConnector);
-        }
 
-        /// <inheritdoc/>
-        public void SetLogger(IFenrirLogger logger)
-        {
-            foreach (var protocolConnector in _supportedProtocolConnectors)
+            foreach(var eventHandlerInstaller in _eventHandlerInstallers.Values)
             {
-                protocolConnector.SetLogger(logger);
+                eventHandlerInstaller.Invoke(protocolConnector);
             }
         }
-
-        /// <inheritdoc/>
-        public void SetContractSerializer(ITypeSerializer contractSerializer)
-        {
-            foreach (var protocolConnector in _supportedProtocolConnectors)
-            {
-                protocolConnector.SetContractSerializer(contractSerializer);
-            }
-        }
-
 
         public void Dispose()
         {
