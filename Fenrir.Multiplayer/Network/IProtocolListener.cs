@@ -55,7 +55,7 @@ namespace Fenrir.Multiplayer.Network
         /// If set, any data contract will be serialized using that contract serializer,
         /// with IByteStreamSerializable used as a fall back.
         /// </summary>
-        void SetContractSerializer(IContractSerializer contractSerializer);
+        void SetContractSerializer(ITypeSerializer contractSerializer);
 
         /// <summary>
         /// Sets custom connection request handler.

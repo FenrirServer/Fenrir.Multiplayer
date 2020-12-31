@@ -22,17 +22,17 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageWriter_WriteMessage_WritesEvent()
         {
             var typeHashMap = new TypeHashMap();
-            var serializationProvider = new SerializationProvider();
-            var messageWriter = new MessageWriter(serializationProvider, typeHashMap, new EventBasedLogger());
+            var serializer = new FenrirSerializer();
+            var messageWriter = new MessageWriter(serializer, typeHashMap, new EventBasedLogger());
 
-            var byteStreamWriter = new ByteStreamWriter();
+            var byteStreamWriter = new ByteStreamWriter(serializer);
             var messageWrapper = MessageWrapper.WrapEvent(new TestEvent() { Value = "test" }, 123, MessageFlags.IsEncrypted, MessageDeliveryMethod.ReliableOrdered);
 
             messageWriter.WriteMessage(byteStreamWriter, messageWrapper);
 
             // Validate 
             // Read hash
-            var byteStreamReader = new ByteStreamReader(byteStreamWriter);
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter, serializer);
             Assert.AreEqual(typeHashMap.GetTypeHash<TestEvent>(), byteStreamReader.ReadULong()); // [ulong] type hash
 
             // Read flags
@@ -44,7 +44,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
             Assert.AreEqual(123, byteStreamReader.ReadByte());
 
             // Read data
-            var testEvent = serializationProvider.Deserialize<TestEvent>(byteStreamReader);
+            var testEvent = serializer.Deserialize<TestEvent>(byteStreamReader);
 
             Assert.AreEqual("test", testEvent.Value);
         }
@@ -53,17 +53,17 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageWriter_WriteMessage_WritesRequest()
         {
             var typeHashMap = new TypeHashMap();
-            var serializationProvider = new SerializationProvider();
-            var messageWriter = new MessageWriter(serializationProvider, typeHashMap, new EventBasedLogger());
+            var serializer = new FenrirSerializer();
+            var messageWriter = new MessageWriter(serializer, typeHashMap, new EventBasedLogger());
 
-            var byteStreamWriter = new ByteStreamWriter();
+            var byteStreamWriter = new ByteStreamWriter(serializer);
             var messageWrapper = MessageWrapper.WrapRequest(new TestRequest() { Value = "test" }, 456, 123, MessageFlags.IsEncrypted | MessageFlags.HasRequestId, MessageDeliveryMethod.ReliableOrdered);
 
             messageWriter.WriteMessage(byteStreamWriter, messageWrapper);
 
             // Validate 
             // Read hash
-            var byteStreamReader = new ByteStreamReader(byteStreamWriter);
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter, serializer);
             Assert.AreEqual(typeHashMap.GetTypeHash<TestRequest>(), byteStreamReader.ReadULong()); // [ulong] type hash
 
             // Read flags
@@ -78,7 +78,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
             Assert.AreEqual(456, byteStreamReader.ReadShort());
 
             // Read data
-            var testRequest = serializationProvider.Deserialize<TestRequest>(byteStreamReader);
+            var testRequest = serializer.Deserialize<TestRequest>(byteStreamReader);
 
             Assert.AreEqual("test", testRequest.Value);
         }
@@ -88,17 +88,17 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageWriter_WriteMessage_WritesResponse()
         {
             var typeHashMap = new TypeHashMap();
-            var serializationProvider = new SerializationProvider();
-            var messageWriter = new MessageWriter(serializationProvider, typeHashMap, new EventBasedLogger());
+            var serializer = new FenrirSerializer();
+            var messageWriter = new MessageWriter(serializer, typeHashMap, new EventBasedLogger());
 
-            var byteStreamWriter = new ByteStreamWriter();
+            var byteStreamWriter = new ByteStreamWriter(serializer);
             var messageWrapper = MessageWrapper.WrapResponse(new TestResponse() { Value = "test" }, 456, 123, MessageFlags.IsEncrypted | MessageFlags.HasRequestId, MessageDeliveryMethod.ReliableOrdered);
 
             messageWriter.WriteMessage(byteStreamWriter, messageWrapper);
 
             // Validate 
             // Read hash
-            var byteStreamReader = new ByteStreamReader(byteStreamWriter);
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter, serializer);
             Assert.AreEqual(typeHashMap.GetTypeHash<TestResponse>(), byteStreamReader.ReadULong()); // [ulong] type hash
 
             // Read flags
@@ -113,7 +113,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
             Assert.AreEqual(456, byteStreamReader.ReadShort());
 
             // Read data
-            var testResponse = serializationProvider.Deserialize<TestResponse>(byteStreamReader);
+            var testResponse = serializer.Deserialize<TestResponse>(byteStreamReader);
 
             Assert.AreEqual("test", testResponse.Value);
         }

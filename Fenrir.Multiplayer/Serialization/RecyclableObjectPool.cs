@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 
 namespace Fenrir.Multiplayer.Serialization
 {
@@ -13,18 +14,29 @@ namespace Fenrir.Multiplayer.Serialization
     /// </summary>
     /// <typeparam name="T">Type of the object to pool</typeparam>
     class RecyclableObjectPool<T>
-        where T : IRecyclable, new()
+        where T : IRecyclable
     {
         /// <summary>
         /// Collection of object currently available in the pool
         /// </summary>
         private readonly ConcurrentBag<T> _objects;
+        
+        /// <summary>
+        /// Factory method used to create a new object
+        /// </summary>
+        private readonly Func<T> _factoryMethod;
 
         /// <summary>
         /// Default constructor
         /// </summary>
-        public RecyclableObjectPool() : this(0)
+        public RecyclableObjectPool(Func<T> factoryMethod) : this(0)
         {
+            if(factoryMethod == null)
+            {
+                throw new ArgumentNullException(nameof(factoryMethod));
+            }
+
+            _factoryMethod = factoryMethod;
         }
 
         /// <summary>
@@ -37,7 +49,8 @@ namespace Fenrir.Multiplayer.Serialization
 
             for(int i=0; i < initialSize; i++)
             {
-                _objects.Add(new T());
+                T obj = _factoryMethod.Invoke();
+                _objects.Add(obj);
             }
         }
 
@@ -49,7 +62,7 @@ namespace Fenrir.Multiplayer.Serialization
         {
             if(!_objects.TryTake(out T obj))
             {
-                obj = new T();
+                obj = _factoryMethod.Invoke();
             }
 
             return obj;

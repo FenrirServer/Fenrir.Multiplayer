@@ -3,7 +3,6 @@
 namespace Fenrir.Multiplayer.Serialization
 {
     /// <summary>
-    /// Byte Stream Writer
     /// Serializes values from a given byte stream 
     /// </summary>
     public interface IByteStreamWriter
@@ -24,10 +23,10 @@ namespace Fenrir.Multiplayer.Serialization
         int Length { get; }
 
         /// <summary>
-        /// Writes custom object of a class that implements <see cref="IByteStreamSerializable"/>
+        /// Writes custom object of an unknown type, using <seealso cref="IFenrirSerializer"/>
         /// </summary>
-        /// <param name="serializable">Serializable object</param>
-        void Write(IByteStreamSerializable serializable);
+        /// <param name="data">Serializable object</param>
+        void Write(object data);
 
         /// <summary>
         /// Writes byte array

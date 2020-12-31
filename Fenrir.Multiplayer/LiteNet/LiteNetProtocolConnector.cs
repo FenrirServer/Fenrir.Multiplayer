@@ -67,9 +67,9 @@ namespace Fenrir.Multiplayer.LiteNet
         private readonly EventHandlerMap _eventHandlerMap;
 
         /// <summary>
-        /// Serialization provider. Used for serialization of messages
+        /// Serializer. Used for serialization of messages
         /// </summary>
-        private readonly SerializationProvider _serializationProvider;
+        private readonly FenrirSerializer _serializer;
 
         /// <summary>
         /// Type map - stores type hashes
@@ -209,16 +209,16 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <param name="logger">Logger</param>
         public LiteNetProtocolConnector()
         {
-            _serializationProvider = new SerializationProvider();
+            _serializer = new FenrirSerializer();
             _logger = new EventBasedLogger();
             _typeHashMap = new TypeHashMap();
             _eventHandlerMap = new EventHandlerMap(_logger);
             _pendingRequestMap = new PendingRequestMap(_logger);
-            _byteStreamWriterPool = new RecyclableObjectPool<ByteStreamWriter>();
-            _byteStreamReaderPool = new RecyclableObjectPool<ByteStreamReader>();
+            _byteStreamWriterPool = new RecyclableObjectPool<ByteStreamWriter>(() => new ByteStreamWriter(_serializer));
+            _byteStreamReaderPool = new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(_serializer));
 
-            _messageReader = new MessageReader(_serializationProvider, _typeHashMap, _logger, _byteStreamReaderPool);
-            _messageWriter = new MessageWriter(_serializationProvider, _typeHashMap, _logger);
+            _messageReader = new MessageReader(_serializer, _typeHashMap, _logger, _byteStreamReaderPool);
+            _messageWriter = new MessageWriter(_serializer, _typeHashMap, _logger);
 
             _netDataWriter = new NetDataWriter();
 
@@ -300,7 +300,7 @@ namespace Fenrir.Multiplayer.LiteNet
             if (connectionRequestData != null)
             {
                 // Client data deserialized
-                _serializationProvider.Serialize(connectionRequestData, new ByteStreamWriter(_netDataWriter));
+                _serializer.Serialize(connectionRequestData, new ByteStreamWriter(_netDataWriter, _serializer));
             }
 
             return _netDataWriter;
@@ -319,9 +319,9 @@ namespace Fenrir.Multiplayer.LiteNet
         }
 
         ///<inheritdoc/>
-        public void SetContractSerializer(IContractSerializer contractSerializer)
+        public void SetContractSerializer(ITypeSerializer contractSerializer)
         {
-            _serializationProvider.SetContractSerializer(contractSerializer);
+            _serializer.SetTypeSerializer(contractSerializer);
         }
 
         public void SetLogger(IFenrirLogger logger)

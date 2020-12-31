@@ -140,7 +140,7 @@ namespace Fenrir.Multiplayer.Server
         }
 
         /// <inheritdoc/>
-        public void SetContractSerializer(IContractSerializer contractSerializer)
+        public void SetContractSerializer(ITypeSerializer contractSerializer)
         {
             foreach (var protocolListener in _protocolListeners)
             {

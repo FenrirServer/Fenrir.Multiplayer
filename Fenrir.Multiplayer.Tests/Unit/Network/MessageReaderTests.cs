@@ -13,18 +13,18 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReadsEvent()
         {
             var typeHashMap = new TypeHashMap();
-            var serializationProvider = new SerializationProvider();
-            var messageReader = new MessageReader(serializationProvider, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>());
+            var serializer = new FenrirSerializer();
+            var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // Write test data
-            var byteStreamWriter = new ByteStreamWriter();
+            var byteStreamWriter = new ByteStreamWriter(serializer);
             byteStreamWriter.Write(typeHashMap.GetTypeHash<TestEvent>()); // ulong type hash
             byteStreamWriter.Write((byte)MessageFlags.IsEncrypted); // byte flags
             byteStreamWriter.Write((byte)123); // byte Channel number
-            serializationProvider.Serialize(new TestEvent() { Value = "test" }, byteStreamWriter); // byte[] data
+            serializer.Serialize(new TestEvent() { Value = "test" }, byteStreamWriter); // byte[] data
 
             // Read message
-            var byteStreamReader = new ByteStreamReader(byteStreamWriter);
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter, serializer);
             bool result = messageReader.TryReadMessage(byteStreamReader, out MessageWrapper messageWrapper);
 
             Assert.IsTrue(result);
@@ -40,18 +40,18 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReadsEvent_WhenEmptyData()
         {
             var typeHashMap = new TypeHashMap();
-            var serializationProvider = new SerializationProvider();
-            var messageReader = new MessageReader(serializationProvider, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>());
+            var serializer = new FenrirSerializer();
+            var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // Write test data
-            var byteStreamWriter = new ByteStreamWriter();
+            var byteStreamWriter = new ByteStreamWriter(serializer);
             byteStreamWriter.Write(typeHashMap.GetTypeHash<TestEmptyEvent>()); // ulong type hash
             byteStreamWriter.Write((byte)MessageFlags.IsEncrypted); // byte flags
             byteStreamWriter.Write((byte)123); // byte Channel number
-            serializationProvider.Serialize(new TestEmptyEvent(), byteStreamWriter); // byte[] data
+            serializer.Serialize(new TestEmptyEvent(), byteStreamWriter); // byte[] data
 
             // Read message
-            var byteStreamReader = new ByteStreamReader(byteStreamWriter);
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter, serializer);
             bool result = messageReader.TryReadMessage(byteStreamReader, out MessageWrapper messageWrapper);
 
             Assert.IsTrue(result);
@@ -66,19 +66,19 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReadsRequest()
         {
             var typeHashMap = new TypeHashMap();
-            var serializationProvider = new SerializationProvider();
-            var messageReader = new MessageReader(serializationProvider, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>());
+            var serializer = new FenrirSerializer();
+            var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // Write test data
-            var byteStreamWriter = new ByteStreamWriter();
+            var byteStreamWriter = new ByteStreamWriter(serializer);
             byteStreamWriter.Write(typeHashMap.GetTypeHash<TestRequest>()); // [ulong] type hash
             byteStreamWriter.Write((byte)(MessageFlags.IsEncrypted | MessageFlags.HasRequestId)); // byte flags
             byteStreamWriter.Write((byte)123); // byte Channel number
             byteStreamWriter.Write((short)456); // short Request id
-            serializationProvider.Serialize(new TestRequest() { Value = "test" }, byteStreamWriter); // data
+            serializer.Serialize(new TestRequest() { Value = "test" }, byteStreamWriter); // data
 
             // Read message
-            var byteStreamReader = new ByteStreamReader(byteStreamWriter);
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter, serializer);
             bool result = messageReader.TryReadMessage(byteStreamReader, out MessageWrapper messageWrapper);
 
             Assert.IsTrue(result);
@@ -95,19 +95,19 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReadsResponse()
         {
             var typeHashMap = new TypeHashMap();
-            var serializationProvider = new SerializationProvider();
-            var messageReader = new MessageReader(serializationProvider, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>());
+            var serializer = new FenrirSerializer();
+            var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // Write test data
-            var byteStreamWriter = new ByteStreamWriter();
+            var byteStreamWriter = new ByteStreamWriter(serializer);
             byteStreamWriter.Write(typeHashMap.GetTypeHash<TestResponse>()); // [ulong] type hash
             byteStreamWriter.Write((byte)(MessageFlags.IsEncrypted | MessageFlags.HasRequestId)); // byte flags
             byteStreamWriter.Write((byte)123); // byte Channel number
             byteStreamWriter.Write((short)456); // short Request id
-            serializationProvider.Serialize(new TestResponse() { Value = "test" }, byteStreamWriter); // byte[] data
+            serializer.Serialize(new TestResponse() { Value = "test" }, byteStreamWriter); // byte[] data
 
             // Read message
-            var byteStreamReader = new ByteStreamReader(byteStreamWriter);
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter, serializer);
             bool result = messageReader.TryReadMessage(byteStreamReader, out MessageWrapper messageWrapper);
 
             Assert.IsTrue(result);
@@ -125,11 +125,11 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReturnsFalse_IfMissingMessageTypeHash()
         {
             var typeHashMap = new TypeHashMap();
-            var serializationProvider = new SerializationProvider();
-            var messageReader = new MessageReader(serializationProvider, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>());
+            var serializer = new FenrirSerializer();
+            var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // empty data
-            var byteStreamReader = new ByteStreamReader();
+            var byteStreamReader = new ByteStreamReader(serializer);
             bool result = messageReader.TryReadMessage(byteStreamReader, out MessageWrapper messageWrapper);
             Assert.IsFalse(result);
         }
@@ -138,14 +138,14 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReturnsFalse_IfInvalidMessageTypeHash()
         {
             var typeHashMap = new TypeHashMap();
-            var serializationProvider = new SerializationProvider();
-            var messageReader = new MessageReader(serializationProvider, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>());
+            var serializer = new FenrirSerializer();
+            var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // Write test data
-            var byteStreamWriter = new ByteStreamWriter();
+            var byteStreamWriter = new ByteStreamWriter(serializer);
             byteStreamWriter.Write((ulong)123123); // invalid message type hash
 
-            var byteStreamReader = new ByteStreamReader(byteStreamWriter);
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter, serializer);
             bool result = messageReader.TryReadMessage(byteStreamReader, out MessageWrapper messageWrapper);
             Assert.IsFalse(result);
         }
@@ -154,15 +154,15 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReturnsFalse_IfMissingFlags()
         {
             var typeHashMap = new TypeHashMap();
-            var serializationProvider = new SerializationProvider();
-            var messageReader = new MessageReader(serializationProvider, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>());
+            var serializer = new FenrirSerializer();
+            var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // Write test data
-            var byteStreamWriter = new ByteStreamWriter();
+            var byteStreamWriter = new ByteStreamWriter(serializer);
             byteStreamWriter.Write((ulong)typeHashMap.GetTypeHash<TestResponse>());
             // missing flags byte
 
-            var byteStreamReader = new ByteStreamReader(byteStreamWriter);
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter, serializer);
             bool result = messageReader.TryReadMessage(byteStreamReader, out MessageWrapper messageWrapper);
             Assert.IsFalse(result);
         }
@@ -171,16 +171,16 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReturnsFalse_IfMissingChannelNumber()
         {
             var typeHashMap = new TypeHashMap();
-            var serializationProvider = new SerializationProvider();
-            var messageReader = new MessageReader(serializationProvider, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>());
+            var serializer = new FenrirSerializer();
+            var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // Write test data
-            var byteStreamWriter = new ByteStreamWriter();
+            var byteStreamWriter = new ByteStreamWriter(serializer);
             byteStreamWriter.Write((ulong)typeHashMap.GetTypeHash<TestResponse>());
             byteStreamWriter.Write((byte)(MessageFlags.IsEncrypted | MessageFlags.HasRequestId));
             // missing channel number byte
 
-            var byteStreamReader = new ByteStreamReader(byteStreamWriter);
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter, serializer);
             bool result = messageReader.TryReadMessage(byteStreamReader, out MessageWrapper messageWrapper);
             Assert.IsFalse(result);
         }
@@ -189,17 +189,17 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReturnsFalse_IfMissingRequestId()
         {
             var typeHashMap = new TypeHashMap();
-            var serializationProvider = new SerializationProvider();
-            var messageReader = new MessageReader(serializationProvider, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>());
+            var serializer = new FenrirSerializer();
+            var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // Write test data
-            var byteStreamWriter = new ByteStreamWriter();
+            var byteStreamWriter = new ByteStreamWriter(serializer);
             byteStreamWriter.Write((ulong)typeHashMap.GetTypeHash<TestResponse>());
             byteStreamWriter.Write((byte)(MessageFlags.IsEncrypted | MessageFlags.HasRequestId));
             byteStreamWriter.Write((byte)123);
             // missing request id short, while HasRequestId flag is set
 
-            var byteStreamReader = new ByteStreamReader(byteStreamWriter);
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter, serializer);
             bool result = messageReader.TryReadMessage(byteStreamReader, out MessageWrapper messageWrapper);
             Assert.IsFalse(result);
         }

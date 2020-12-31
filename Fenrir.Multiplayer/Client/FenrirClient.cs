@@ -5,6 +5,7 @@ using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -24,7 +25,7 @@ namespace Fenrir.Multiplayer.Client
         /// <summary>
         /// List of supported protocol connectors
         /// </summary>
-        private readonly IProtocolConnector[] _supportedProtocolConnectors;
+        private readonly List<IProtocolConnector> _supportedProtocolConnectors = new List<IProtocolConnector>();
 
         /// <summary>
         /// Current protocol connector. Null if no connection attempt was made
@@ -40,54 +41,33 @@ namespace Fenrir.Multiplayer.Client
         /// <inheritdoc/>
         public ConnectionState State => _protocolConnector?.State ?? ConnectionState.Disconnected;
 
-        /// <summary>
-        /// Creates Fenrir Client
-        /// </summary>
-        /// <param name="httpClient">HttpClient to use</param>
-        public FenrirClient(HttpClient httpClient)
-            : this()
-        {
-            _httpClient = httpClient;
-        }
 
         /// <summary>
-        /// Creates Fenrir Client
-        /// </summary>
-        /// <param name="supportedProtocolConnectors">Supported Protocols</param>
-        /// <param name="httpClient">HttpClient to use</param>
-        public FenrirClient(IProtocolConnector[] supportedProtocolConnectors, HttpClient httpClient)
-            : this(supportedProtocolConnectors)
-        {
-            _httpClient = httpClient;
-        }
-
-        /// <summary>
-        /// Creates Fenrir Client
+        /// Creates new Fenrir Client
         /// </summary>
         public FenrirClient()
-            : this(new IProtocolConnector[] { new LiteNetProtocolConnector() })
+            : this(new EventBasedLogger(), new HttpClient())
+        {
+        }
+
+
+        /// <summary>
+        /// Creates new Fenrir Client
+        /// </summary>
+        /// <param name="logger">Logger</param>
+        public FenrirClient(IFenrirLogger logger)
+            : this(logger, new HttpClient())
         {
         }
 
         /// <summary>
-        /// Creates Fenrir Client
+        /// Creates new Fenrir Client
         /// </summary>
-        /// <param name="supportedProtocolConnectors">Supported Protocols</param>
-        public FenrirClient(IProtocolConnector[] supportedProtocolConnectors)
+        /// <param name="logger">Logger</param>
+        /// <param name="httpClient">Http Client</param>
+        public FenrirClient(IFenrirLogger logger, HttpClient httpClient)
         {
             ClientId = Guid.NewGuid().ToString();
-
-            if(supportedProtocolConnectors == null)
-            {
-                throw new ArgumentNullException(nameof(supportedProtocolConnectors));
-            }
-
-            if (supportedProtocolConnectors.Length == 0)
-            {
-                throw new ArgumentException("Supported protocol connectors can not be empty", nameof(supportedProtocolConnectors));
-            }
-
-            _supportedProtocolConnectors = supportedProtocolConnectors;
         }
 
         /// <inheritdoc/>
@@ -186,6 +166,12 @@ namespace Fenrir.Multiplayer.Client
         }
 
         /// <inheritdoc/>
+        public void AddProtocol(IProtocolConnector protocolConnector)
+        {
+            _supportedProtocolConnectors.Add(protocolConnector);
+        }
+
+        /// <inheritdoc/>
         public void SetLogger(IFenrirLogger logger)
         {
             foreach (var protocolConnector in _supportedProtocolConnectors)
@@ -195,7 +181,7 @@ namespace Fenrir.Multiplayer.Client
         }
 
         /// <inheritdoc/>
-        public void SetContractSerializer(IContractSerializer contractSerializer)
+        public void SetContractSerializer(ITypeSerializer contractSerializer)
         {
             foreach (var protocolConnector in _supportedProtocolConnectors)
             {

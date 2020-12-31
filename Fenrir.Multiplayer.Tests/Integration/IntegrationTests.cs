@@ -4,12 +4,12 @@ using Fenrir.Multiplayer.LiteNet;
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
 using Fenrir.Multiplayer.Server;
+using Fenrir.Multiplayer.Tests.Fixtures;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;
 using System;
 using System.Net.Http;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.Tests
@@ -59,13 +59,15 @@ namespace Fenrir.Multiplayer.Tests
         [TestMethod, Timeout(TestTimeout)]
         public async Task FenrirClient_ConnectsToFenrirServer_WithLiteNetProtocol()
         {
-            using var fenrirServer = new FenrirServer();
+            using var logger = new TestLogger();
+            using var fenrirServer = new FenrirServer(logger);
             fenrirServer.AddLiteNetProtocol(27018);
             await fenrirServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
 
-            using var fenrirClient = new FenrirClient();
+            using var fenrirClient = new FenrirClient(logger);
+            fenrirClient.AddLiteNetProtocol();
             var serverInfo = new ServerInfo()
             {
                 Hostname = "127.0.0.1",
@@ -85,14 +87,16 @@ namespace Fenrir.Multiplayer.Tests
         [TestMethod, Timeout(TestTimeout)]
         public async Task FenrirClient_ConnectsToFenrirServer_WithServerInfoService()
         {
-            using var fenrirServer = new FenrirServer();
+            using var logger = new TestLogger();
+            using var fenrirServer = new FenrirServer(logger);
             fenrirServer.AddLiteNetProtocol(27018);
             fenrirServer.AddInfoService(8080);
             await fenrirServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
 
-            using var fenrirClient = new FenrirClient();
+            using var fenrirClient = new FenrirClient(logger);
+            fenrirClient.AddLiteNetProtocol();
             await fenrirClient.Connect("http://127.0.0.1:8080");
 
             Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not connected");
@@ -101,7 +105,8 @@ namespace Fenrir.Multiplayer.Tests
         [TestMethod, Timeout(TestTimeout)]
         public async Task FenrirClient_ConnectsToFenrirServer_WithCustomConnectionRequestHandler()
         {
-            using var fenrirServer = new FenrirServer();
+            using var logger = new TestLogger();
+            using var fenrirServer = new FenrirServer(logger);
             fenrirServer.AddLiteNetProtocol();
             fenrirServer.AddInfoService();
 
@@ -116,7 +121,8 @@ namespace Fenrir.Multiplayer.Tests
 
             Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
 
-            using var fenrirClient = new FenrirClient();
+            using var fenrirClient = new FenrirClient(logger);
+            fenrirClient.AddLiteNetProtocol();
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080", new CustomConnectionRequestData() { Token = "test" });
 
             Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
@@ -128,7 +134,8 @@ namespace Fenrir.Multiplayer.Tests
         [TestMethod, Timeout(TestTimeout)]
         public async Task FenrirClient_FailsToConnectToFenrirServer_WhenCustomConnectionRequestHandlerRejects()
         {
-            using var fenrirServer = new FenrirServer();
+            using var logger = new TestLogger();
+            using var fenrirServer = new FenrirServer(logger);
             fenrirServer.AddLiteNetProtocol();
             fenrirServer.AddInfoService();
 
@@ -141,7 +148,8 @@ namespace Fenrir.Multiplayer.Tests
 
             Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
 
-            using var fenrirClient = new FenrirClient();
+            using var fenrirClient = new FenrirClient(logger);
+            fenrirClient.AddLiteNetProtocol();
 
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080", new CustomConnectionRequestData() { Token = "test" });
 
@@ -154,7 +162,8 @@ namespace Fenrir.Multiplayer.Tests
         [TestMethod, Timeout(TestTimeout)]
         public async Task FenrirClient_FailsToConnectToFenrirServer_WhenCustomConnectionRequestHandlerThrowsException()
         {
-            using var fenrirServer = new FenrirServer();
+            using var logger = new TestLogger();
+            using var fenrirServer = new FenrirServer(logger);
             fenrirServer.AddLiteNetProtocol();
             fenrirServer.AddInfoService();
 
@@ -167,8 +176,8 @@ namespace Fenrir.Multiplayer.Tests
 
             Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
 
-            using var fenrirClient = new FenrirClient();
-
+            using var fenrirClient = new FenrirClient(logger);
+            fenrirClient.AddLiteNetProtocol();
 
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080", new CustomConnectionRequestData() { Token = "test" });
 
@@ -180,7 +189,8 @@ namespace Fenrir.Multiplayer.Tests
         [TestMethod, Timeout(TestTimeout)]
         public async Task FenrirClient_FailsToConnectToFenrirServer_WhenRequestDataSerializationFails()
         {
-            using var fenrirServer = new FenrirServer();
+            using var logger = new TestLogger();
+            using var fenrirServer = new FenrirServer(logger);
             fenrirServer.AddLiteNetProtocol();
             fenrirServer.AddInfoService();
 
@@ -193,7 +203,8 @@ namespace Fenrir.Multiplayer.Tests
 
             Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
 
-            using var fenrirClient = new FenrirClient();
+            using var fenrirClient = new FenrirClient(logger);
+            fenrirClient.AddLiteNetProtocol();
 
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080", new CustomConnectionRequestData() { Token = "test" });
 
@@ -205,7 +216,8 @@ namespace Fenrir.Multiplayer.Tests
         [TestMethod, Timeout(TestTimeout)]
         public async Task FenrirClient_SendRequest_SendsRequest()
         {
-            using var fenrirServer = new FenrirServer();
+            using var logger = new TestLogger();
+            using var fenrirServer = new FenrirServer(logger);
             fenrirServer.AddLiteNetProtocol();
             fenrirServer.AddInfoService();
 
@@ -216,7 +228,8 @@ namespace Fenrir.Multiplayer.Tests
 
             Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
 
-            using var fenrirClient = new FenrirClient();
+            using var fenrirClient = new FenrirClient(logger);
+            fenrirClient.AddLiteNetProtocol();
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
 
             Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
@@ -233,7 +246,8 @@ namespace Fenrir.Multiplayer.Tests
         [TestMethod, Timeout(TestTimeout)]
         public async Task FenrirClient_SendRequestResponse_SendsRequestWithResponse()
         {
-            using var fenrirServer = new FenrirServer();
+            using var logger = new TestLogger();
+            using var fenrirServer = new FenrirServer(logger);
             fenrirServer.AddLiteNetProtocol();
             fenrirServer.AddInfoService();
 
@@ -247,7 +261,8 @@ namespace Fenrir.Multiplayer.Tests
 
             Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
 
-            using var fenrirClient = new FenrirClient();
+            using var fenrirClient = new FenrirClient(logger);
+            fenrirClient.AddLiteNetProtocol();
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
 
             Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
@@ -261,7 +276,8 @@ namespace Fenrir.Multiplayer.Tests
         [TestMethod, Timeout(TestTimeout)]
         public async Task FenrirClient_SendRequestResponse_ThrowsRequestFailedException_IfRequestHandlerFails()
         {
-            using var fenrirServer = new FenrirServer();
+            using var logger = new TestLogger();
+            using var fenrirServer = new FenrirServer(logger);
             fenrirServer.AddLiteNetProtocol();
             fenrirServer.AddInfoService();
 
@@ -274,7 +290,8 @@ namespace Fenrir.Multiplayer.Tests
 
             Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
 
-            using var fenrirClient = new FenrirClient();
+            using var fenrirClient = new FenrirClient(logger);
+            fenrirClient.AddLiteNetProtocol();
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
 
             Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
@@ -290,7 +307,8 @@ namespace Fenrir.Multiplayer.Tests
         [TestMethod, Timeout(TestTimeout)]
         public async Task FenrirClient_SendRequestResponse_ThrowsRequestFailedException_IfRequestHandlerReturnsNull()
         {
-            using var fenrirServer = new FenrirServer();
+            using var logger = new TestLogger();
+            using var fenrirServer = new FenrirServer(logger);
             fenrirServer.AddLiteNetProtocol();
             fenrirServer.AddInfoService();
 
@@ -303,7 +321,8 @@ namespace Fenrir.Multiplayer.Tests
 
             Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
 
-            using var fenrirClient = new FenrirClient();
+            using var fenrirClient = new FenrirClient(logger);
+            fenrirClient.AddLiteNetProtocol();
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
 
             Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
@@ -319,7 +338,8 @@ namespace Fenrir.Multiplayer.Tests
         [TestMethod, Timeout(TestTimeout)]
         public async Task FenrirClient_SendRequestResponse_SendsRequestWithAsyncResponse()
         {
-            using var fenrirServer = new FenrirServer();
+            using var logger = new TestLogger();
+            using var fenrirServer = new FenrirServer(logger);
             fenrirServer.AddLiteNetProtocol();
             fenrirServer.AddInfoService();
 
@@ -333,7 +353,8 @@ namespace Fenrir.Multiplayer.Tests
 
             Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
 
-            using var fenrirClient = new FenrirClient();
+            using var fenrirClient = new FenrirClient(logger);
+            fenrirClient.AddLiteNetProtocol();
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
 
             Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
@@ -347,7 +368,8 @@ namespace Fenrir.Multiplayer.Tests
         [TestMethod, Timeout(TestTimeout)]
         public async Task FenrirClient_SendRequestResponse_ThrowsRequestFailedException_IfAsyncRequestHandlerFails()
         {
-            using var fenrirServer = new FenrirServer();
+            using var logger = new TestLogger();
+            using var fenrirServer = new FenrirServer(logger);
             fenrirServer.AddLiteNetProtocol();
             fenrirServer.AddInfoService();
 
@@ -360,7 +382,8 @@ namespace Fenrir.Multiplayer.Tests
 
             Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
 
-            using var fenrirClient = new FenrirClient();
+            using var fenrirClient = new FenrirClient(logger);
+            fenrirClient.AddLiteNetProtocol();
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
 
             Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
@@ -376,20 +399,22 @@ namespace Fenrir.Multiplayer.Tests
         [TestMethod, Timeout(TestTimeout)]
         public async Task FenrirClient_SendRequestResponse_ThrowsRequestFailedException_IfAsyncRequestHandlerReturnsNull()
         {
-            using var fenrirServer = new FenrirServer();
+            using var logger = new TestLogger();
+            using var fenrirServer = new FenrirServer(logger);
             fenrirServer.AddLiteNetProtocol();
             fenrirServer.AddInfoService();
 
             fenrirServer.AddRequestHandlerAsync(new TestAsyncRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
             {
-                return null;
+                return Task.FromResult<TestResponse>(null);
             }));
 
             await fenrirServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
 
-            using var fenrirClient = new FenrirClient();
+            using var fenrirClient = new FenrirClient(logger);
+            fenrirClient.AddLiteNetProtocol();
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
 
             Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
@@ -405,7 +430,8 @@ namespace Fenrir.Multiplayer.Tests
         [TestMethod, Timeout(TestTimeout)]
         public async Task FenrirClient_SendRequestResponse_ThrowsRequestFailedException_IfRequestHandlerTimesOut()
         {
-            using var fenrirServer = new FenrirServer();
+            using var logger = new TestLogger();
+            using var fenrirServer = new FenrirServer(logger);
             fenrirServer.AddLiteNetProtocol();
             fenrirServer.AddInfoService();
 
@@ -419,9 +445,8 @@ namespace Fenrir.Multiplayer.Tests
 
             Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
 
-            using var fenrirClient = new FenrirClient(
-                new IProtocolConnector[] { new LiteNetProtocolConnector() { RequestTimeoutMs = 100 } }
-            );
+            using var fenrirClient = new FenrirClient(logger);
+            fenrirClient.AddProtocol(new LiteNetProtocolConnector() { RequestTimeoutMs = 100 });
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
 
             Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");

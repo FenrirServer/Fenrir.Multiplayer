@@ -1,15 +1,19 @@
-﻿using LiteNetLib.Utils;
-using System;
+﻿using System;
 using System.Net;
+using LiteNetLib.Utils;
 
 namespace Fenrir.Multiplayer.Serialization
 {
     /// <summary>
-    /// Byte Stream Reader
     /// Deserializes values from a given byte stream 
     /// </summary>
     class ByteStreamReader : IByteStreamReader, IRecyclable
     {
+        /// <summary>
+        /// Net Data Reader
+        /// </summary>
+        public NetDataReader NetDataReader { get; private set; }
+
         /// <inheritdoc/>
         public int Position => NetDataReader.Position;
 
@@ -23,42 +27,52 @@ namespace Fenrir.Multiplayer.Serialization
         public int AvailableBytes => NetDataReader.AvailableBytes;
 
         /// <summary>
-        /// Net Data Reader
+        /// Instance of a serializer. Used to read unknown types
         /// </summary>
-        public NetDataReader NetDataReader { get; private set; }
+        private IFenrirSerializer _serializer;
 
         /// <summary>
         /// Creates ByteStreamReader
         /// </summary>
-        public ByteStreamReader()
+        /// <param name="serializer">Fenrir Serializer, used for deserializing unknown types</param>
+        public ByteStreamReader(IFenrirSerializer serializer)
+            : this(new NetDataReader(), serializer)
         {
-            NetDataReader = new NetDataReader();
         }
 
         /// <summary>
         /// Creates byte stream reader from byte stream writer
         /// </summary>
         /// <param name="byteStreamWriter">Byte stream writer</param>
-        public ByteStreamReader(ByteStreamWriter byteStreamWriter)
+        /// <param name="serializer">Fenrir Serializer, used for deserializing unknown types</param>
+        public ByteStreamReader(ByteStreamWriter byteStreamWriter, IFenrirSerializer serializer = null)
+            : this(new NetDataReader(byteStreamWriter.NetDataWriter), serializer)
         {
-            NetDataReader = new NetDataReader(byteStreamWriter.NetDataWriter);
         }
 
         /// <summary>
-        /// Creates ByteStreamReader form byte array
+        /// Creates <see cref="ByteStreamReader"/> with <seealso cref="IFenrirSerializer"/> and byte stream array
         /// </summary>
         /// <param name="bytes">Bytes</param>
-        public ByteStreamReader(byte[] bytes)
+        /// <param name="serializer">Fenrir Serializer, used for deserializing unknown types</param>
+        public ByteStreamReader(byte[] bytes, IFenrirSerializer serializer = null)
+            : this(new NetDataReader(bytes), serializer)
         {
-            NetDataReader = new NetDataReader(bytes);
         }
 
         /// <summary>
-        /// Creates ByteStreamReader from LiteNet NetDataWriter
+        /// Creates <see cref="ByteStreamReader"/> with <seealso cref="IFenrirSerializer"/> and <seealso cref="NetDataReader"/>
         /// </summary>
         /// <param name="netDataReader">Net data reader</param>
-        public ByteStreamReader(NetDataReader netDataReader)
+        /// <param name="serializer">Fenrir Serializer, used for deserializing unknown types</param>
+        public ByteStreamReader(NetDataReader netDataReader, IFenrirSerializer serializer = null)
         {
+            if(netDataReader == null)
+            {
+                throw new ArgumentNullException(nameof(netDataReader));
+            }
+
+            _serializer = serializer;
             NetDataReader = netDataReader;
         }
 
@@ -69,11 +83,14 @@ namespace Fenrir.Multiplayer.Serialization
         }
 
         /// <inheritdoc/>
-        public T Read<T>() where T : IByteStreamSerializable, new()
+        public T Read<T>() where T : new()
         {
-            var data = new T();
-            data.Deserialize(this);
-            return data;
+            if(_serializer == null)
+            {
+                throw new NullReferenceException($"Failed to read {typeof(T).Name}, {nameof(ByteStreamReader)}.{nameof(_serializer)} is not set");
+            }
+
+            return _serializer.Deserialize<T>(this);
         }
 
         /// <inheritdoc/>

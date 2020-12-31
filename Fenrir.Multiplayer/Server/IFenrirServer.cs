@@ -40,7 +40,7 @@ namespace Fenrir.Multiplayer.Server
         /// If set, any data contract will be serialized using that contract serializer,
         /// with IByteStreamSerializable used as a fall back.
         /// </summary>
-        void SetContractSerializer(IContractSerializer contractSerializer);
+        void SetContractSerializer(ITypeSerializer contractSerializer);
 
         /// <summary>
         /// Sets Fenrir Logger. If not set, EventBasedLogger is used

@@ -4,7 +4,6 @@ using System.Net;
 namespace Fenrir.Multiplayer.Serialization
 {
     /// <summary>
-    /// Byte Stream reader
     /// Deserializes values from a given byte stream 
     /// </summary>
     public interface IByteStreamReader
@@ -30,11 +29,11 @@ namespace Fenrir.Multiplayer.Serialization
         int AvailableBytes { get; }
 
         /// <summary>
-        /// Reads data of a custom type that implements <see cref="IByteStreamSerializable"/>
+        /// Reads data of a custom data type.
         /// </summary>
-        /// <typeparam name="T">Type</typeparam>
+        /// <typeparam name="T">Type of data</typeparam>
         /// <returns>Instance of type T</returns>
-        T Read<T>() where T : IByteStreamSerializable, new();
+        T Read<T>() where T : new();
 
         /// <summary>
         /// Reads boolean

@@ -12,16 +12,16 @@ namespace Fenrir.Multiplayer.Tests.Unit
     public class SerializationTests
     {
         [TestMethod]
-        public void SerializationProvider_SerializesWithByteStreamSerializable()
+        public void Serializer_SerializesWithByteStreamSerializable()
         {
             var test = new TestSerializable() { TestString = "test", TestInteger = 123 };
-            var serializationProvider = new SerializationProvider();
+            var serializer = new FenrirSerializer();
 
-            var byteStreamWriter = new ByteStreamWriter();
-            serializationProvider.Serialize(test, byteStreamWriter);
+            var byteStreamWriter = new ByteStreamWriter(serializer);
+            serializer.Serialize(test, byteStreamWriter);
 
-            var byteStreamReader = new ByteStreamReader(byteStreamWriter.Bytes);
-            TestSerializable test2 = serializationProvider.Deserialize<TestSerializable>(byteStreamReader);
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter.Bytes, serializer);
+            TestSerializable test2 = serializer.Deserialize<TestSerializable>(byteStreamReader);
 
             Assert.AreEqual(test.TestString, test2.TestString);
             Assert.AreEqual(test.TestInteger, test2.TestInteger);
@@ -29,20 +29,20 @@ namespace Fenrir.Multiplayer.Tests.Unit
 
 
         [TestMethod]
-        public void SerializationProvider_SerializesWithNestedByteStreamSerializable()
+        public void Serializer_SerializesWithNestedByteStreamSerializable()
         {
             var test = new TestNestedSerializable()
             {
                 Test = new TestSerializable() { TestString = "test", TestInteger = 123 }
             };
 
-            var serializationProvider = new SerializationProvider();
+            var serializer = new FenrirSerializer();
 
-            var byteStreamWriter = new ByteStreamWriter();
-            serializationProvider.Serialize(test, byteStreamWriter);
+            var byteStreamWriter = new ByteStreamWriter(serializer);
+            serializer.Serialize(test, byteStreamWriter);
 
-            var byteStreamReader = new ByteStreamReader(byteStreamWriter.Bytes);
-            TestNestedSerializable test2 = serializationProvider.Deserialize<TestNestedSerializable>(byteStreamReader);
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter.Bytes, serializer);
+            TestNestedSerializable test2 = serializer.Deserialize<TestNestedSerializable>(byteStreamReader);
 
             Assert.IsNotNull(test.Test);
             Assert.IsNotNull(test2.Test);
@@ -51,66 +51,133 @@ namespace Fenrir.Multiplayer.Tests.Unit
         }
 
         [TestMethod]
-        public void SerializationProvider_SerializesWithCustomContractSerializer()
+        public void Serializer_SerializesWithCustomTypeSerializer()
         {
             var test = new TestDataContract() { TestString = "test", TestInteger = 123 };
-            var serializationProvider = new SerializationProvider();
-            serializationProvider.SetContractSerializer(new TestContractSerializer());
+            var serializer = new FenrirSerializer();
+            serializer.SetTypeSerializer(new TestContractSerializer());
 
-            var byteStreamWriter = new ByteStreamWriter();
-            serializationProvider.Serialize(test, byteStreamWriter);
+            var byteStreamWriter = new ByteStreamWriter(serializer);
+            serializer.Serialize(test, byteStreamWriter);
 
-            var byteStreamReader = new ByteStreamReader(byteStreamWriter.Bytes);
-            TestDataContract test2 = serializationProvider.Deserialize<TestDataContract>(byteStreamReader);
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter.Bytes, serializer);
+            TestDataContract test2 = serializer.Deserialize<TestDataContract>(byteStreamReader);
 
             Assert.AreEqual(test.TestString, test2.TestString);
             Assert.AreEqual(test.TestInteger, test2.TestInteger);
         }
 
         [TestMethod]
-        public void SerializationProvider_Serialize_ThrowsSerializationException_WhenByteStreamSerializableThrows()
+        public void Serializer_SerializesWithCustomTypeSerializer_ForGivenType()
+        {
+            var test = new TestDataContract() { TestString = "test", TestInteger = 123 };
+            var serializer = new FenrirSerializer();
+            serializer.AddTypeSerializer<TestDataContract>(new TestContractTypeSerializer());
+
+            var byteStreamWriter = new ByteStreamWriter(serializer);
+            serializer.Serialize(test, byteStreamWriter);
+
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter.Bytes, serializer);
+            TestDataContract test2 = serializer.Deserialize<TestDataContract>(byteStreamReader);
+
+            Assert.AreEqual(test.TestString, test2.TestString);
+            Assert.AreEqual(test.TestInteger, test2.TestInteger);
+        }
+
+        [TestMethod]
+        public void Serializer_SerializesWithCustomTypeSerializer_ForGivenType_WithNested()
+        {
+            var serializer = new FenrirSerializer();
+            serializer.AddTypeSerializer<LinkedListNode>(new LinkedListNodeSerializer());
+
+            LinkedListNode node1 = new LinkedListNode() { Value = "node1" };
+            LinkedListNode node2 = new LinkedListNode() { Value = "node2" };
+            node1.Next = node2;
+
+            var byteStreamWriter = new ByteStreamWriter(serializer);
+            serializer.Serialize(node1, byteStreamWriter);
+
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter.Bytes, serializer);
+            LinkedListNode test1Deserialized = serializer.Deserialize<LinkedListNode>(byteStreamReader);
+
+            Assert.AreEqual(node1.Value, test1Deserialized.Value);
+            Assert.AreEqual(node1.Next.Value, test1Deserialized.Next.Value);
+        }
+
+
+        [TestMethod]
+        public void Serializer_Serialize_ThrowsSerializationException_WhenByteStreamSerializableThrows()
         {
             var test = new TestThrowingSerializable();
-            var serializationProvider = new SerializationProvider();
+            var serializer = new FenrirSerializer();
 
-            var byteStreamWriter = new ByteStreamWriter();
-            var e = Assert.ThrowsException<SerializationException>(() => serializationProvider.Serialize(test, byteStreamWriter));
+            var byteStreamWriter = new ByteStreamWriter(serializer);
+            var e = Assert.ThrowsException<SerializationException>(() => serializer.Serialize(test, byteStreamWriter));
             Assert.IsInstanceOfType(e.InnerException, typeof(InvalidOperationException));
             Assert.AreEqual("test", e.InnerException.Message);
         }
 
+
         [TestMethod]
-        public void SerializationProvider_Deserialize_ThrowsSerializationException_WhenByteStreamSerializableThrows()
+        public void Serializer_Deserialize_ThrowsSerializationException_WhenByteStreamSerializableThrows()
         {
-            var serializationProvider = new SerializationProvider();
-            var byteStreamReader = new ByteStreamReader();
-            var e = Assert.ThrowsException<SerializationException>(() => serializationProvider.Deserialize<TestThrowingSerializable>(byteStreamReader));
+            var serializer = new FenrirSerializer();
+            var byteStreamWriter = new ByteStreamWriter(serializer);
+            byteStreamWriter.Write(true); // To make sure there is some data
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter, serializer);
+            var e = Assert.ThrowsException<SerializationException>(() => serializer.Deserialize<TestThrowingSerializable>(byteStreamReader));
             Assert.IsInstanceOfType(e.InnerException, typeof(InvalidOperationException));
             Assert.AreEqual("test", e.InnerException.Message);
         }
 
         [TestMethod]
-        public void SerializationProvider_Serialize_ThrowsSerializationException_WhenContractSerializerThrows()
+        public void Serializer_Serialize_ThrowsSerializationException_WhenTypeSerializerThrows()
         {
             var test = new TestDataContract();
-            var serializationProvider = new SerializationProvider();
-            serializationProvider.SetContractSerializer(new ThrowingContractSerializer());
+            var serializer = new FenrirSerializer();
+            serializer.SetTypeSerializer(new ThrowingContractSerializer());
 
-            var byteStreamWriter = new ByteStreamWriter();
-            var e = Assert.ThrowsException<SerializationException>(() => serializationProvider.Serialize(test, byteStreamWriter));
+            var byteStreamWriter = new ByteStreamWriter(serializer);
+            var e = Assert.ThrowsException<SerializationException>(() => serializer.Serialize(test, byteStreamWriter));
             Assert.IsInstanceOfType(e.InnerException, typeof(InvalidOperationException));
             Assert.AreEqual("test", e.InnerException.Message);
         }
 
         [TestMethod]
-        public void SerializationProvider_Deserialize_ThrowsSerializationException_WhenContractSerializerThrows()
+        public void Serializer_Deserialize_ThrowsSerializationException_WhenTypeSerializerThrows()
         {
-            var serializationProvider = new SerializationProvider();
-            serializationProvider.SetContractSerializer(new ThrowingContractSerializer());
-            var byteStreamReader = new ByteStreamReader();
-            var e = Assert.ThrowsException<SerializationException>(() => serializationProvider.Deserialize<TestDataContract>(byteStreamReader));
+            var serializer = new FenrirSerializer();
+            serializer.SetTypeSerializer(new ThrowingContractSerializer());
+            var byteStreamWriter = new ByteStreamWriter(serializer);
+            byteStreamWriter.Write(true); // To make sure there is some data
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter, serializer);
+            var e = Assert.ThrowsException<SerializationException>(() => serializer.Deserialize<TestDataContract>(byteStreamReader));
             Assert.IsInstanceOfType(e.InnerException, typeof(InvalidOperationException));
             Assert.AreEqual("test", e.InnerException.Message);
+        }
+        
+        [TestMethod]
+        public void Serializer_Deserialize_ThrowsSerializationException_WhenEndOfStreamReached()
+        {
+            var serializer = new FenrirSerializer();
+            serializer.SetTypeSerializer(new ThrowingContractSerializer());
+            var byteStreamReader = new ByteStreamReader(serializer);
+            var e = Assert.ThrowsException<SerializationException>(() => serializer.Deserialize<TestDataContract>(byteStreamReader));
+        }
+
+        [TestMethod]
+        public void Serializer_Serialize_ThrowsSerializationException_WhenCircularReferenceReachesMaxDepth()
+        {
+            var serializer = new FenrirSerializer();
+            serializer.AddTypeSerializer<LinkedListNode>(new LinkedListNodeSerializer());
+
+            LinkedListNode test1 = new LinkedListNode();
+            LinkedListNode test2 = new LinkedListNode();
+            test1.Next = test2;
+            test2.Next = test1; // Circular reference
+
+            var byteStreamWriter = new ByteStreamWriter(serializer);
+            var e = Assert.ThrowsException<SerializationException>(() => serializer.Serialize(test1, byteStreamWriter));
         }
 
         #region Test Fixtures
@@ -161,18 +228,8 @@ namespace Fenrir.Multiplayer.Tests.Unit
             }
         }
 
-        class TestContractSerializer : IContractSerializer
+        class TestContractSerializer : ITypeSerializer
         {
-            public TData Deserialize<TData>(IByteStreamReader byteStreamReader) where TData : new()
-            {
-                byte[] bytes = byteStreamReader.ReadBytesWithLength();
-                using var memoryStream = new MemoryStream(bytes);
-
-                var dataContractSerializer = new DataContractSerializer(typeof(TData));
-                TData data = (TData)dataContractSerializer.ReadObject(memoryStream);
-                return data;
-            }
-
             public object Deserialize(Type type, IByteStreamReader byteStreamReader)
             {
                 byte[] bytes = byteStreamReader.ReadBytesWithLength();
@@ -195,13 +252,8 @@ namespace Fenrir.Multiplayer.Tests.Unit
             }
         }
 
-        class ThrowingContractSerializer : IContractSerializer
+        class ThrowingContractSerializer : ITypeSerializer
         {
-            public TData Deserialize<TData>(IByteStreamReader byteStreamReader) where TData : new()
-            {
-                throw new InvalidOperationException("test");
-            }
-
             public object Deserialize(Type type, IByteStreamReader byteStreamReader)
             {
                 throw new InvalidOperationException("test");
@@ -212,6 +264,42 @@ namespace Fenrir.Multiplayer.Tests.Unit
                 throw new InvalidOperationException("test");
             }
         }
+
+        class TestContractTypeSerializer : ITypeSerializer<TestDataContract>
+        {
+            public TestDataContract Deserialize(IByteStreamReader byteStreamReader)
+            {
+                TestDataContract contract = new TestDataContract();
+                contract.TestString = byteStreamReader.ReadString();
+                contract.TestInteger = byteStreamReader.ReadInt();
+                return contract;
+            }
+
+            public void Serialize(TestDataContract data, IByteStreamWriter byteStreamWriter)
+            {
+                byteStreamWriter.Write(data.TestString);
+                byteStreamWriter.Write(data.TestInteger);
+            }
+        }
+
+
+        class LinkedListNodeSerializer : ITypeSerializer<LinkedListNode>
+        {
+            public LinkedListNode Deserialize(IByteStreamReader byteStreamReader)
+            {
+                LinkedListNode contract = new LinkedListNode();
+                contract.Value = byteStreamReader.ReadString();
+                contract.Next = byteStreamReader.Read<LinkedListNode>();
+                return contract;
+            }
+
+            public void Serialize(LinkedListNode data, IByteStreamWriter byteStreamWriter)
+            {
+                byteStreamWriter.Write(data.Value);
+                byteStreamWriter.Write(data.Next);
+            }
+        }
+
 
         [DataContract]
         class TestDataContract
@@ -224,6 +312,12 @@ namespace Fenrir.Multiplayer.Tests.Unit
         }
 
 
+        class LinkedListNode
+        {
+            public string Value;
+
+            public LinkedListNode Next;
+        }
 
         #endregion
     }

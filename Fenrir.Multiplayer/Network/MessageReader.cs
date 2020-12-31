@@ -14,7 +14,7 @@ namespace Fenrir.Multiplayer.Network
         /// <summary>
         /// Serialization provider - used for serializing and deserializing messages
         /// </summary>
-        private readonly ISerializationProvider _serializationProvider;
+        private readonly IFenrirSerializer _serializationProvider;
         
         /// <summary>
         /// Type map - contians list of types and hashes
@@ -38,7 +38,7 @@ namespace Fenrir.Multiplayer.Network
         /// <param name="typeHashMap">Type Hash Map</param>
         /// <param name="logger">Logger</param>
         /// <param name="byteStreamReaderPool">Object pool of Byte Stream Readers</param>
-        public MessageReader(ISerializationProvider serializationProvider, ITypeHashMap typeHashMap, IFenrirLogger logger, RecyclableObjectPool<ByteStreamReader> byteStreamReaderPool)
+        public MessageReader(IFenrirSerializer serializationProvider, ITypeHashMap typeHashMap, IFenrirLogger logger, RecyclableObjectPool<ByteStreamReader> byteStreamReaderPool)
         {
             _serializationProvider = serializationProvider;
             _typeHashMap = typeHashMap;

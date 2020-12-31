@@ -4,17 +4,15 @@ using System;
 
 namespace Fenrir.Multiplayer.Tests.Fixtures
 {
-    class TestLogger : IFenrirLogger
+    class TestLogger : IFenrirLogger, IDisposable
     {
+        private ILoggerFactory _loggerFactory;
         private ILogger _logger;
 
         public TestLogger()
         {
-            using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => {
-                builder.AddConsole();
-            });
-
-            _logger = loggerFactory.CreateLogger<TestLogger>();
+            _loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            _logger = _loggerFactory.CreateLogger<TestLogger>();
         }
 
         public void Critical(string format, params object[] arguments) => _logger.LogCritical(format, arguments);
@@ -28,5 +26,11 @@ namespace Fenrir.Multiplayer.Tests.Fixtures
         public void Trace(string format, params object[] arguments) => _logger.LogTrace(format, arguments);
 
         public void Warning(string format, params object[] arguments) => _logger.LogWarning(format, arguments);
+
+        public void Dispose()
+        {
+            _loggerFactory.Dispose();
+        }
+
     }
 }

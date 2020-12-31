@@ -1,5 +1,6 @@
-﻿using System.Net;
-using LiteNetLib.Utils;
+﻿using LiteNetLib.Utils;
+using System;
+using System.Net;
 
 namespace Fenrir.Multiplayer.Serialization
 {
@@ -9,6 +10,11 @@ namespace Fenrir.Multiplayer.Serialization
     /// </summary>
     class ByteStreamWriter : IByteStreamWriter, IRecyclable
     {
+        /// <summary>
+        /// Net Data Writer
+        /// </summary>
+        public NetDataWriter NetDataWriter { get; private set; }
+
         ///<inheritdoc/>
         public int Capacity => NetDataWriter.Capacity;
 
@@ -19,33 +25,32 @@ namespace Fenrir.Multiplayer.Serialization
         public int Length => NetDataWriter.Length;
 
         /// <summary>
-        /// Net Data Writer
+        /// Instance of a serializer. Used to write unknown types
         /// </summary>
-        public NetDataWriter NetDataWriter { get; private set; }
+        private IFenrirSerializer _serializer;
 
         /// <summary>
         /// Creates Byte Stream Writer
         /// </summary>
-        public ByteStreamWriter()
+        /// <param name="serializer">Fenrir Serializer, used for serializing unknown types</param>
+        public ByteStreamWriter(IFenrirSerializer serializer)
+            : this(new NetDataWriter(), serializer)
         {
-            NetDataWriter = new NetDataWriter();
         }
 
         /// <summary>
-        /// Creates Byte Stream Writer
-        /// </summary>
-        /// <param name="byteStreamReader">Byte stream reader</param>
-        public ByteStreamWriter(ByteStreamReader byteStreamReader)
-        {
-            NetDataWriter = new NetDataWriter();
-        }
-
-        /// <summary>
-        /// Constructs Byte Stream Writer with LiteNet NetDataWriter
+        /// Creates new <see cref="ByteStreamWriter"/> with <seealso cref="IFenrirSerializer"/> and <seealso cref="NetDataWriter"/>
         /// </summary>
         /// <param name="netDataWriter">Net Data Writer</param>
-        public ByteStreamWriter(NetDataWriter netDataWriter)
+        /// <param name="serializer">Fenrir Serializer, used for serializing unknown types</param>
+        public ByteStreamWriter(NetDataWriter netDataWriter, IFenrirSerializer serializer)
         {
+            if (netDataWriter == null)
+            {
+                throw new ArgumentNullException(nameof(netDataWriter));
+            }
+
+            _serializer = serializer;
             NetDataWriter = netDataWriter;
         }
 
@@ -59,7 +64,15 @@ namespace Fenrir.Multiplayer.Serialization
         void IRecyclable.Recycle() => NetDataWriter?.Reset();
 
         ///<inheritdoc/>
-        public void Write(IByteStreamSerializable serializable) => serializable.Serialize(this);
+        public void Write(object obj) 
+        {
+            if (_serializer == null)
+            {
+                throw new NullReferenceException($"Failed to write {obj.GetType().Name}, {nameof(ByteStreamReader)}.{nameof(_serializer)} is not set");
+            }
+    
+            _serializer.Serialize(obj, this);
+        }
 
         ///<inheritdoc/>
         public void Write(byte[] data, int offset, int length) => NetDataWriter.Put(data, offset, length);
