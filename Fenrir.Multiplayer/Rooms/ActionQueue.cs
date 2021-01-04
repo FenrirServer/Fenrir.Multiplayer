@@ -9,7 +9,7 @@ namespace Fenrir.Multiplayer.Rooms
     /// <summary>
     /// Single threaded event loop
     /// </summary>
-    class ActionQueue : IDisposable
+    class ActionQueue : IActionQueue, IDisposable
     {
         /// <summary>
         /// Logger
@@ -81,9 +81,7 @@ namespace Fenrir.Multiplayer.Rooms
         {
         }
 
-        /// <summary>
-        /// Runs event loop. Starts processing actions in the queue
-        /// </summary>
+        /// <inheritdoc/>
         public async void Run()
         {
             if(_isDisposed)
@@ -141,18 +139,13 @@ namespace Fenrir.Multiplayer.Rooms
             return false;
         }
 
-        /// <summary>
-        /// Stops action queue
-        /// </summary>
+        /// <inheritdoc/>
         public void Stop()
         {
             IsRunning = false;
         }
 
-        /// <summary>
-        /// Adds action to the queue
-        /// </summary>
-        /// <param name="action">Callback</param>
+        /// <inheritdoc/>
         public void Enqueue(Action action)
         {
             lock(_actions)
@@ -164,11 +157,7 @@ namespace Fenrir.Multiplayer.Rooms
             _actionEnqueuedTcs?.TrySetResult(false);
         }
 
-        /// <summary>
-        /// Schedules action with a specified delay
-        /// </summary>
-        /// <param name="action">Callback</param>
-        /// <param name="delayMs">Delay, in MS</param>
+        /// <inheritdoc/>
         public async void Schedule(Action action, int delayMs)
         {
             await Task.Delay(delayMs);
@@ -181,11 +170,7 @@ namespace Fenrir.Multiplayer.Rooms
             Enqueue(action);
         }
 
-        /// <summary>
-        /// Schedules action with a specified delay
-        /// </summary>
-        /// <param name="action">Callback</param>
-        /// <param name="delayMs">Delay</param>
+        /// <inheritdoc/>
         public async void Schedule(Action action, TimeSpan delay)
         {
             await Task.Delay(delay);
