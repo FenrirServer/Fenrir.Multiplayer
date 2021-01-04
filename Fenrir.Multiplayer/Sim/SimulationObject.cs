@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 
 
-namespace Fenrir.Multiplayer.Simulation
+namespace Fenrir.Multiplayer.Sim
 {
     public sealed class SimulationObject
     {

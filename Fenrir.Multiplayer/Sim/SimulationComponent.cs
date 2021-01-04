@@ -1,4 +1,4 @@
-﻿namespace Fenrir.Multiplayer.Simulation
+﻿namespace Fenrir.Multiplayer.Sim
 {
     public abstract class SimulationComponent
     {
@@ -15,6 +15,10 @@
         }
 
         public virtual void Tick()
+        {
+        }
+
+        public virtual void ClientTick()
         {
         }
     }

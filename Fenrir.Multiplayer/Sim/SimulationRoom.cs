@@ -4,7 +4,7 @@ using Fenrir.Multiplayer.Rooms;
 using System;
 using System.Diagnostics;
 
-namespace Fenrir.Multiplayer.Simulation
+namespace Fenrir.Multiplayer.Sim
 {
     public class SimulationRoom : ServerRoom
     {
@@ -16,7 +16,7 @@ namespace Fenrir.Multiplayer.Simulation
         /// <summary>
         /// Contains server simulation
         /// </summary>
-        private readonly ISimulation _simulation;
+        private readonly Simulation _simulation;
 
         /// <summary>
         /// Stopwatch used to measure simulation tickrate
@@ -29,7 +29,7 @@ namespace Fenrir.Multiplayer.Simulation
         /// <param name="simulation">Simulation</param>
         /// <param name="logger">Logger</param>
         /// <param name="roomId">Room id</param>
-        public SimulationRoom(ISimulation simulation, IFenrirLogger logger, string roomId)
+        public SimulationRoom(Simulation simulation, IFenrirLogger logger, string roomId)
             : base(logger, roomId)
         {
             _simulation = simulation;
@@ -71,12 +71,12 @@ namespace Fenrir.Multiplayer.Simulation
 
         protected override void OnPeerJoin(IServerPeer peer, string token)
         {
-            _simulation.AddPeer(peer, token);
+            _simulation.AddPlayer(peer.Id);
         }
 
         protected override void OnPeerLeave(IServerPeer peer)
         {
-            _simulation.RemovePeer(peer);
+            _simulation.RemovePlayer(peer.Id);
         }
     }
 }

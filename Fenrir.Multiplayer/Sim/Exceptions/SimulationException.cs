@@ -1,7 +1,7 @@
 ﻿using Fenrir.Multiplayer.Exceptions;
 using System;
 
-namespace Fenrir.Multiplayer.Simulation.Exceptions
+namespace Fenrir.Multiplayer.Sim.Exceptions
 {
     class SimulationException : FenrirException
     {

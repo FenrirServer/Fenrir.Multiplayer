@@ -1,14 +1,14 @@
 ﻿using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Simulation.Exceptions;
+using Fenrir.Multiplayer.Sim.Exceptions;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 
-namespace Fenrir.Multiplayer.Simulation
+namespace Fenrir.Multiplayer.Sim
 {
-    public class Simulation : ISimulation
+    public class Simulation
     {
         /// <summary>
         /// Next object id, used to track incremented object ids
@@ -26,30 +26,67 @@ namespace Fenrir.Multiplayer.Simulation
         private TypeHashMap _componentTypeHash = new TypeHashMap();
 
         /// <summary>
+        /// Player owned objects by player id
+        /// </summary>
+        private Dictionary<string, SimulationObject> _players = new Dictionary<string, SimulationObject>();
+
+        /// <summary>
         /// Logger
         /// </summary>
-        private IFenrirLogger _logger;
+        private readonly IFenrirLogger _logger;
+
+        /// <summary>
+        /// Player handler - methods are invoked when new player object is created
+        /// </summary>
+        private readonly ISimulationPlayerHandler _playerHandler;
+
+        /// <summary>
+        /// True if simulation runs on the host (server)
+        /// </summary>
+        public bool IsServer { get; set; }
 
         /// <summary>
         /// Creates new Server Simulation
         /// </summary>
-        public Simulation(IFenrirLogger logger)
+        public Simulation(IFenrirLogger logger, ISimulationPlayerHandler playerHandler)
         {
+            if(logger == null)
+            {
+                throw new ArgumentNullException(nameof(logger));
+            }
+            if (playerHandler == null)
+            {
+                throw new ArgumentNullException(nameof(playerHandler));
+            }
+
             _logger = logger;
-        }
-
-        public virtual void AddPeer(IServerPeer peer, string token)
-        {
-        }
-
-        public virtual void RemovePeer(IServerPeer peer)
-        {
+            _playerHandler = playerHandler;
         }
 
         public void RegisterComponentType<TComponent>()
             where TComponent : SimulationComponent
         {
             _componentTypeHash.AddType<TComponent>();
+        }
+
+        public void AddPlayer(string playerId)
+        {
+            SimulationObject playerObject = CreateObject();
+            _players.Add(playerId, playerObject);
+            _playerHandler.PlayerAdded(this, playerObject);
+        }
+
+        public void RemovePlayer(string playerId)
+        {
+            if(!_players.ContainsKey(playerId))
+            {
+                throw new Exception($"Can't remove player from Simulation, no player found with id {playerId}");
+            }
+
+            SimulationObject playerObject = _players[playerId];
+            _players.Remove(playerId);
+
+            _playerHandler.PlayerRemoved(this, playerObject);
         }
 
         public SimulationObject CreateObject()
@@ -99,7 +136,6 @@ namespace Fenrir.Multiplayer.Simulation
                 {
                     try
                     {
-                        // Tick
                         component.Tick();
                     }
                     catch (Exception e)
@@ -144,5 +180,6 @@ namespace Fenrir.Multiplayer.Simulation
         {
             return _componentTypeHash.GetTypeHash(componentType);
         }
+
     }
 }
