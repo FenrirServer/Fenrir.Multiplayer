@@ -76,7 +76,7 @@ namespace Fenrir.Multiplayer.Sim
             where TComponent : SimulationComponent
         {
             component = GetComponent<TComponent>();
-            return component == null;
+            return component != null;
         }
 
         public IEnumerable<SimulationComponent> GetComponents()
