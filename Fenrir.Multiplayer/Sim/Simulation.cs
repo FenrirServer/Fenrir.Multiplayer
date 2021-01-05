@@ -17,10 +17,14 @@ namespace Fenrir.Multiplayer.Sim
         private readonly IFenrirLogger _logger;
 
         /// <summary>
-        /// Player handler - methods are invoked when new player object is created
+        /// Simulation server - gets notified of the server simulation events
         /// </summary>
-        private readonly ISimulationPlayerHandler _playerHandler;
+        private readonly ISimulationServer _simulationServer;
 
+        /// <summary>
+        /// Simulation client - gets notified of the client simulation events
+        /// </summary>
+        private readonly ISimulationClient _simulationClient;
 
         /// <summary>
         /// Next object id, used to track incremented object ids
@@ -50,24 +54,75 @@ namespace Fenrir.Multiplayer.Sim
         /// <summary>
         /// True if simulation runs on the host (server)
         /// </summary>
-        public bool IsServer { get; set; }
+        public bool IsServer { get; private set; }
+
+        /// <summary>
+        /// Creates new Simulation
+        /// </summary>
+        /// <param name="logger">Logger</param>
+        private Simulation(IFenrirLogger logger)
+        {
+            if (logger == null)
+            {
+                throw new ArgumentNullException(nameof(logger));
+            }
+
+            _logger = logger;
+        }
 
         /// <summary>
         /// Creates new Server Simulation
         /// </summary>
-        public Simulation(IFenrirLogger logger, ISimulationPlayerHandler playerHandler)
+        /// <param name="logger">Logger</param>
+        /// <param name="simulationServer">Simulation server</param>
+        public Simulation(IFenrirLogger logger, ISimulationServer simulationServer)
+            : this(logger)
         {
-            if(logger == null)
+            if (simulationServer == null)
             {
-                throw new ArgumentNullException(nameof(logger));
-            }
-            if (playerHandler == null)
-            {
-                throw new ArgumentNullException(nameof(playerHandler));
+                throw new ArgumentNullException(nameof(simulationServer));
             }
 
-            _logger = logger;
-            _playerHandler = playerHandler;
+            _simulationServer = simulationServer;
+            IsServer = true;
+        }
+
+        /// <summary>
+        /// Creates new Client Simulation
+        /// </summary>
+        /// <param name="logger">Logger</param>
+        /// <param name="simulationClient">Server Simulation client</param>
+        public Simulation(IFenrirLogger logger, ISimulationClient simulationClient)
+            : this(logger)
+        {
+            if (simulationClient == null)
+            {
+                throw new ArgumentNullException(nameof(simulationClient));
+            }
+
+            _simulationClient = simulationClient;
+        }
+
+        /// <summary>
+        /// Creates new combined Server and Client Simulation
+        /// </summary>
+        /// <param name="logger">Logger</param>
+        /// <param name="simulationServer">Simulation server</param>
+        /// <param name="simulationClient">Server Simulation client</param>
+        public Simulation(IFenrirLogger logger, ISimulationServer simulationServer, ISimulationClient simulationClient)
+            : this(logger)
+        {
+            if (simulationServer == null)
+            {
+                throw new ArgumentNullException(nameof(simulationServer));
+            }
+            if (simulationClient == null)
+            {
+                throw new ArgumentNullException(nameof(simulationClient));
+            }
+
+            _simulationServer = simulationServer;
+            _simulationClient = simulationClient;
         }
 
         #region Component Registration
@@ -94,7 +149,7 @@ namespace Fenrir.Multiplayer.Sim
 
             SimulationObject playerObject = CreateObject();
             _players.Add(playerId, playerObject);
-            _playerHandler.PlayerAdded(this, playerObject, playerId);
+            _simulationServer.PlayerAdded(this, playerObject, playerId);
         }
 
         public void RemovePlayer(string playerId)
@@ -112,13 +167,18 @@ namespace Fenrir.Multiplayer.Sim
             SimulationObject playerObject = _players[playerId];
             _players.Remove(playerId);
 
-            _playerHandler.PlayerRemoved(this, playerObject, playerId);
+            _simulationServer.PlayerRemoved(this, playerObject, playerId);
         }
         #endregion
 
         #region Object Management
         public SimulationObject CreateObject()
         {
+            if(!IsServer)
+            {
+                throw new SimulationException("Client simulation is not allowed to spawn objects directly. Please invoke server RPC using a component");
+            }
+
             ushort objectId = GetNextObjectId();
             SimulationObject obj = new SimulationObject(this, objectId);
             _objectsById.Add(objectId, obj);
@@ -127,7 +187,12 @@ namespace Fenrir.Multiplayer.Sim
 
         public void RemoveObject(SimulationObject obj)
         {
-            if(obj == null)
+            if (!IsServer)
+            {
+                throw new SimulationException("Client simulation is not allowed to remove objects directly. Please invoke server RPC using a component");
+            }
+
+            if (obj == null)
             {
                 throw new ArgumentNullException(nameof(obj));
             }
@@ -142,6 +207,11 @@ namespace Fenrir.Multiplayer.Sim
 
         public void RemoveObject(ushort objectId)
         {
+            if (!IsServer)
+            {
+                throw new SimulationException("Client simulation is not allowed to remove objects directly. Please invoke server RPC using a component");
+            }
+
             if (!_objectsById.Contains(objectId))
             {
                 throw new SimulationException($"Failed to remove object {objectId} from simulation, object not in simulation");

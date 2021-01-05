@@ -1,6 +1,6 @@
 ﻿namespace Fenrir.Multiplayer.Sim
 {
-    public interface ISimulationPlayerHandler
+    public interface ISimulationServer
     {
         /// <summary>
         /// Invoked when player joins the simulation

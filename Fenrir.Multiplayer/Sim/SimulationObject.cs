@@ -25,6 +25,11 @@ namespace Fenrir.Multiplayer.Sim
         public void AddComponent<TComponent>(TComponent component)
              where TComponent : SimulationComponent
         {
+            if(!Simulation.IsServer)
+            {
+                throw new SimulationException("Client simulation is not allowed to add components directly. Please invoke server RPC using a component");
+            }
+
             if(component == null)
             {
                 throw new ArgumentNullException(nameof(component));
@@ -50,6 +55,11 @@ namespace Fenrir.Multiplayer.Sim
         public TComponent AddComponent<TComponent>()
             where TComponent : SimulationComponent, new()
         {
+            if (!Simulation.IsServer)
+            {
+                throw new SimulationException("Client simulation is not allowed to add components directly. Please invoke server RPC using a component");
+            }
+
             if (!Simulation.ComponentRegistered<TComponent>())
             {
                 throw new ArgumentException($"Failed to add component {typeof(TComponent).Name}, component type is not registered with Simulation. Please call {nameof(Simulation.RegisterComponentType)}");
@@ -92,7 +102,12 @@ namespace Fenrir.Multiplayer.Sim
         public TComponent GetOrAddComponent<TComponent>()
             where TComponent : SimulationComponent, new()
         {
-            if(TryGetComponent<TComponent>(out TComponent component))
+            if (!Simulation.IsServer)
+            {
+                throw new SimulationException("Client simulation is not allowed to add components directly. Please invoke server RPC using a component");
+            }
+
+            if (TryGetComponent<TComponent>(out TComponent component))
             {
                 return component;
             }
@@ -103,6 +118,11 @@ namespace Fenrir.Multiplayer.Sim
         public void RemoveComponent<TComponent>()
              where TComponent : SimulationComponent
         {
+            if (!Simulation.IsServer)
+            {
+                throw new SimulationException("Client simulation is not allowed to remove components directly. Please invoke server RPC using a component");
+            }
+
             if (!_componentsByType.Contains(typeof(TComponent)))
             {
                 throw new ArgumentException($"Failed to remove component {typeof(TComponent).Name}, not in component collection");
