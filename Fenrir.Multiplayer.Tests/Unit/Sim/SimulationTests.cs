@@ -7,6 +7,7 @@ using Moq;
 using NuGet.Frameworks;
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.Tests.Unit.Sim
 {
@@ -153,6 +154,64 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             simulation.RemovePlayer("test_player");
 
             playerHandlerMock.Verify(handler => handler.PlayerRemoved(simulation, It.IsAny<SimulationObject>(), "test_player"));
+        }
+        #endregion
+
+        #region Simulation.Tick
+        [TestMethod]
+        public void Simulation_Tick_TicksComponents()
+        {
+            var logger = new TestLogger();
+            var playerHandlerMock = new Mock<ISimulationPlayerHandler>();
+            var simulation = new Simulation(logger, playerHandlerMock.Object);
+            simulation.RegisterComponentType<TestTickingComponent>();
+
+            SimulationObject simObject = simulation.CreateObject();
+            TestTickingComponent comp = simObject.AddComponent<TestTickingComponent>();
+            bool componentDidTick = false;
+            comp.TickHandler = () => componentDidTick = true;
+
+            simulation.Tick();
+            Assert.IsTrue(componentDidTick);
+        }
+
+        #endregion
+
+        #region Simulation.Enqueue
+        [TestMethod]
+        public void Simulation_EnqueueAction_EnqueuesAction()
+        {
+            var logger = new TestLogger();
+            var playerHandlerMock = new Mock<ISimulationPlayerHandler>();
+            var simulation = new Simulation(logger, playerHandlerMock.Object);
+
+            bool didInvoke = false;
+
+            simulation.EnqueueAction(() => didInvoke = true);
+            simulation.Tick();
+
+            Assert.IsTrue(didInvoke);
+        }
+
+        [TestMethod]
+        public async Task Simulation_ScheduleAction_SchedulesAction()
+        {
+            var logger = new TestLogger();
+            var playerHandlerMock = new Mock<ISimulationPlayerHandler>();
+            var simulation = new Simulation(logger, playerHandlerMock.Object);
+
+            bool didInvoke = false;
+
+            simulation.ScheduleAction(() => didInvoke = true, 50);
+            simulation.Tick();
+
+            Assert.IsFalse(didInvoke);
+
+            await Task.Delay(100);
+
+            simulation.Tick();
+
+            Assert.IsTrue(didInvoke);
         }
         #endregion
 
@@ -334,9 +393,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
 
         // TODO: Add/remove component replication on the other side
         // TODO: RPC
-        // TODO: [SyncVar] and rollback
-
-        // TODO: Tick()
+        // TODO: [SyncVar] and 
 
         #region Test Fixtures
         class TestComponent : SimulationComponent
@@ -368,6 +425,15 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             }
         }
 
+        class TestTickingComponent : SimulationComponent
+        {
+            public Action TickHandler;
+
+            public override void Tick()
+            {
+                TickHandler?.Invoke();
+            }
+        }
         #endregion
     }
 }

@@ -22,7 +22,6 @@ namespace Fenrir.Multiplayer.Sim
             Id = objectId;
         }
 
-
         public void AddComponent<TComponent>(TComponent component)
              where TComponent : SimulationComponent
         {

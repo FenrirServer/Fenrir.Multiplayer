@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.Sim
 {
@@ -42,6 +43,11 @@ namespace Fenrir.Multiplayer.Sim
         private Dictionary<string, SimulationObject> _players = new Dictionary<string, SimulationObject>();
 
         /// <summary>
+        /// Queue of actions scheduled for the next tick
+        /// </summary>
+        private Queue<Action> _actionQueue = new Queue<Action>();
+
+        /// <summary>
         /// True if simulation runs on the host (server)
         /// </summary>
         public bool IsServer { get; set; }
@@ -64,12 +70,21 @@ namespace Fenrir.Multiplayer.Sim
             _playerHandler = playerHandler;
         }
 
+        #region Component Registration
         public void RegisterComponentType<TComponent>()
             where TComponent : SimulationComponent
         {
             _componentTypeHash.AddType<TComponent>();
         }
+        public bool ComponentRegistered<TComponent>()
+            where TComponent : SimulationComponent
+        {
+            return _componentTypeHash.HasTypeHash(typeof(TComponent));
+        }
 
+        #endregion
+
+        #region Player Registration
         public void AddPlayer(string playerId)
         {
             if(playerId == null)
@@ -99,7 +114,9 @@ namespace Fenrir.Multiplayer.Sim
 
             _playerHandler.PlayerRemoved(this, playerObject, playerId);
         }
+        #endregion
 
+        #region Object Management
         public SimulationObject CreateObject()
         {
             ushort objectId = GetNextObjectId();
@@ -143,10 +160,18 @@ namespace Fenrir.Multiplayer.Sim
                 yield return simObject;
             }
         }
+        #endregion
 
+        #region Tick
         public void Tick()
         {
-            // Get all sim objects
+            // Tick enqueued actions
+            while(TryDequeueAction(out Action action))
+            {
+                action.Invoke();
+            }
+
+            // Tick simulation objects
             IDictionaryEnumerator objectEnumerator = _objectsById.GetEnumerator();
 
             while (objectEnumerator.MoveNext())
@@ -167,7 +192,49 @@ namespace Fenrir.Multiplayer.Sim
                 }
             }
         }
+        private bool TryDequeueAction(out Action action)
+        {
+            action = null;
 
+            lock (_actionQueue)
+            {
+                if (_actionQueue.Count > 0)
+                {
+                    action = _actionQueue.Dequeue();
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public void EnqueueAction(Action action)
+        {
+            if(action == null)
+            {
+                throw new ArgumentNullException(nameof(action));
+            }
+
+            lock(_actionQueue)
+            {
+                _actionQueue.Enqueue(action);
+            }
+        }
+
+        public async void ScheduleAction(Action action, int delayMs)
+        {
+            if (action == null)
+            {
+                throw new ArgumentNullException(nameof(action));
+            }
+
+            await Task.Delay(delayMs);
+            EnqueueAction(action);
+        }
+
+        #endregion
+
+        #region Utility Methods
         private ushort GetNextObjectId()
         {
             if(_objectsById.Count == ushort.MaxValue)
@@ -192,12 +259,6 @@ namespace Fenrir.Multiplayer.Sim
             throw new SimulationException($"Failed to create Simulation Object Id, total number of objects: {_objectsById.Count}");
         }
 
-        public bool ComponentRegistered<TComponent>()
-            where TComponent : SimulationComponent
-        {
-            return _componentTypeHash.HasTypeHash(typeof(TComponent));
-        }
-
         public ulong GetComponentTypeHash<TComponent>()
             where TComponent : SimulationComponent
         {
@@ -213,6 +274,6 @@ namespace Fenrir.Multiplayer.Sim
 
             return _componentTypeHash.GetTypeHash(componentType);
         }
-
+        #endregion
     }
 }

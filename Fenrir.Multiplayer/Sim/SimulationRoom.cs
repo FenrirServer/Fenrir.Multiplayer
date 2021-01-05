@@ -71,12 +71,12 @@ namespace Fenrir.Multiplayer.Sim
 
         protected override void OnPeerJoin(IServerPeer peer, string token)
         {
-            _simulation.AddPlayer(peer.Id);
+            _simulation.EnqueueAction(() => _simulation.AddPlayer(peer.Id));
         }
 
         protected override void OnPeerLeave(IServerPeer peer)
         {
-            _simulation.RemovePlayer(peer.Id);
+            _simulation.EnqueueAction(() => _simulation.RemovePlayer(peer.Id));
         }
     }
 }
