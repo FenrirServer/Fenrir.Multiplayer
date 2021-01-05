@@ -11,6 +11,17 @@ namespace Fenrir.Multiplayer.Sim
     public class Simulation
     {
         /// <summary>
+        /// Logger
+        /// </summary>
+        private readonly IFenrirLogger _logger;
+
+        /// <summary>
+        /// Player handler - methods are invoked when new player object is created
+        /// </summary>
+        private readonly ISimulationPlayerHandler _playerHandler;
+
+
+        /// <summary>
         /// Next object id, used to track incremented object ids
         /// </summary>
         private ushort _nextObjectId = 0;
@@ -29,16 +40,6 @@ namespace Fenrir.Multiplayer.Sim
         /// Player owned objects by player id
         /// </summary>
         private Dictionary<string, SimulationObject> _players = new Dictionary<string, SimulationObject>();
-
-        /// <summary>
-        /// Logger
-        /// </summary>
-        private readonly IFenrirLogger _logger;
-
-        /// <summary>
-        /// Player handler - methods are invoked when new player object is created
-        /// </summary>
-        private readonly ISimulationPlayerHandler _playerHandler;
 
         /// <summary>
         /// True if simulation runs on the host (server)
@@ -73,7 +74,7 @@ namespace Fenrir.Multiplayer.Sim
         {
             SimulationObject playerObject = CreateObject();
             _players.Add(playerId, playerObject);
-            _playerHandler.PlayerAdded(this, playerObject);
+            _playerHandler.PlayerAdded(this, playerObject, playerId);
         }
 
         public void RemovePlayer(string playerId)
@@ -86,7 +87,7 @@ namespace Fenrir.Multiplayer.Sim
             SimulationObject playerObject = _players[playerId];
             _players.Remove(playerId);
 
-            _playerHandler.PlayerRemoved(this, playerObject);
+            _playerHandler.PlayerRemoved(this, playerObject, playerId);
         }
 
         public SimulationObject CreateObject()
@@ -112,7 +113,7 @@ namespace Fenrir.Multiplayer.Sim
             _objectsById.Remove(obj.Id);
         }
 
-        public void RemoveObject(int objectId)
+        public void RemoveObject(ushort objectId)
         {
             if (!_objectsById.Contains(objectId))
             {
@@ -120,6 +121,17 @@ namespace Fenrir.Multiplayer.Sim
             }
 
             _objectsById.Remove(objectId);
+        }
+
+        public IEnumerable<SimulationObject> GetObjects()
+        {
+            IDictionaryEnumerator objectEnumerator = _objectsById.GetEnumerator();
+
+            while (objectEnumerator.MoveNext())
+            {
+                SimulationObject simObject = (SimulationObject)objectEnumerator.Value;
+                yield return simObject;
+            }
         }
 
         public void Tick()
@@ -168,6 +180,12 @@ namespace Fenrir.Multiplayer.Sim
 
             // This should not happen because of the check above
             throw new SimulationException($"Failed to create Simulation Object Id, total number of objects: {_objectsById.Count}");
+        }
+
+        public bool ComponentRegistered<TComponent>()
+            where TComponent : SimulationComponent
+        {
+            return _componentTypeHash.HasTypeHash(typeof(TComponent));
         }
 
         public ulong GetComponentTypeHash<TComponent>()

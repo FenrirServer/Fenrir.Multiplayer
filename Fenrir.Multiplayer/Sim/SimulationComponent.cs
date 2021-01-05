@@ -17,9 +17,5 @@
         public virtual void Tick()
         {
         }
-
-        public virtual void ClientTick()
-        {
-        }
     }
 }

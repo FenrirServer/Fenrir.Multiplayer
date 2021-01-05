@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Fenrir.Multiplayer.Sim.Exceptions;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -35,6 +36,11 @@ namespace Fenrir.Multiplayer.Sim
                 throw new ArgumentException($"Failed to add component {typeof(TComponent).Name}, object already has component of this type");
             }
 
+            if(!Simulation.ComponentRegistered<TComponent>())
+            {
+                throw new ArgumentException($"Failed to add component {typeof(TComponent).Name}, component type is not registered with Simulation. Please call {nameof(Simulation.RegisterComponentType)}");
+            }
+
             ulong componentTypeHash = Simulation.GetComponentTypeHash<TComponent>();
 
             _componentsByType.Add(typeof(TComponent), component);
@@ -45,10 +51,16 @@ namespace Fenrir.Multiplayer.Sim
         public TComponent AddComponent<TComponent>()
             where TComponent : SimulationComponent, new()
         {
+            if (!Simulation.ComponentRegistered<TComponent>())
+            {
+                throw new ArgumentException($"Failed to add component {typeof(TComponent).Name}, component type is not registered with Simulation. Please call {nameof(Simulation.RegisterComponentType)}");
+            }
+
             TComponent component = new TComponent();
             AddComponent(component);
             return component;
         }
+
         public TComponent GetComponent<TComponent>() 
             where TComponent : SimulationComponent
         {

@@ -11,7 +11,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
     public class TypeHashMapTests
     {
         [TestMethod]
-        public void typeHashMap_GetTypeHash_CalculatesDeterministicHash()
+        public void TypeHashMap_GetTypeHash_CalculatesDeterministicHash()
         {
             // Simple check to ensure type hash is deterministic for multiple instances of typeHashMap
 
@@ -32,7 +32,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
 
 
         [TestMethod]
-        public void typeHashMap_AddType_AddsType()
+        public void TypeHashMap_AddType_AddsType()
         {
             var typeHashMap = new TypeHashMap();
             typeHashMap.AddType(typeof(int));
@@ -45,7 +45,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
 
 
         [TestMethod]
-        public void typeHashMap_AddTypeGeneric_AddsType()
+        public void TypeHashMap_AddTypeGeneric_AddsType()
         {
             var typeHashMap = new TypeHashMap();
             typeHashMap.AddType<int>();
@@ -58,7 +58,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
 
 
         [TestMethod]
-        public void typeHashMap_GetTypeHash_AutomaticallyAddsHash()
+        public void TypeHashMap_GetTypeHash_AutomaticallyAddsHash()
         {
             var typeHashMap = new TypeHashMap();
             ulong hash = typeHashMap.GetTypeHash<int>();
@@ -68,7 +68,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
         }
 
         [TestMethod]
-        public void typeHashMap_GetTypeHash_ReturnsHash()
+        public void TypeHashMap_GetTypeHash_ReturnsHash()
         {
             var typeHashMap = new TypeHashMap();
             typeHashMap.AddType(typeof(int));
@@ -81,7 +81,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
 
 
         [TestMethod]
-        public void typeHashMap_GetTypeByHash_ReturnsType()
+        public void TypeHashMap_GetTypeByHash_ReturnsType()
         {
             var typeHashMap = new TypeHashMap();
             typeHashMap.AddType(typeof(int));
@@ -94,7 +94,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
         
 
         [TestMethod]
-        public void typeHashMap_TryGetTypeByHash_ReturnsTrue()
+        public void TypeHashMap_TryGetTypeByHash_ReturnsTrue()
         {
             var typeHashMap = new TypeHashMap();
             typeHashMap.AddType(typeof(int));
@@ -107,7 +107,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
         }
 
         [TestMethod]
-        public void typeHashMap_TryGetTypeByHash_ReturnsFalse_WhenNoType()
+        public void TypeHashMap_TryGetTypeByHash_ReturnsFalse_WhenNoType()
         {
             var typeHashMap = new TypeHashMap();
             bool result = typeHashMap.TryGetTypeByHash(12340000, out Type type);
@@ -117,7 +117,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
 
 
         [TestMethod]
-        public void typeHashMap_RemoveType_RemovesType()
+        public void TypeHashMap_RemoveType_RemovesType()
         {
             var typeHashMap = new TypeHashMap();
             typeHashMap.AddType<int>();
@@ -130,7 +130,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
 
 
         [TestMethod]
-        public void typeHashMap_RemoveTypeGeneric_RemovesType()
+        public void TypeHashMap_RemoveTypeGeneric_RemovesType()
         {
             var typeHashMap = new TypeHashMap();
             typeHashMap.AddType<int>();
@@ -141,5 +141,38 @@ namespace Fenrir.Multiplayer.Tests.Unit
             Assert.ThrowsException<TypeHashMapException>(() => typeHashMap.GetTypeByHash(hash));
         }
 
+        [TestMethod]
+        public void TypeHashMap_HasType_ReturnsTrue_WhenTypeAdded()
+        {
+            var typeHashMap = new TypeHashMap();
+            typeHashMap.AddType(typeof(int));
+            Assert.IsTrue(typeHashMap.HasTypeHash<int>());
+        }
+
+        [TestMethod]
+        public void TypeHashMap_HasType_ReturnsTrue_WhenTypeRemoved()
+        {
+            var typeHashMap = new TypeHashMap();
+            typeHashMap.AddType(typeof(int));
+            typeHashMap.RemoveType(typeof(int));
+            Assert.IsFalse(typeHashMap.HasTypeHash<int>());
+        }
+
+        [TestMethod]
+        public void TypeHashMap_HasTypeGeneric_ReturnsTrue_WhenTypeAdded()
+        {
+            var typeHashMap = new TypeHashMap();
+            typeHashMap.AddType<int>();
+            Assert.IsTrue(typeHashMap.HasTypeHash<int>());
+        }
+
+        [TestMethod]
+        public void TypeHashMap_HasTypeGeneric_ReturnsFalse_WhenTypeRemoved()
+        {
+            var typeHashMap = new TypeHashMap();
+            typeHashMap.AddType<int>();
+            typeHashMap.RemoveType<int>();
+            Assert.IsFalse(typeHashMap.HasTypeHash<int>());
+        }
     }
 }

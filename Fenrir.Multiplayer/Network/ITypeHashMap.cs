@@ -60,5 +60,19 @@ namespace Fenrir.Multiplayer.Network
         /// <param name="type">Out parameter for a type, if found</param>
         /// <returns>True if type is found, otherwise false</returns>
         bool TryGetTypeByHash(ulong hash, out Type type);
+
+        /// <summary>
+        /// Checks if has map contains a given type
+        /// </summary>
+        /// <param name="type">Type</param>
+        /// <returns>True if type map contains a given type, otherwise false</returns>
+        bool HasTypeHash(Type type);
+
+        /// <summary>
+        /// Checks if has map contains a given type
+        /// </summary>
+        /// <typeparam name="T">Type</typeparam>
+        /// <returns>True if type map contains a given type, otherwise false</returns>
+        bool HasTypeHash<T>();
     }
 }

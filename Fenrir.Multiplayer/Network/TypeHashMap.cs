@@ -109,7 +109,6 @@ namespace Fenrir.Multiplayer.Network
             }
         }
 
-
         /// <inheritdoc/>
         public bool TryGetTypeByHash(ulong hash, out Type type)
         {
@@ -117,6 +116,22 @@ namespace Fenrir.Multiplayer.Network
             {
                 return _hashToTypeDictionary.TryGetValue(hash, out type);
             }
+        }
+
+
+        /// <inheritdoc/>
+        public bool HasTypeHash(Type type)
+        {
+            lock (_syncRoot)
+            {
+                return _typeToHashDictionary.ContainsKey(type);
+            }
+        }
+
+        /// <inheritdoc/>
+        public bool HasTypeHash<T>()
+        {
+            return HasTypeHash(typeof(T));
         }
 
         /// <summary>
@@ -139,6 +154,5 @@ namespace Fenrir.Multiplayer.Network
 
             return hash;
         }
-
     }
 }
