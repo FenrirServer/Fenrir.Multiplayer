@@ -72,6 +72,11 @@ namespace Fenrir.Multiplayer.Sim
 
         public void AddPlayer(string playerId)
         {
+            if(playerId == null)
+            {
+                throw new ArgumentNullException(nameof(playerId));
+            }
+
             SimulationObject playerObject = CreateObject();
             _players.Add(playerId, playerObject);
             _playerHandler.PlayerAdded(this, playerObject, playerId);
@@ -79,7 +84,12 @@ namespace Fenrir.Multiplayer.Sim
 
         public void RemovePlayer(string playerId)
         {
-            if(!_players.ContainsKey(playerId))
+            if (playerId == null)
+            {
+                throw new ArgumentNullException(nameof(playerId));
+            }
+
+            if (!_players.ContainsKey(playerId))
             {
                 throw new Exception($"Can't remove player from Simulation, no player found with id {playerId}");
             }
@@ -196,6 +206,11 @@ namespace Fenrir.Multiplayer.Sim
 
         public ulong GetComponentTypeHash(Type componentType)
         {
+            if(componentType == null)
+            {
+                throw new ArgumentNullException(nameof(componentType));
+            }
+
             return _componentTypeHash.GetTypeHash(componentType);
         }
 

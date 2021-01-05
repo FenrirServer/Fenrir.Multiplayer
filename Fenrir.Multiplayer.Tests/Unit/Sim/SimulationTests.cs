@@ -337,7 +337,6 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         // TODO: [SyncVar] and rollback
 
         // TODO: Tick()
-        // Null arg checks
 
         #region Test Fixtures
         class TestComponent : SimulationComponent
