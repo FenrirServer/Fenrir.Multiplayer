@@ -18,8 +18,9 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_AddComponent_AddsSimulationComponent_UsingDefaultConstructor_WhenServerSim()
         {
             var logger = new TestLogger();
-            var simulationServerMock = new Mock<ISimulationServer>();
-            var simulation = new Simulation(logger, simulationServerMock.Object);
+            var simulationViewMock = new Mock<ISimulationView>();
+            var simulationServerViewMock = new Mock<ISimulationServerView>();
+            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = simulation.CreateObject();
@@ -37,8 +38,9 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_AddComponent_AddsSimulationComponent_UsingComponentReference_WhenServerSim()
         {
             var logger = new TestLogger();
-            var simulationServerMock = new Mock<ISimulationServer>();
-            var simulation = new Simulation(logger, simulationServerMock.Object);
+            var simulationViewMock = new Mock<ISimulationView>();
+            var simulationServerViewMock = new Mock<ISimulationServerView>();
+            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = simulation.CreateObject();
@@ -57,8 +59,9 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_AddComponent_ThrowsArgumentException_IfComponentNotRegistered_UsingDefaultConstructor_WhenServerSim()
         {
             var logger = new TestLogger();
-            var simulationServerMock = new Mock<ISimulationServer>();
-            var simulation = new Simulation(logger, simulationServerMock.Object);
+            var simulationViewMock = new Mock<ISimulationView>();
+            var simulationServerViewMock = new Mock<ISimulationServerView>();
+            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
 
             SimulationObject simObject = simulation.CreateObject();
             TestComponent testComponent = simObject.AddComponent<TestComponent>();
@@ -68,8 +71,9 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_AddComponent_ThrowsArgumentException_IfComponentNotRegistered_UsingComponentReference_WhenServerSim()
         {
             var logger = new TestLogger();
-            var simulationServerMock = new Mock<ISimulationServer>();
-            var simulation = new Simulation(logger, simulationServerMock.Object);
+            var simulationViewMock = new Mock<ISimulationView>();
+            var simulationServerViewMock = new Mock<ISimulationServerView>();
+            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
 
             SimulationObject simObject = simulation.CreateObject();
             var comp = new TestComponent("test2");
@@ -80,8 +84,9 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_AddComponent_ThrowsArgumentException_IfComponentOfTheSameTypeWasAdded_WhenServerSim()
         {
             var logger = new TestLogger();
-            var simulationServerMock = new Mock<ISimulationServer>();
-            var simulation = new Simulation(logger, simulationServerMock.Object);
+            var simulationViewMock = new Mock<ISimulationView>();
+            var simulationServerViewMock = new Mock<ISimulationServerView>();
+            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
 
             SimulationObject simObject = simulation.CreateObject();
             simObject.AddComponent<TestComponent>();
@@ -92,8 +97,8 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_AddComponent_ThrowsSimulationException_UsingDefaultConstructor_WhenClientSim()
         {
             var logger = new TestLogger();
-            var simulationClientMock = new Mock<ISimulationClient>();
-            var simulation = new Simulation(logger, simulationClientMock.Object);
+            var simulationViewMock = new Mock<ISimulationView>();
+            var simulation = new Simulation(logger, simulationViewMock.Object);
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = new SimulationObject(simulation, 123);
@@ -104,8 +109,8 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_AddComponent_ThrowsSimulationException_UsingComponentReference_WhenClientSim()
         {
             var logger = new TestLogger();
-            var simulationClientMock = new Mock<ISimulationClient>();
-            var simulation = new Simulation(logger, simulationClientMock.Object);
+            var simulationViewMock = new Mock<ISimulationView>();
+            var simulation = new Simulation(logger, simulationViewMock.Object);
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = new SimulationObject(simulation, 123);
@@ -119,8 +124,9 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_RemoveComponent_RemovesSimulationComponent_WhenServerSim()
         {
             var logger = new TestLogger();
-            var simulationServerMock = new Mock<ISimulationServer>();
-            var simulation = new Simulation(logger, simulationServerMock.Object);
+            var simulationViewMock = new Mock<ISimulationView>();
+            var simulationServerViewMock = new Mock<ISimulationServerView>();
+            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = simulation.CreateObject();
@@ -139,8 +145,9 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_TryGetComponent_ReturnsTrue_WritesSimulationComponent()
         {
             var logger = new TestLogger();
-            var simulationServerMock = new Mock<ISimulationServer>();
-            var simulation = new Simulation(logger, simulationServerMock.Object);
+            var simulationViewMock = new Mock<ISimulationView>();
+            var simulationServerViewMock = new Mock<ISimulationServerView>();
+            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = simulation.CreateObject();
@@ -157,8 +164,9 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_GetComponents_ReturnsSimulationComponents()
         {
             var logger = new TestLogger();
-            var simulationServerMock = new Mock<ISimulationServer>();
-            var simulation = new Simulation(logger, simulationServerMock.Object);
+            var simulationViewMock = new Mock<ISimulationView>();
+            var simulationServerViewMock = new Mock<ISimulationServerView>();
+            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
             simulation.RegisterComponentType<TestComponent>();
             simulation.RegisterComponentType<OtherTestComponent>();
 
@@ -179,8 +187,9 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_GetOrAddComponent_AddsSimulationComponent_IfNotAdded_WhenServerSim()
         {
             var logger = new TestLogger();
-            var simulationServerMock = new Mock<ISimulationServer>();
-            var simulation = new Simulation(logger, simulationServerMock.Object);
+            var simulationViewMock = new Mock<ISimulationView>();
+            var simulationServerViewMock = new Mock<ISimulationServerView>();
+            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = simulation.CreateObject();
@@ -197,8 +206,9 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_GetOrAddComponent_ReturnsSimulationComponent_IfWasAddedBefore_WhenServerSim()
         {
             var logger = new TestLogger();
-            var simulationServerMock = new Mock<ISimulationServer>();
-            var simulation = new Simulation(logger, simulationServerMock.Object);
+            var simulationViewMock = new Mock<ISimulationView>();
+            var simulationServerViewMock = new Mock<ISimulationServerView>();
+            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = simulation.CreateObject();
@@ -215,7 +225,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_GetOrAddComponent_ThrowsSimulationException_WhenClientSim()
         {
             var logger = new TestLogger();
-            var simulationClientMock = new Mock<ISimulationClient>();
+            var simulationClientMock = new Mock<ISimulationView>();
             var simulation = new Simulation(logger, simulationClientMock.Object);
             simulation.RegisterComponentType<TestComponent>();
 

@@ -14,17 +14,12 @@ namespace Fenrir.Multiplayer.Sim
         /// <summary>
         /// Logger
         /// </summary>
-        private readonly IFenrirLogger _logger;
-
-        /// <summary>
-        /// Simulation server - gets notified of the server simulation events
-        /// </summary>
-        private readonly ISimulationServer _simulationServer;
+        protected IFenrirLogger Logger { get; private set; }
 
         /// <summary>
         /// Simulation client - gets notified of the client simulation events
         /// </summary>
-        private readonly ISimulationClient _simulationClient;
+        private ISimulationView SimulationView { get; set; }
 
         /// <summary>
         /// Next object id, used to track incremented object ids
@@ -42,11 +37,6 @@ namespace Fenrir.Multiplayer.Sim
         private TypeHashMap _componentTypeHash = new TypeHashMap();
 
         /// <summary>
-        /// Player owned objects by player id
-        /// </summary>
-        private Dictionary<string, SimulationObject> _players = new Dictionary<string, SimulationObject>();
-
-        /// <summary>
         /// Queue of actions scheduled for the next tick
         /// </summary>
         private Queue<Action> _actionQueue = new Queue<Action>();
@@ -54,75 +44,27 @@ namespace Fenrir.Multiplayer.Sim
         /// <summary>
         /// True if simulation runs on the host (server)
         /// </summary>
-        public bool IsServer { get; private set; }
-
-        /// <summary>
-        /// Creates new Simulation
-        /// </summary>
-        /// <param name="logger">Logger</param>
-        private Simulation(IFenrirLogger logger)
-        {
-            if (logger == null)
-            {
-                throw new ArgumentNullException(nameof(logger));
-            }
-
-            _logger = logger;
-        }
-
-        /// <summary>
-        /// Creates new Server Simulation
-        /// </summary>
-        /// <param name="logger">Logger</param>
-        /// <param name="simulationServer">Simulation server</param>
-        public Simulation(IFenrirLogger logger, ISimulationServer simulationServer)
-            : this(logger)
-        {
-            if (simulationServer == null)
-            {
-                throw new ArgumentNullException(nameof(simulationServer));
-            }
-
-            _simulationServer = simulationServer;
-            IsServer = true;
-        }
+        public virtual bool IsServer => false;
 
         /// <summary>
         /// Creates new Client Simulation
         /// </summary>
         /// <param name="logger">Logger</param>
-        /// <param name="simulationClient">Server Simulation client</param>
-        public Simulation(IFenrirLogger logger, ISimulationClient simulationClient)
-            : this(logger)
+        /// <param name="view">Simulation view, that is being notified of simulation events</param>
+        public Simulation(IFenrirLogger logger, ISimulationView view)
         {
-            if (simulationClient == null)
+            if (view == null)
             {
-                throw new ArgumentNullException(nameof(simulationClient));
+                throw new ArgumentNullException(nameof(view));
             }
 
-            _simulationClient = simulationClient;
-        }
-
-        /// <summary>
-        /// Creates new combined Server and Client Simulation
-        /// </summary>
-        /// <param name="logger">Logger</param>
-        /// <param name="simulationServer">Simulation server</param>
-        /// <param name="simulationClient">Server Simulation client</param>
-        public Simulation(IFenrirLogger logger, ISimulationServer simulationServer, ISimulationClient simulationClient)
-            : this(logger)
-        {
-            if (simulationServer == null)
+            if (logger == null)
             {
-                throw new ArgumentNullException(nameof(simulationServer));
-            }
-            if (simulationClient == null)
-            {
-                throw new ArgumentNullException(nameof(simulationClient));
+                throw new ArgumentNullException(nameof(logger));
             }
 
-            _simulationServer = simulationServer;
-            _simulationClient = simulationClient;
+            Logger = logger;
+            SimulationView = view;
         }
 
         #region Component Registration
@@ -137,38 +79,6 @@ namespace Fenrir.Multiplayer.Sim
             return _componentTypeHash.HasTypeHash(typeof(TComponent));
         }
 
-        #endregion
-
-        #region Player Registration
-        public void AddPlayer(string playerId)
-        {
-            if(playerId == null)
-            {
-                throw new ArgumentNullException(nameof(playerId));
-            }
-
-            SimulationObject playerObject = CreateObject();
-            _players.Add(playerId, playerObject);
-            _simulationServer.PlayerAdded(this, playerObject, playerId);
-        }
-
-        public void RemovePlayer(string playerId)
-        {
-            if (playerId == null)
-            {
-                throw new ArgumentNullException(nameof(playerId));
-            }
-
-            if (!_players.ContainsKey(playerId))
-            {
-                throw new Exception($"Can't remove player from Simulation, no player found with id {playerId}");
-            }
-
-            SimulationObject playerObject = _players[playerId];
-            _players.Remove(playerId);
-
-            _simulationServer.PlayerRemoved(this, playerObject, playerId);
-        }
         #endregion
 
         #region Object Management
@@ -257,7 +167,7 @@ namespace Fenrir.Multiplayer.Sim
                     }
                     catch (Exception e)
                     {
-                        _logger.Error($"Uncaught exception during component {nameof(SimulationComponent.Tick)}: {e.ToString()}");
+                        Logger.Error($"Uncaught exception during component {nameof(SimulationComponent.Tick)}: {e.ToString()}");
                     }
                 }
             }

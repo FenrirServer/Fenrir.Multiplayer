@@ -16,7 +16,7 @@ namespace Fenrir.Multiplayer.Sim
         /// <summary>
         /// Contains server simulation
         /// </summary>
-        private readonly Simulation _simulation;
+        private readonly ServerSimulation _simulation;
 
         /// <summary>
         /// Stopwatch used to measure simulation tickrate
@@ -29,7 +29,7 @@ namespace Fenrir.Multiplayer.Sim
         /// <param name="simulation">Simulation</param>
         /// <param name="logger">Logger</param>
         /// <param name="roomId">Room id</param>
-        public SimulationRoom(Simulation simulation, IFenrirLogger logger, string roomId)
+        public SimulationRoom(ServerSimulation simulation, IFenrirLogger logger, string roomId)
             : base(logger, roomId)
         {
             _simulation = simulation;
@@ -71,12 +71,12 @@ namespace Fenrir.Multiplayer.Sim
 
         protected override void OnPeerJoin(IServerPeer peer, string token)
         {
-            _simulation.EnqueueAction(() => _simulation.AddPlayer(peer.Id));
+            _simulation.EnqueueAction(() => _simulation.AddPlayer(peer, token));
         }
 
         protected override void OnPeerLeave(IServerPeer peer)
         {
-            _simulation.EnqueueAction(() => _simulation.RemovePlayer(peer.Id));
+            _simulation.EnqueueAction(() => _simulation.RemovePlayer(peer));
         }
     }
 }
