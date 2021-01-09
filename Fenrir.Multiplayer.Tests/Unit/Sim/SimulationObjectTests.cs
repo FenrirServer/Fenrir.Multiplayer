@@ -23,7 +23,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
             simulation.RegisterComponentType<TestComponent>();
 
-            SimulationObject simObject = simulation.CreateObject();
+            SimulationObject simObject = simulation.SpawnObject();
             TestComponent testComponent = simObject.AddComponent<TestComponent>();
 
             Assert.AreEqual("test", testComponent.Value);
@@ -43,7 +43,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
             simulation.RegisterComponentType<TestComponent>();
 
-            SimulationObject simObject = simulation.CreateObject();
+            SimulationObject simObject = simulation.SpawnObject();
             var comp = new TestComponent("test2");
             simObject.AddComponent(comp);
 
@@ -63,7 +63,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var simulationServerViewMock = new Mock<ISimulationServerView>();
             var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
 
-            SimulationObject simObject = simulation.CreateObject();
+            SimulationObject simObject = simulation.SpawnObject();
             TestComponent testComponent = simObject.AddComponent<TestComponent>();
         }
 
@@ -75,7 +75,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var simulationServerViewMock = new Mock<ISimulationServerView>();
             var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
 
-            SimulationObject simObject = simulation.CreateObject();
+            SimulationObject simObject = simulation.SpawnObject();
             var comp = new TestComponent("test2");
             simObject.AddComponent(comp);
         }
@@ -88,7 +88,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var simulationServerViewMock = new Mock<ISimulationServerView>();
             var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
 
-            SimulationObject simObject = simulation.CreateObject();
+            SimulationObject simObject = simulation.SpawnObject();
             simObject.AddComponent<TestComponent>();
             simObject.AddComponent<TestComponent>();
         }
@@ -129,7 +129,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
             simulation.RegisterComponentType<TestComponent>();
 
-            SimulationObject simObject = simulation.CreateObject();
+            SimulationObject simObject = simulation.SpawnObject();
             TestComponent testComponent = simObject.AddComponent<TestComponent>();
 
             // Remove component
@@ -150,7 +150,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
             simulation.RegisterComponentType<TestComponent>();
 
-            SimulationObject simObject = simulation.CreateObject();
+            SimulationObject simObject = simulation.SpawnObject();
             TestComponent testComponent = simObject.AddComponent<TestComponent>();
 
             // Get component
@@ -170,7 +170,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             simulation.RegisterComponentType<TestComponent>();
             simulation.RegisterComponentType<OtherTestComponent>();
 
-            SimulationObject simObject = simulation.CreateObject();
+            SimulationObject simObject = simulation.SpawnObject();
             TestComponent testComponent = simObject.AddComponent<TestComponent>();
             OtherTestComponent testComponent2 = simObject.AddComponent<OtherTestComponent>();
 
@@ -192,7 +192,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
             simulation.RegisterComponentType<TestComponent>();
 
-            SimulationObject simObject = simulation.CreateObject();
+            SimulationObject simObject = simulation.SpawnObject();
             TestComponent comp1 = simObject.GetOrAddComponent<TestComponent>();
             Assert.IsNotNull(comp1);
 
@@ -211,7 +211,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
             simulation.RegisterComponentType<TestComponent>();
 
-            SimulationObject simObject = simulation.CreateObject();
+            SimulationObject simObject = simulation.SpawnObject();
             TestComponent comp1 = simObject.AddComponent<TestComponent>();
             Assert.IsNotNull(comp1);
 

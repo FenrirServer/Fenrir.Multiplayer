@@ -4,6 +4,10 @@
     {
         public SimulationObject Object { get; private set; }
 
+        public int TickCreated { get; private set; }
+
+        public int TickRemoved { get; private set; }
+
         public virtual void OnAdded(SimulationObject simulationObject)
         {
             Object = simulationObject;

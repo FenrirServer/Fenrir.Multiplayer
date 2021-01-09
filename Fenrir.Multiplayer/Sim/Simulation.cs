@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.Sim
@@ -22,14 +23,9 @@ namespace Fenrir.Multiplayer.Sim
         private ISimulationView SimulationView { get; set; }
 
         /// <summary>
-        /// Next object id, used to track incremented object ids
-        /// </summary>
-        private ushort _nextObjectId = 0;
-
-        /// <summary>
         /// Simulation objects by ushort id
         /// </summary>
-        private OrderedDictionary _objectsById = new OrderedDictionary();
+        protected OrderedDictionary ObjectsById => new OrderedDictionary();
 
         /// <summary>
         /// Global component type hash
@@ -45,6 +41,16 @@ namespace Fenrir.Multiplayer.Sim
         /// True if simulation runs on the host (server)
         /// </summary>
         public virtual bool IsServer => false;
+
+        /// <summary>
+        /// Indicates if simulation is rolling back for server re-conciliation
+        /// </summary>
+        public bool IsRolledBack { get; private set; }
+
+        /// <summary>
+        /// Simulation tick number
+        /// </summary>
+        public int CurrentTick { get; private set; }
 
         /// <summary>
         /// Creates new Client Simulation
@@ -82,18 +88,19 @@ namespace Fenrir.Multiplayer.Sim
         #endregion
 
         #region Object Management
-        public SimulationObject CreateObject()
-        {
-            if(!IsServer)
-            {
-                throw new SimulationException("Client simulation is not allowed to spawn objects directly. Please invoke server RPC using a component");
-            }
 
-            ushort objectId = GetNextObjectId();
+        /// <summary>
+        /// Creates object with a given object id
+        /// </summary>
+        /// <param name="objectId"></param>
+        /// <returns></returns>
+        internal SimulationObject SpawnObject(ushort objectId)
+        {
             SimulationObject obj = new SimulationObject(this, objectId);
-            _objectsById.Add(objectId, obj);
+            ObjectsById.Add(objectId, obj);
             return obj;
         }
+
 
         public void RemoveObject(SimulationObject obj)
         {
@@ -107,12 +114,12 @@ namespace Fenrir.Multiplayer.Sim
                 throw new ArgumentNullException(nameof(obj));
             }
 
-            if(!_objectsById.Contains(obj.Id))
+            if(!ObjectsById.Contains(obj.Id))
             {
                 throw new SimulationException($"Failed to remove object {obj.Id} from simulation, object not in simulation");
             }
 
-            _objectsById.Remove(obj.Id);
+            ObjectsById.Remove(obj.Id);
         }
 
         public void RemoveObject(ushort objectId)
@@ -122,17 +129,17 @@ namespace Fenrir.Multiplayer.Sim
                 throw new SimulationException("Client simulation is not allowed to remove objects directly. Please invoke server RPC using a component");
             }
 
-            if (!_objectsById.Contains(objectId))
+            if (!ObjectsById.Contains(objectId))
             {
                 throw new SimulationException($"Failed to remove object {objectId} from simulation, object not in simulation");
             }
 
-            _objectsById.Remove(objectId);
+            ObjectsById.Remove(objectId);
         }
 
         public IEnumerable<SimulationObject> GetObjects()
         {
-            IDictionaryEnumerator objectEnumerator = _objectsById.GetEnumerator();
+            IDictionaryEnumerator objectEnumerator = ObjectsById.GetEnumerator();
 
             while (objectEnumerator.MoveNext())
             {
@@ -143,34 +150,32 @@ namespace Fenrir.Multiplayer.Sim
         #endregion
 
         #region Tick
-        public void Tick()
+        public virtual void Tick()
         {
+            // Check if we can tick simulation. If simulation is being rolled back for reconciliation, we can't tick.
+            if(IsRolledBack)
+            {
+                throw new SimulationException("Can not tick simulation while simulation is being rolled back.");
+            }
+
             // Tick enqueued actions
             while(TryDequeueAction(out Action action))
             {
                 action.Invoke();
             }
-
-            // Tick simulation objects
-            IDictionaryEnumerator objectEnumerator = _objectsById.GetEnumerator();
+            
+            // Iterate over objects
+            IDictionaryEnumerator objectEnumerator = ObjectsById.GetEnumerator();
 
             while (objectEnumerator.MoveNext())
             {
                 SimulationObject simObject = (SimulationObject)objectEnumerator.Value;
-
-                // Get all components attached to this object
-                foreach (var component in simObject.GetComponents())
-                {
-                    try
-                    {
-                        component.Tick();
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Error($"Uncaught exception during component {nameof(SimulationComponent.Tick)}: {e.ToString()}");
-                    }
-                }
+                simObject.Tick();
             }
+
+
+            // Increment tick
+            CurrentTick++;
         }
         private bool TryDequeueAction(out Action action)
         {
@@ -215,30 +220,6 @@ namespace Fenrir.Multiplayer.Sim
         #endregion
 
         #region Utility Methods
-        private ushort GetNextObjectId()
-        {
-            if(_objectsById.Count == ushort.MaxValue)
-            {
-                throw new SimulationException($"Failed to create Simulation Object Id, has reached max number of simulation objects: {_objectsById.Count}");
-            }
-
-            // Find next unused objectid
-            int maxId = _nextObjectId - 1;
-            do
-            {
-                if (!_objectsById.Contains(_nextObjectId))
-                {
-                    return _nextObjectId;
-                }
-
-                _nextObjectId++;
-            }
-            while (_nextObjectId != maxId);
-
-            // This should not happen because of the check above
-            throw new SimulationException($"Failed to create Simulation Object Id, total number of objects: {_objectsById.Count}");
-        }
-
         public ulong GetComponentTypeHash<TComponent>()
             where TComponent : SimulationComponent
         {

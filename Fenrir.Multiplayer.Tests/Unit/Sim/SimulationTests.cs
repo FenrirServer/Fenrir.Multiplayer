@@ -13,9 +13,9 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
     [TestClass]
     public class SimulationTests
     {
-        #region Simulation.CreateObject
+        #region Simulation.SpawnObject
         [TestMethod, ExpectedException(typeof(SimulationException))]
-        public void Simulation_CreateObject_ThrowsSimulationException()
+        public void Simulation_SpawnObject_ThrowsSimulationException()
         {
             // Client simulation does not allow creating objects
 
@@ -23,7 +23,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var simulationViewMock = new Mock<ISimulationView>();
             var simulation = new Simulation(logger, simulationViewMock.Object);
 
-            simulation.CreateObject();
+            simulation.SpawnObject();
         }
         #endregion
 
@@ -93,7 +93,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
 
             simulation.RegisterComponentType<TestTickingComponent>();
 
-            SimulationObject simObject = simulation.CreateObject();
+            SimulationObject simObject = simulation.SpawnObject();
             TestTickingComponent comp = simObject.AddComponent<TestTickingComponent>();
             bool componentDidTick = false;
             comp.TickHandler = () => componentDidTick = true;

@@ -1,4 +1,5 @@
-﻿using Fenrir.Multiplayer.Sim.Exceptions;
+﻿using Fenrir.Multiplayer.Logging;
+using Fenrir.Multiplayer.Sim.Exceptions;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,18 +8,49 @@ using System.Collections.Specialized;
 
 namespace Fenrir.Multiplayer.Sim
 {
-    public sealed class SimulationObject
+    public class SimulationObject
     {
+        /// <summary>
+        /// Logger
+        /// </summary>
+        protected IFenrirLogger Logger { get; private set; }
+
+        /// <summary>
+        /// Reference to a simulation object
+        /// </summary>
         public Simulation Simulation { get; private set; }
 
+        /// <summary>
+        /// Unique id of the object
+        /// </summary>
         public ushort Id { get; private set; }
 
+        /// <summary>
+        /// List of components, by component type
+        /// </summary>
         private OrderedDictionary _componentsByType = new OrderedDictionary();
 
+        /// <summary>
+        /// Tick when object was created
+        /// </summary>
+        public int TickCreated { get; private set; }
 
-        public SimulationObject(Simulation simulation, ushort objectId)
+        /// <summary>
+        /// Tick when simulation object has been destroyed
+        /// </summary>
+        public int TickDestroyed { get; private set; }
+
+        /// <summary>
+        /// Indicates if object has been destroyed
+        /// </summary>
+        public bool IsDestroyed { get; private set; }
+
+
+        public SimulationObject(Simulation simulation, IFenrirLogger logger, ushort objectId)
         {
             Simulation = simulation;
+            Logger = logger;
+            TickCreated = simulation.CurrentTick;
             Id = objectId;
         }
 
@@ -132,6 +164,28 @@ namespace Fenrir.Multiplayer.Sim
             _componentsByType.Remove(typeof(TComponent));
 
             component.OnRemoved();
+        }
+
+        public virtual void Tick()
+        {
+            // Get all components attached to this object and tick them
+            foreach (var component in GetComponents())
+            {
+                try
+                {
+                    component.Tick();
+                }
+                catch (Exception e)
+                {
+                    Logger.Error($"Uncaught exception during component {nameof(SimulationComponent.Tick)}: {e.ToString()}");
+                }
+            }
+        }
+
+        public void Destroy()
+        {
+            IsDestroyed = true;
+            TickDestroyed = Simulation.CurrentTick;
         }
     }
 }

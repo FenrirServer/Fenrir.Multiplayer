@@ -25,7 +25,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var simulationServerViewMock = new Mock<ISimulationServerView>();
             var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
 
-            SimulationObject simObject = simulation.CreateObject();
+            SimulationObject simObject = simulation.SpawnObject();
 
             Assert.IsNotNull(simObject);
 
@@ -42,7 +42,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var simulationServerViewMock = new Mock<ISimulationServerView>();
             var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
 
-            SimulationObject simObject = simulation.CreateObject();
+            SimulationObject simObject = simulation.SpawnObject();
 
             Assert.IsNotNull(simObject);
 
@@ -62,7 +62,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var simulationServerViewMock = new Mock<ISimulationServerView>();
             var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
 
-            SimulationObject simObject = simulation.CreateObject();
+            SimulationObject simObject = simulation.SpawnObject();
 
             Assert.IsNotNull(simObject);
 
