@@ -1,8 +1,10 @@
 ﻿using Fenrir.Multiplayer.Sim;
+using Fenrir.Multiplayer.Sim.Command;
 using Fenrir.Multiplayer.Sim.Exceptions;
 using Fenrir.Multiplayer.Tests.Fixtures;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using NuGet.Frameworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,13 +16,29 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
     public class SimulationObjectTests
     {
         #region SimulationObject.AddComponent
-        [TestMethod]
-        public void SimulationObject_AddComponent_AddsSimulationComponent_UsingDefaultConstructor_WhenServerSim()
+
+        [TestMethod, ExpectedException(typeof(SimulationException))]
+        public void SimulationObject_AddComponent_ThrowsSimulationException_WhenNoAuthority()
         {
             var logger = new TestLogger();
-            var simulationViewMock = new Mock<ISimulationView>();
-            var simulationServerViewMock = new Mock<ISimulationServerView>();
-            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
+            var simulationListenerMock = new Mock<ISimulationListener>();
+            var simulation = new Simulation(simulationListenerMock.Object, logger) { IsAuthority = false };
+            simulation.RegisterComponentType<TestComponent>();
+
+            SimulationObject simObject = new SimulationObject(simulation, logger, 123);
+            simObject.AddComponent<TestComponent>();
+        }
+
+        [TestMethod]
+        public void SimulationObject_AddComponent_AddsSimulationComponent_SendsAddComponentCommand_UsingDefaultFactory_WhenHasAuthority()
+        {
+            var logger = new TestLogger();
+            var simulationListenerMock = new Mock<ISimulationListener>();
+            AddComponentSimulationCommand command = null;
+            simulationListenerMock.Setup(listener => listener.OnSendCommand(It.IsAny<AddComponentSimulationCommand>()))
+                .Callback<ISimulationCommand>(cmd => command = (AddComponentSimulationCommand)cmd);
+
+            var simulation = new Simulation(simulationListenerMock.Object, logger) { IsAuthority = true };
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = simulation.SpawnObject();
@@ -29,51 +47,33 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             Assert.AreEqual("test", testComponent.Value);
 
             // Get component
-            var comp2 = simObject.GetComponent<TestComponent>();
-            Assert.IsNotNull(comp2);
-            Assert.AreEqual("test", comp2.Value);
-        }
+            var component = simObject.GetComponent<TestComponent>();
+            Assert.IsNotNull(component);
+            Assert.AreEqual("test", component.Value);
 
-        [TestMethod]
-        public void SimulationObject_AddComponent_AddsSimulationComponent_UsingComponentReference_WhenServerSim()
-        {
-            var logger = new TestLogger();
-            var simulationViewMock = new Mock<ISimulationView>();
-            var simulationServerViewMock = new Mock<ISimulationServerView>();
-            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
-            simulation.RegisterComponentType<TestComponent>();
-
-            SimulationObject simObject = simulation.SpawnObject();
-            var comp = new TestComponent("test2");
-            simObject.AddComponent(comp);
-
-            Assert.AreEqual("test2", comp.Value);
-
-            // Get component
-            var comp2 = simObject.GetComponent<TestComponent>();
-            Assert.IsNotNull(comp2);
-            Assert.AreEqual("test2", comp2.Value);
+            // Verify command was sent
+            Assert.IsNotNull(command);
+            Assert.AreEqual(simulation.GetComponentTypeHash<TestComponent>(), command.ComponentTypeHash);
+            Assert.AreEqual(component.Object.Id, command.ObjectId);
         }
 
         [TestMethod, ExpectedException(typeof(ArgumentException))]
-        public void SimulationObject_AddComponent_ThrowsArgumentException_IfComponentNotRegistered_UsingDefaultConstructor_WhenServerSim()
+        public void SimulationObject_AddComponent_ThrowsArgumentException_IfComponentNotRegistered_UsingDefaultConstructor_WhenHasAuthority()
         {
             var logger = new TestLogger();
-            var simulationViewMock = new Mock<ISimulationView>();
-            var simulationServerViewMock = new Mock<ISimulationServerView>();
-            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
+            var simulationListenerMock = new Mock<ISimulationListener>();
+            var simulation = new Simulation(simulationListenerMock.Object, logger) { IsAuthority = true };
 
             SimulationObject simObject = simulation.SpawnObject();
             TestComponent testComponent = simObject.AddComponent<TestComponent>();
         }
 
         [TestMethod, ExpectedException(typeof(ArgumentException))]
-        public void SimulationObject_AddComponent_ThrowsArgumentException_IfComponentNotRegistered_UsingComponentReference_WhenServerSim()
+        public void SimulationObject_AddComponent_ThrowsArgumentException_IfComponentNotRegistered_UsingComponentReference_WhenHasAuthority()
         {
             var logger = new TestLogger();
-            var simulationViewMock = new Mock<ISimulationView>();
-            var simulationServerViewMock = new Mock<ISimulationServerView>();
-            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
+            var simulationListenerMock = new Mock<ISimulationListener>();
+            var simulation = new Simulation(simulationListenerMock.Object, logger) { IsAuthority = true };
 
             SimulationObject simObject = simulation.SpawnObject();
             var comp = new TestComponent("test2");
@@ -81,52 +81,55 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         }
 
         [TestMethod, ExpectedException(typeof(ArgumentException))]
-        public void SimulationObject_AddComponent_ThrowsArgumentException_IfComponentOfTheSameTypeWasAdded_WhenServerSim()
+        public void SimulationObject_AddComponent_ThrowsArgumentException_IfComponentOfTheSameTypeWasAdded_WhenHasAuthority()
         {
             var logger = new TestLogger();
-            var simulationViewMock = new Mock<ISimulationView>();
-            var simulationServerViewMock = new Mock<ISimulationServerView>();
-            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
+            var simulationListenerMock = new Mock<ISimulationListener>();
+            var simulation = new Simulation(simulationListenerMock.Object, logger) { IsAuthority = true };
 
             SimulationObject simObject = simulation.SpawnObject();
             simObject.AddComponent<TestComponent>();
             simObject.AddComponent<TestComponent>();
         }
 
-        [TestMethod, ExpectedException(typeof(SimulationException))]
-        public void SimulationObject_AddComponent_ThrowsSimulationException_UsingDefaultConstructor_WhenClientSim()
-        {
-            var logger = new TestLogger();
-            var simulationViewMock = new Mock<ISimulationView>();
-            var simulation = new Simulation(logger, simulationViewMock.Object);
-            simulation.RegisterComponentType<TestComponent>();
-
-            SimulationObject simObject = new SimulationObject(simulation, 123);
-            simObject.AddComponent<TestComponent>();
-        }
-
-        [TestMethod, ExpectedException(typeof(SimulationException))]
-        public void SimulationObject_AddComponent_ThrowsSimulationException_UsingComponentReference_WhenClientSim()
-        {
-            var logger = new TestLogger();
-            var simulationViewMock = new Mock<ISimulationView>();
-            var simulation = new Simulation(logger, simulationViewMock.Object);
-            simulation.RegisterComponentType<TestComponent>();
-
-            SimulationObject simObject = new SimulationObject(simulation, 123);
-            var comp = new TestComponent("test2");
-            simObject.AddComponent(comp);
-        }
         #endregion
 
         #region SimulationObject.RemoveComponent
+
         [TestMethod]
-        public void SimulationObject_RemoveComponent_RemovesSimulationComponent_WhenServerSim()
+        public void SimulationObject_RemoveComponent_ThrowsSimulationException_WhenNoAuthority()
         {
             var logger = new TestLogger();
-            var simulationViewMock = new Mock<ISimulationView>();
-            var simulationServerViewMock = new Mock<ISimulationServerView>();
-            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
+            var simulationListenerMock = new Mock<ISimulationListener>();
+            var simulation = new Simulation(simulationListenerMock.Object, logger) { IsAuthority = false };
+            simulation.RegisterComponentType<TestComponent>();
+
+            // Spawn new object by ingesting spawn object command
+            var spawnObjectCommand = new SpawnObjectSimulationCommand(DateTime.UtcNow, 123);
+            simulation.IngestCommand(spawnObjectCommand);
+
+            simulation.Tick();
+
+            // Get object
+            SimulationObject simObject = simulation.GetObjects().First();
+
+            // Invoke RemoveComponent
+            Assert.ThrowsException<SimulationException>(
+                () => simObject.RemoveComponent<TestComponent>()
+            );
+        }
+
+        [TestMethod]
+        public void SimulationObject_RemoveComponent_RemovesSimulationComponent_SendsRemoveComponentCommand_WhenHasAuthority()
+        {
+            var logger = new TestLogger();
+            var simulationListenerMock = new Mock<ISimulationListener>();
+            RemoveComponentSimulationCommand command = null;
+            simulationListenerMock.Setup(listener => listener.OnSendCommand(It.IsAny<ISimulationCommand>()))
+                .Callback<ISimulationCommand>(cmd => command = (RemoveComponentSimulationCommand)cmd);
+
+
+            var simulation = new Simulation(simulationListenerMock.Object, logger) { IsAuthority = false };
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = simulation.SpawnObject();
@@ -137,17 +140,21 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
 
             // Check if was removed
             Assert.IsFalse(simObject.GetComponents().Contains(testComponent));
+
+            // Check if command was sent
+            Assert.IsNotNull(command);
+            Assert.AreEqual(simObject.Id, command.ObjectId);
+            Assert.AreEqual(simulation.GetComponentTypeHash<TestComponent>(), command.ComponentTypeHash);
         }
         #endregion
 
         #region SimulationObject.TryGetComponent
         [TestMethod]
-        public void SimulationObject_TryGetComponent_ReturnsTrue_WritesSimulationComponent()
+        public void SimulationObject_TryGetComponent_ReturnsTrue_ProvidesSimulationComponent_WhenHasAuthority()
         {
             var logger = new TestLogger();
-            var simulationViewMock = new Mock<ISimulationView>();
-            var simulationServerViewMock = new Mock<ISimulationServerView>();
-            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
+            var simulationListenerMock = new Mock<ISimulationListener>();
+            var simulation = new Simulation(simulationListenerMock.Object, logger) { IsAuthority = true };
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = simulation.SpawnObject();
@@ -161,12 +168,11 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
 
         #region SimulationObject.GetComponents
         [TestMethod]
-        public void SimulationObject_GetComponents_ReturnsSimulationComponents()
+        public void SimulationObject_GetComponents_ReturnsSimulationComponents_WhenHasAuthority()
         {
             var logger = new TestLogger();
-            var simulationViewMock = new Mock<ISimulationView>();
-            var simulationServerViewMock = new Mock<ISimulationServerView>();
-            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
+            var simulationListenerMock = new Mock<ISimulationListener>();
+            var simulation = new Simulation(simulationListenerMock.Object, logger) { IsAuthority = true };
             simulation.RegisterComponentType<TestComponent>();
             simulation.RegisterComponentType<OtherTestComponent>();
 
@@ -184,12 +190,11 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
 
         #region SimulationObject.GetOrAddComponent
         [TestMethod]
-        public void SimulationObject_GetOrAddComponent_AddsSimulationComponent_IfNotAdded_WhenServerSim()
+        public void SimulationObject_GetOrAddComponent_AddsSimulationComponent_IfNotAdded_WhenHasAuthority()
         {
             var logger = new TestLogger();
-            var simulationViewMock = new Mock<ISimulationView>();
-            var simulationServerViewMock = new Mock<ISimulationServerView>();
-            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
+            var simulationListenerMock = new Mock<ISimulationListener>();
+            var simulation = new Simulation(simulationListenerMock.Object, logger) { IsAuthority = true };
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = simulation.SpawnObject();
@@ -203,12 +208,11 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         }
 
         [TestMethod]
-        public void SimulationObject_GetOrAddComponent_ReturnsSimulationComponent_IfWasAddedBefore_WhenServerSim()
+        public void SimulationObject_GetOrAddComponent_ReturnsSimulationComponent_IfWasAddedBefore_WhenHasAuthority()
         {
             var logger = new TestLogger();
-            var simulationViewMock = new Mock<ISimulationView>();
-            var simulationServerViewMock = new Mock<ISimulationServerView>();
-            var simulation = new ServerSimulation(logger, simulationViewMock.Object, simulationServerViewMock.Object);
+            var simulationListenerMock = new Mock<ISimulationListener>();
+            var simulation = new Simulation(simulationListenerMock.Object, logger) { IsAuthority = true };
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = simulation.SpawnObject();
@@ -225,11 +229,11 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_GetOrAddComponent_ThrowsSimulationException_WhenClientSim()
         {
             var logger = new TestLogger();
-            var simulationClientMock = new Mock<ISimulationView>();
-            var simulation = new Simulation(logger, simulationClientMock.Object);
+            var simulationListenerMock = new Mock<ISimulationListener>();
+            var simulation = new Simulation(simulationListenerMock.Object, logger) { IsAuthority = false };
             simulation.RegisterComponentType<TestComponent>();
 
-            SimulationObject simObject = new SimulationObject(simulation, 123);
+            SimulationObject simObject = new SimulationObject(simulation, logger, 123);
             TestComponent comp1 = simObject.GetOrAddComponent<TestComponent>();
         }
         #endregion

@@ -1,5 +1,4 @@
 ﻿using Fenrir.Multiplayer.Logging;
-using Fenrir.Multiplayer.Sim.Exceptions;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -31,14 +30,20 @@ namespace Fenrir.Multiplayer.Sim
         private OrderedDictionary _componentsByType = new OrderedDictionary();
 
         /// <summary>
-        /// Tick when object was created
+        /// Temporary buffer of removed components by component type. 
+        /// Removed components are stored in this buffer until max rollback time 
         /// </summary>
-        public int TickCreated { get; private set; }
+        private OrderedDictionary _removedComponentsByType = new OrderedDictionary();
 
         /// <summary>
-        /// Tick when simulation object has been destroyed
+        /// Time when object was created
         /// </summary>
-        public int TickDestroyed { get; private set; }
+        public DateTime TimeCreated { get; private set; }
+
+        /// <summary>
+        /// Time when simulation object has been destroyed
+        /// </summary>
+        public DateTime TimeDestroyed { get; private set; }
 
         /// <summary>
         /// Indicates if object has been destroyed
@@ -50,57 +55,31 @@ namespace Fenrir.Multiplayer.Sim
         {
             Simulation = simulation;
             Logger = logger;
-            TickCreated = simulation.CurrentTick;
+            TimeCreated = DateTime.UtcNow;
             Id = objectId;
         }
 
-        public void AddComponent<TComponent>(TComponent component)
-             where TComponent : SimulationComponent
+        #region AddComponent
+        public TComponent AddComponent<TComponent>()
+            where TComponent : SimulationComponent
         {
-            if(!Simulation.IsServer)
-            {
-                throw new SimulationException("Client simulation is not allowed to add components directly. Please invoke server RPC using a component");
-            }
+            // This method is a simple facade around internal Simulation method that creates a component addition command
+            // Command is executed and replicated on all clients
+            return Simulation.AddComponent<TComponent>(this);
+        }
 
-            if(component == null)
-            {
-                throw new ArgumentNullException(nameof(component));
-            }
-
+        internal void AddComponent<TComponent>(TComponent component)
+            where TComponent : SimulationComponent
+        {
             if (_componentsByType.Contains(typeof(TComponent)))
             {
                 throw new ArgumentException($"Failed to add component {typeof(TComponent).Name}, object already has component of this type");
             }
 
-            if(!Simulation.ComponentRegistered<TComponent>())
-            {
-                throw new ArgumentException($"Failed to add component {typeof(TComponent).Name}, component type is not registered with Simulation. Please call {nameof(Simulation.RegisterComponentType)}");
-            }
-
-            ulong componentTypeHash = Simulation.GetComponentTypeHash<TComponent>();
-
+            // Add to list of components
             _componentsByType.Add(typeof(TComponent), component);
-
-            component.OnAdded(this);
         }
-
-        public TComponent AddComponent<TComponent>()
-            where TComponent : SimulationComponent, new()
-        {
-            if (!Simulation.IsServer)
-            {
-                throw new SimulationException("Client simulation is not allowed to add components directly. Please invoke server RPC using a component");
-            }
-
-            if (!Simulation.ComponentRegistered<TComponent>())
-            {
-                throw new ArgumentException($"Failed to add component {typeof(TComponent).Name}, component type is not registered with Simulation. Please call {nameof(Simulation.RegisterComponentType)}");
-            }
-
-            TComponent component = new TComponent();
-            AddComponent(component);
-            return component;
-        }
+        #endregion
 
         public TComponent GetComponent<TComponent>() 
             where TComponent : SimulationComponent
@@ -134,11 +113,6 @@ namespace Fenrir.Multiplayer.Sim
         public TComponent GetOrAddComponent<TComponent>()
             where TComponent : SimulationComponent, new()
         {
-            if (!Simulation.IsServer)
-            {
-                throw new SimulationException("Client simulation is not allowed to add components directly. Please invoke server RPC using a component");
-            }
-
             if (TryGetComponent<TComponent>(out TComponent component))
             {
                 return component;
@@ -150,19 +124,28 @@ namespace Fenrir.Multiplayer.Sim
         public void RemoveComponent<TComponent>()
              where TComponent : SimulationComponent
         {
-            if (!Simulation.IsServer)
+            // This method is a simple facade around internal Simulation method that replicates component removal command to all clients,
+            // then calls RemoveComponent(Type componentType)
+            Simulation.AddComponent<TComponent>(this);
+        }
+
+        internal void RemoveComponent(Type componentType)
+        {
+            if (!_componentsByType.Contains(componentType))
             {
-                throw new SimulationException("Client simulation is not allowed to remove components directly. Please invoke server RPC using a component");
+                throw new ArgumentException($"Failed to remove component {componentType.Name}, component not added to the object component list");
             }
 
-            if (!_componentsByType.Contains(typeof(TComponent)))
-            {
-                throw new ArgumentException($"Failed to remove component {typeof(TComponent).Name}, not in component collection");
-            }
+            // Get component
+            SimulationComponent component = (SimulationComponent)_componentsByType[componentType];
+            
+            // Remove from the list
+            _componentsByType.Remove(componentType);
 
-            TComponent component = (TComponent)_componentsByType[typeof(TComponent)];
-            _componentsByType.Remove(typeof(TComponent));
+            // Re-add to the list of removed components, allowing to get it's state if we roll back this operation
+            _removedComponentsByType.Add(componentType, component);
 
+            // Invoked component callback
             component.OnRemoved();
         }
 
@@ -180,12 +163,25 @@ namespace Fenrir.Multiplayer.Sim
                     Logger.Error($"Uncaught exception during component {nameof(SimulationComponent.Tick)}: {e.ToString()}");
                 }
             }
+
+            // Expire any removed components            
+            IDictionaryEnumerator componentEnumerator = _removedComponentsByType.GetEnumerator();
+
+            while (componentEnumerator.MoveNext())
+            {
+                SimulationComponent component = (SimulationComponent)componentEnumerator.Value;
+                if (component.TimeRemoved > Simulation.Time + TimeSpan.FromMilliseconds(Simulation.MaxRollbackTimeMs))
+                {
+                    // We can't rollback past this point anymore, so ready to remove this component (and let GC destroy it)
+                    _removedComponentsByType.Remove(component.GetType());
+                }
+            }
         }
 
         public void Destroy()
         {
             IsDestroyed = true;
-            TickDestroyed = Simulation.CurrentTick;
+            TimeDestroyed = DateTime.UtcNow;
         }
     }
 }
