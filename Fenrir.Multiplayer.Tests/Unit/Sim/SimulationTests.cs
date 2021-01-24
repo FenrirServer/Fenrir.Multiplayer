@@ -36,10 +36,75 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var logger = new TestLogger();
             var listener = new TestSimulationListener();
             var simulation = new Simulation(listener, logger) { IsAuthority = true };
-            SimulationObject simObject = simulation.SpawnObject();
+            SimulationObject simObject = null;
+
+            simulation.EnqueueAction(() => simObject = simulation.SpawnObject());
+            simulation.Tick(); // Executes the action and sends the outgoing command
 
             Assert.IsTrue(listener.TryGetCommand<SpawnObjectSimulationCommand>(out var command));
             Assert.AreEqual(simObject.Id, command.ObjectId);
+        }
+        #endregion
+
+        #region Simulation.GetObject
+        [TestMethod]
+        public void Simulation_GetObject_ReturnsObject()
+        {
+            var logger = new TestLogger();
+            var listener = new TestSimulationListener();
+            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            SimulationObject simObject = null;
+
+            simulation.EnqueueAction(() => simObject = simulation.SpawnObject());
+            simulation.Tick(); // Executes the action and sends the outgoing command
+
+            SimulationObject obj2 = null;
+            simulation.EnqueueAction(() => obj2 = simulation.GetObject(simObject.Id));
+            simulation.Tick();
+
+            Assert.IsNotNull(obj2);
+        }
+        #endregion
+
+        #region Simulation.TryGetObject
+        [TestMethod]
+        public void Simulation_TryGetObject_ReturnsObject()
+        {
+            var logger = new TestLogger();
+            var listener = new TestSimulationListener();
+            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            SimulationObject simObject = null;
+
+            simulation.EnqueueAction(() => simObject = simulation.SpawnObject());
+            simulation.Tick(); // Executes the action and sends the outgoing command
+
+            bool result = false;
+            SimulationObject obj2 = null;
+            simulation.EnqueueAction(() => result = simulation.TryGetObject(simObject.Id, out obj2));
+            simulation.Tick();
+
+            Assert.IsNotNull(obj2);
+        }
+        #endregion
+
+        #region Simulation.GetObjects
+        [TestMethod]
+        public void Simulation_GetObjects_ReturnsObjectEnumerable()
+        {
+            var logger = new TestLogger();
+            var listener = new TestSimulationListener();
+            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            SimulationObject simObject = null;
+
+            simulation.EnqueueAction(() => simObject = simulation.SpawnObject());
+            simulation.Tick(); // Executes the action and sends the outgoing command
+
+            IEnumerable<SimulationObject> simObjects = null;
+            simulation.EnqueueAction(() => simObjects = simulation.GetObjects());
+            simulation.Tick();
+
+            Assert.AreEqual(1, simObjects.Count());
+            Assert.IsTrue(simObjects.Any(obj => obj.Id == simObject.Id));
         }
         #endregion
 
@@ -75,13 +140,18 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var listener = new TestSimulationListener();
             var simulation = new Simulation(listener, logger) { IsAuthority = true };
 
-            SimulationObject simObject = simulation.SpawnObject();
+
+            SimulationObject simObject = null;
+
+            simulation.EnqueueAction(() => simObject = simulation.SpawnObject());
+            simulation.Tick(); // Executes the action and sends the outgoing command
 
             Assert.IsNotNull(simObject);
 
             Assert.IsTrue(simulation.HasObject(simObject.Id));
 
-            simulation.DestroyObject(simObject);
+            simulation.EnqueueAction(() => simulation.DestroyObject(simObject));
+            simulation.Tick();
 
             Assert.IsFalse(simulation.HasObject(simObject.Id));
 
@@ -103,7 +173,8 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
 
             Assert.IsTrue(simulation.GetObjects().Contains(simObject));
 
-            simulation.DestroyObject(simObject.Id);
+            simulation.EnqueueAction(() => simulation.DestroyObject(simObject.Id));
+            simulation.Tick(); // Executes the action and sends the outgoing command
 
             Assert.IsFalse(simulation.GetObjects().Contains(simObject));
 
@@ -156,7 +227,9 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var listener = new TestSimulationListener();
             var simulation = new Simulation(listener, logger) { IsAuthority = false };
 
-            var spawnObjectCommand = new SpawnObjectSimulationCommand(DateTime.UtcNow, 123);
+            DateTime commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
+            var spawnObjectCommand = new SpawnObjectSimulationCommand(commandTime, 123);
+
             simulation.IngestCommand(spawnObjectCommand);
 
             simulation.Tick();
@@ -174,17 +247,17 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var simulation = new Simulation(listener, logger) { IsAuthority = false };
 
             // Create object
-            var spawnObjectCommand = new SpawnObjectSimulationCommand(DateTime.UtcNow, 123);
+            DateTime commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
+            var spawnObjectCommand = new SpawnObjectSimulationCommand(commandTime, 123);
             simulation.IngestCommand(spawnObjectCommand);
-
             simulation.Tick();
 
             Assert.IsTrue(simulation.HasObject(spawnObjectCommand.ObjectId));
 
             // Destroy object
-            var destroyObjectCommand = new DestroyObjectSimulationCommand(DateTime.UtcNow, 123);
-            simulation.IngestCommand(destroyObjectCommand);
-
+            commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
+            var destroyObjectCommand = new DestroyObjectSimulationCommand(commandTime, 123);
+            simulation.IngestCommand(destroyObjectCommand); 
             simulation.Tick();
 
             Assert.IsFalse(simulation.HasObject(spawnObjectCommand.ObjectId));

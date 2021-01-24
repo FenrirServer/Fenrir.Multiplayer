@@ -1,4 +1,5 @@
 ﻿using Fenrir.Multiplayer.Logging;
+using Fenrir.Multiplayer.Sim.Exceptions;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -68,16 +69,18 @@ namespace Fenrir.Multiplayer.Sim
             return Simulation.AddComponent<TComponent>(this);
         }
 
-        internal void AddComponent<TComponent>(TComponent component)
-            where TComponent : SimulationComponent
+        internal void AddComponent(SimulationComponent component, Type componentType)
         {
-            if (_componentsByType.Contains(typeof(TComponent)))
+            if (_componentsByType.Contains(componentType))
             {
-                throw new ArgumentException($"Failed to add component {typeof(TComponent).Name}, object already has component of this type");
+                throw new SimulationException($"Failed to add component {componentType.Name}, object already has component of this type");
             }
 
             // Add to list of components
-            _componentsByType.Add(typeof(TComponent), component);
+            _componentsByType.Add(componentType, component);
+
+            // Invoke component callback
+            component.OnAdded(this);
         }
         #endregion
 
@@ -126,7 +129,7 @@ namespace Fenrir.Multiplayer.Sim
         {
             // This method is a simple facade around internal Simulation method that replicates component removal command to all clients,
             // then calls RemoveComponent(Type componentType)
-            Simulation.AddComponent<TComponent>(this);
+            Simulation.RemoveComponent<TComponent>(this);
         }
 
         internal void RemoveComponent(Type componentType)

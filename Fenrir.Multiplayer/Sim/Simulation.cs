@@ -23,9 +23,10 @@ namespace Fenrir.Multiplayer.Sim
         /// Logger
         /// </summary>
         private readonly IFenrirLogger _logger;
-        
+
         /// <summary>
         /// Simulation objects by ushort id
+        ///  TODO: Every time we do object lookups we have boxing because our key is ushort. TODO: Replace with a better structure
         /// </summary>
         private OrderedDictionary _objectsById = new OrderedDictionary();
 
@@ -202,14 +203,12 @@ namespace Fenrir.Multiplayer.Sim
 
         private void ExecuteDestroyObjectCommand(DestroyObjectSimulationCommand command)
         {
-            if (!_objectsById.Contains(command.ObjectId))
+            if (!TryGetObject(command.ObjectId, out SimulationObject simObject))
             {
                 throw new SimulationException($"Failed to remove object {command.ObjectId} from simulation, object not found in the simulation");
             }
 
-            SimulationObject obj = (SimulationObject)_objectsById[command.ObjectId];
-
-            _objectsById.Remove(obj.Id);
+            _objectsById.Remove(simObject.Id);
         }
 
         public void DestroyObject(ushort objectId)
@@ -247,7 +246,7 @@ namespace Fenrir.Multiplayer.Sim
 
         public SimulationObject GetObject(ushort objectId)
         {
-            if(TryGetObject(objectId, out SimulationObject simObject))
+            if(!TryGetObject(objectId, out SimulationObject simObject))
             {
                 return null;
             }
@@ -264,7 +263,7 @@ namespace Fenrir.Multiplayer.Sim
                 return false;
             }
 
-            simObject = (SimulationObject)_objectsById[objectId];
+            simObject = (SimulationObject)_objectsById[(object)objectId];
             return true;
         }
 
@@ -332,7 +331,7 @@ namespace Fenrir.Multiplayer.Sim
             SimulationComponent component = factoryMethod.Invoke();
 
             // Add component
-            simObject.AddComponent(component);
+            simObject.AddComponent(component, componentType);
 
             return component;
         }
@@ -398,7 +397,7 @@ namespace Fenrir.Multiplayer.Sim
                 _incomingCommandBuffer.Sort((cmd1, cmd2) => cmd2.Time.CompareTo(cmd1.Time));
 
                 // Iterate over commands that are OLDER than sim time + delay
-                for (int i = _incomingCommandBuffer.Count; i >= 0; i--)
+                for (int i = _incomingCommandBuffer.Count - 1; i >= 0; i--)
                 {
                     ISimulationCommand incomingCommand = _incomingCommandBuffer[i];
                     if (DateTime.UtcNow < incomingCommand.Time + TimeSpan.FromMilliseconds(IncomingCommandDelayMs))
