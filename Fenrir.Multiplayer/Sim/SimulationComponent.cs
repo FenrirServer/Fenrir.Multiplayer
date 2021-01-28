@@ -6,24 +6,46 @@ namespace Fenrir.Multiplayer.Sim
     {
         public SimulationObject Object { get; private set; }
 
-        public DateTime TimeAdded { get; private set; }
+        public Simulation Simulation => Object?.Simulation;
 
-        public DateTime TimeRemoved { get; private set; }
+        public ulong TypeHash { get; private set; }
 
-        public virtual void OnAdded(SimulationObject simulationObject)
+        public DateTime TimeInitialized { get; private set; }
+
+        public DateTime TimeDestroyed { get; private set; }
+
+        internal void Initialize(SimulationObject simulationObject)
         {
-            TimeAdded = DateTime.UtcNow;
+            TimeInitialized = DateTime.UtcNow;
             Object = simulationObject;
+            TypeHash = Object.Simulation.GetComponentTypeHash(GetType());
+
+            // Invoke callback
+            OnInitialized();
+        }
+        internal void BeforeDestroy()
+        {
+            OnBeforeDestroyed();
         }
 
-        public virtual void OnRemoved()
+        internal void Destroy()
         {
-            TimeRemoved = DateTime.UtcNow;
+            TimeDestroyed = DateTime.UtcNow;
             Object = null;
+            OnDestroyed();
         }
 
-        public virtual void Tick()
+        internal void Tick()
         {
+            OnTick();
         }
+
+        protected virtual void OnInitialized() { }
+
+        protected virtual void OnBeforeDestroyed() { }
+
+        protected virtual void OnDestroyed() { }
+
+        protected virtual void OnTick(){ }
     }
 }

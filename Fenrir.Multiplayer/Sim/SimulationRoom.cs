@@ -9,7 +9,7 @@ using System.Diagnostics;
 
 namespace Fenrir.Multiplayer.Sim
 {
-    public class SimulationRoom : ServerRoom, ISimulationListener
+    public class SimulationRoom : ServerRoom
     {
         /// <summary>
         /// Simulation tick rate - ~66 times a second
@@ -27,9 +27,10 @@ namespace Fenrir.Multiplayer.Sim
         private readonly Stopwatch _simulationTickStopwatch;
 
         /// <summary>
-        /// Tracks peer id -> simulation object id
+        /// Tracks peer id -> player component
         /// </summary>
-        private Dictionary<string, ushort> _playerObjects = new Dictionary<string, ushort>();
+        private Dictionary<string, PlayerComponent> _playerObjects = new Dictionary<string, PlayerComponent>();
+
 
         /// <summary>
         /// Creates new room that runs a simulation.
@@ -40,7 +41,7 @@ namespace Fenrir.Multiplayer.Sim
         public SimulationRoom(IFenrirLogger logger, string roomId)
             : base(logger, roomId)
         {
-            Simulation = new Simulation(this, logger);
+            Simulation = new Simulation(logger);
             _simulationTickStopwatch = new Stopwatch();
 
             // Do first simulation tick, calling this method schedule next tick and so on
@@ -77,52 +78,54 @@ namespace Fenrir.Multiplayer.Sim
             }
         }
 
-        protected override void OnPeerJoin(IServerPeer peer, string token)
+        protected sealed override void OnPeerJoin(IServerPeer peer, string token)
         {
             Simulation.EnqueueAction(() =>
             {
                 SimulationObject playerObject = Simulation.SpawnObject();
-                playerObject.AddComponent<PlayerComponent>();
-                _playerObjects.Add(peer.Id, playerObject.Id);
+                PlayerComponent playerComponent = playerObject.AddComponent<PlayerComponent>();
+                playerComponent.ServerPeer = peer; // TODO: Introduce parameterized AddComponent. It should take in T1, T2, T3 etc parameters and pass into component factory
+                _playerObjects.Add(peer.Id, playerComponent);
+                OnPlayerObjectCreated(playerObject, playerComponent);
             });
         }
 
-        protected override void OnPeerLeave(IServerPeer peer)
+        protected virtual void OnPlayerObjectCreated(SimulationObject simObject, PlayerComponent player)
+        {
+        }
+
+        protected sealed override void OnPeerLeave(IServerPeer peer)
         {
             Simulation.EnqueueAction(() =>
             {
-                if(!_playerObjects.TryGetValue(peer.Id, out ushort objectId))
+                if(!_playerObjects.TryGetValue(peer.Id, out PlayerComponent playerComponent))
                 {
                     Logger.Warning($"{nameof(OnPeerLeave)} failed: no peer found with id {peer.Id}");
                     return;
                 }
 
-                if(!Simulation.TryGetObject(objectId, out SimulationObject simObject))
-                {
-                    Logger.Warning($"{nameof(OnPeerLeave)} failed: no player object found id {objectId}, player object has been destroyed?");
-                    return;
-                }
+                SimulationObject playerObject = playerComponent.Object;
 
-                Simulation.DestroyObject(simObject);
+                OnBeforePlayerObjectDestroyed(playerObject, playerComponent);
+
+                Simulation.DestroyObject(playerObject);
             });
         }
 
-
-        public void OnSendCommand(ISimulationCommand command)
+        protected virtual void OnBeforePlayerObjectDestroyed(SimulationObject simObject, PlayerComponent player)
         {
-            // TODO: Send to all peers
-            throw new NotImplementedException();
         }
 
-        public void OnSendCommands(IEnumerable<ISimulationCommand> commands)
+        public void AcknowledgeTickSnapshot(IServerPeer peer, DateTime tickTime)
         {
-            // TODO: Pack and send to all peers
-            throw new NotImplementedException();
-        }
+            if(!_playerObjects.TryGetValue(peer.Id, out PlayerComponent playerComponent))
+            {
+                Logger.Warning($"{nameof(AcknowledgeTickSnapshot)} failed, no peer component found. Perhaps peer object has been destroyed");
+                return;
+            }
 
-        public void OnCommandExecuted(ISimulationCommand command)
-        {
-            // Do nothing on the server. Client will render using SimulationView?
+            // Schedule acknowledgement on the next tick
+            Simulation.EnqueueAction(() => playerComponent.AcknowledgeTickSnapshot(tickTime));
         }
     }
 }

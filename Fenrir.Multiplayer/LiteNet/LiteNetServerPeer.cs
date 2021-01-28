@@ -23,6 +23,11 @@ namespace Fenrir.Multiplayer.LiteNet
         public int ProtocolVersion { get; private set; }
 
         /// <summary>
+        /// Custom peer data object that can be assigned to each peer
+        /// </summary>
+        public object PeerData { get; set; }
+
+        /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="peerId">Unique id of the client</param>

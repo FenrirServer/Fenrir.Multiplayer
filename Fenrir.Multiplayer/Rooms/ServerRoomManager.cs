@@ -29,7 +29,7 @@ namespace Fenrir.Multiplayer.Rooms
         /// <summary>
         /// Logger
         /// </summary>
-        private readonly IFenrirLogger _logger;
+        protected IFenrirLogger Logger { get; private set; }
 
         /// <summary>
         /// Room creation callback
@@ -45,9 +45,9 @@ namespace Fenrir.Multiplayer.Rooms
         /// Creates room manager
         /// </summary>
         /// <param name="logger">Logger</param>
-        private ServerRoomManager(IFenrirLogger logger)
+        protected ServerRoomManager(IFenrirLogger logger)
         {
-            _logger = logger;
+            Logger = logger;
         }
 
         /// <summary>
@@ -139,18 +139,23 @@ namespace Fenrir.Multiplayer.Rooms
             }
             catch(Exception e)
             {
-                _logger.Error("Uncaught exception during room creation with id {0}: {1}", roomId, e.ToString());
+                Logger.Error("Uncaught exception during room creation with id {0}: {1}", roomId, e.ToString());
                 return false;
             }
 
             if(room == null)
             {
-                _logger.Error("Failed to create a room with id {0}, room factory returned null", roomId);
+                Logger.Error("Failed to create a room with id {0}, room factory returned null", roomId);
                 return false;
             }
 
             room.Terminated += OnRoomTerminated;
             return true;
+        }
+
+        protected virtual TRoom CreateRoom(IServerPeer peer, string roomId, string token)
+        {
+            return _roomFactoryMethod(peer, roomId, token);
         }
 
         private void OnRoomTerminated(object sender, EventArgs e)
@@ -162,7 +167,7 @@ namespace Fenrir.Multiplayer.Rooms
             }
             catch(InvalidCastException ex)
             {
-                _logger.Error("Failed to terminate room, failed to cast {0} to {1}: {2}", sender.GetType().Name, typeof(TRoom).Name, ex.ToString());
+                Logger.Error("Failed to terminate room, failed to cast {0} to {1}: {2}", sender.GetType().Name, typeof(TRoom).Name, ex.ToString());
                 return;
             }
 
@@ -186,6 +191,7 @@ namespace Fenrir.Multiplayer.Rooms
 
             // Join first user
             room.AddPeer(peer, request.Token);
+            peer.PeerData = room;
 
             return RoomJoinResponse.JoinSuccess;
         }
@@ -194,7 +200,7 @@ namespace Fenrir.Multiplayer.Rooms
         {
             if(request.RoomId == null)
             {
-                _logger.Warning("Failed to remove peer {0} from the room, {1} is null", peer.EndPoint, nameof(request.RoomId));
+                Logger.Warning("Failed to remove peer {0} from the room, {1} is null", peer.EndPoint, nameof(request.RoomId));
                 return RoomLeaveResponse.LeaveFailed;
             }
 
@@ -208,7 +214,9 @@ namespace Fenrir.Multiplayer.Rooms
                 }
             }
 
+            peer.PeerData = null;
             room.RemovePeer(peer);
+
             return RoomLeaveResponse.LeaveSuccess;
         }
         #endregion

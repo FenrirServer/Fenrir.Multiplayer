@@ -22,8 +22,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             // Client simulation does not allow creating objects
 
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = false }; 
+            var simulation = new Simulation(logger) { IsAuthority = false }; 
 
             simulation.SpawnObject();
         }
@@ -34,14 +33,17 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             // Client simulation does not allow creating objects
 
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            var simulation = new Simulation(logger) { IsAuthority = true };
+
+            SpawnObjectSimulationCommand command = null;
+            simulation.CommandCreated += cmd => command = (SpawnObjectSimulationCommand)cmd;
+
             SimulationObject simObject = null;
 
             simulation.EnqueueAction(() => simObject = simulation.SpawnObject());
             simulation.Tick(); // Executes the action and sends the outgoing command
 
-            Assert.IsTrue(listener.TryGetCommand<SpawnObjectSimulationCommand>(out var command));
+            Assert.IsNotNull(command);
             Assert.AreEqual(simObject.Id, command.ObjectId);
         }
         #endregion
@@ -51,8 +53,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void Simulation_GetObject_ReturnsObject()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            var simulation = new Simulation(logger) { IsAuthority = true };
             SimulationObject simObject = null;
 
             simulation.EnqueueAction(() => simObject = simulation.SpawnObject());
@@ -71,8 +72,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void Simulation_TryGetObject_ReturnsObject()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            var simulation = new Simulation(logger) { IsAuthority = true };
             SimulationObject simObject = null;
 
             simulation.EnqueueAction(() => simObject = simulation.SpawnObject());
@@ -92,8 +92,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void Simulation_GetObjects_ReturnsObjectEnumerable()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            var simulation = new Simulation(logger) { IsAuthority = true };
             SimulationObject simObject = null;
 
             simulation.EnqueueAction(() => simObject = simulation.SpawnObject());
@@ -115,8 +114,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             // Client simulation does not allow removing objects
 
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = false };
+            var simulation = new Simulation(logger) { IsAuthority = false };
 
             simulation.DestroyObject(new SimulationObject(simulation, logger, 123));
         }
@@ -127,8 +125,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             // Client simulation does not allow removing objects
 
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = false };
+            var simulation = new Simulation(logger) { IsAuthority = false };
 
             simulation.DestroyObject(123);
         }
@@ -137,9 +134,16 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void ServerSimulation_DestroyObject_RemovesSimObject_SendsSimulationCommand_UsingObjectRef_WhenHasAuthority()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            var simulation = new Simulation(logger) { IsAuthority = true };
 
+            DestroyObjectSimulationCommand command = null;
+            simulation.CommandCreated += cmd =>
+            {
+                if (cmd is DestroyObjectSimulationCommand)
+                {
+                    command = (DestroyObjectSimulationCommand)cmd;
+                }
+            };
 
             SimulationObject simObject = null;
 
@@ -155,7 +159,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
 
             Assert.IsFalse(simulation.HasObject(simObject.Id));
 
-            Assert.IsTrue(listener.TryGetCommand<DestroyObjectSimulationCommand>(out var command));
+            Assert.IsNotNull(command);
             Assert.AreEqual(simObject.Id, command.ObjectId);
         }
 
@@ -164,8 +168,16 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         {
 
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            var simulation = new Simulation(logger) { IsAuthority = true };
+
+            DestroyObjectSimulationCommand command = null;
+            simulation.CommandCreated += cmd =>
+            {
+                if (cmd is DestroyObjectSimulationCommand)
+                {
+                    command = (DestroyObjectSimulationCommand)cmd;
+                }
+            };
 
             SimulationObject simObject = simulation.SpawnObject();
 
@@ -178,7 +190,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
 
             Assert.IsFalse(simulation.GetObjects().Contains(simObject));
 
-            Assert.IsTrue(listener.TryGetCommand<DestroyObjectSimulationCommand>(out var command));
+            Assert.IsNotNull(command);
             Assert.AreEqual(simObject.Id, command.ObjectId);
         }
 
@@ -186,8 +198,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void ServerSimulation_RemoveObject_ThrowsSimulationException_UsingObjectRef_WhenNoObjectFound()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            var simulation = new Simulation(logger) { IsAuthority = true };
 
             simulation.DestroyObject(new SimulationObject(simulation, logger, 123)); // bad object id
         }
@@ -196,8 +207,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void ServerSimulation_RemoveObject_ThrowsSimulationException_UsingObjectId_WhenNoObjectFound()
         {
             var logger = new TestLogger(); 
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger);
+            var simulation = new Simulation(logger);
 
             simulation.DestroyObject(123); // bad object id
         }
@@ -208,8 +218,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void Simulation_RegisterComponentType_RegistersComponent()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger);
+            var simulation = new Simulation(logger);
 
             simulation.RegisterComponentType<TestComponent>();
 
@@ -224,8 +233,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void Simulation_IngestCommand_SpawnObjectSimulationCommand_SpawnsSimulationObject()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = false };
+            var simulation = new Simulation(logger) { IsAuthority = false };
 
             DateTime commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
             var spawnObjectCommand = new SpawnObjectSimulationCommand(commandTime, 123);
@@ -243,8 +251,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void Simulation_IngestCommand_DestroyObjectSimulationCommand_DestroysSimulationObject()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = false };
+            var simulation = new Simulation(logger) { IsAuthority = false };
 
             // Create object
             DateTime commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
@@ -271,8 +278,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void Simulation_Tick_TicksComponent()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            var simulation = new Simulation(logger) { IsAuthority = true };
 
             simulation.RegisterComponentType<TestTickingComponent>();
 
@@ -292,8 +298,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void Simulation_EnqueueAction_EnqueuesAction()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger);
+            var simulation = new Simulation(logger);
 
             bool didInvoke = false;
 
@@ -307,8 +312,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public async Task Simulation_ScheduleAction_SchedulesAction()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger);
+            var simulation = new Simulation(logger);
 
             bool didInvoke = false;
 

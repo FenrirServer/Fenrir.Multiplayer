@@ -15,9 +15,15 @@ namespace Fenrir.Multiplayer.Sim
     public class Simulation
     {
         /// <summary>
-        /// Gets notified when simulation events occur
+        /// Delegate that describes event when simulation creates an outgoing command
         /// </summary>
-        private readonly ISimulationListener _listener;
+        /// <param name="command">Outgoing command</param>
+        public delegate void CommandCreatedHandler(ISimulationCommand command);
+
+        /// <summary>
+        /// Invokes when simulation creates an outgoing command
+        /// </summary>
+        public event CommandCreatedHandler CommandCreated;
 
         /// <summary>
         /// Logger
@@ -44,11 +50,6 @@ namespace Fenrir.Multiplayer.Sim
         /// Queue of actions scheduled for the next tick
         /// </summary>
         private Queue<Action> _actionQueue = new Queue<Action>();
-
-        /// <summary>
-        /// List of outgoing commands that are being sent in bulk every tick
-        /// </summary>
-        private Queue<ISimulationCommand> _outgoingCommandBuffer = new Queue<ISimulationCommand>();
 
         /// <summary>
         /// Log of all outgoing commands, regardless of when they were sent (immediately vs bulked)
@@ -95,18 +96,13 @@ namespace Fenrir.Multiplayer.Sim
         public bool IsAuthority { get; set; }
         
         #region Constructor
-        public Simulation(ISimulationListener listener, IFenrirLogger logger)
+        public Simulation(IFenrirLogger logger)
         {
-            if(listener == null)
-            {
-                throw new ArgumentNullException(nameof(listener));
-            }
             if (logger == null)
             {
                 throw new ArgumentNullException(nameof(logger));
             }
 
-            _listener = listener;
             _logger = logger;
         }
         #endregion
@@ -428,12 +424,6 @@ namespace Fenrir.Multiplayer.Sim
                 simObject.Tick();
             }
 
-            // Send bulked outgoing commands
-            if(IsAuthority)
-            {
-                _listener.OnSendCommands(_outgoingCommandBuffer);
-                _outgoingCommandBuffer.Clear();
-            }
 
             // Trim the rollback command log
             TrimOutgoingCommandLog();
@@ -504,20 +494,14 @@ namespace Fenrir.Multiplayer.Sim
         #region Command Processing
         internal void SendOutgoingCommand(ISimulationCommand command)
         {
+            // If this is an authority, log command to be able to roll back
             if (IsAuthority)
             {
-                // If this is an authority, bulk commands before sending them.
-                // Command will be sent on the next tick using _listener.OnSendCommands
-                _outgoingCommandBuffer.Enqueue(command);
-
-                // If this is an authority, log command to be able to roll back
                 _outgoingCommandLog.Enqueue(command);
             }
-            else
-            {
-                // If not authority, send command right away. Do not log the command
-                _listener.OnSendCommand(command);
-            }
+
+            // Produce outgoing command
+            CommandCreated?.Invoke(command);
         }
 
         public void IngestCommand(ISimulationCommand command)

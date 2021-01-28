@@ -21,8 +21,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_AddComponent_ThrowsSimulationException_WhenNoAuthority()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = false };
+            var simulation = new Simulation(logger) { IsAuthority = false };
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = new SimulationObject(simulation, logger, 123);
@@ -33,9 +32,17 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_AddComponent_AddsSimulationComponent_SendsAddComponentCommand_UsingDefaultFactory_WhenHasAuthority()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            var simulation = new Simulation(logger) { IsAuthority = true };
             simulation.RegisterComponentType<TestComponent>();
+
+            AddComponentSimulationCommand command = null;
+            simulation.CommandCreated += cmd =>
+            {
+                if (cmd is AddComponentSimulationCommand)
+                {
+                    command = (AddComponentSimulationCommand)cmd;
+                }
+            };
 
             SimulationObject simObject = null;
             TestComponent testComponent = null;
@@ -57,7 +64,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             Assert.AreEqual("test", component.Value);
 
             // Verify command was sent
-            Assert.IsTrue(listener.TryGetCommand<AddComponentSimulationCommand>(out var command));
+            Assert.IsNotNull(command);
             Assert.AreEqual(simulation.GetComponentTypeHash<TestComponent>(), command.ComponentTypeHash);
             Assert.AreEqual(component.Object.Id, command.ObjectId);
         }
@@ -66,8 +73,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_AddComponent_ThrowsSimulationException_IfComponentNotRegistered_UsingDefaultConstructor_WhenHasAuthority()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            var simulation = new Simulation(logger) { IsAuthority = true };
 
             SimulationObject simObject = simulation.SpawnObject();
             TestComponent testComponent = simObject.AddComponent<TestComponent>();
@@ -77,8 +83,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_AddComponent_ThrowsSimulationException_IfComponentOfTheSameTypeWasAdded_WhenHasAuthority()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            var simulation = new Simulation(logger) { IsAuthority = true };
 
             SimulationObject simObject = simulation.SpawnObject();
             simObject.AddComponent<TestComponent>();
@@ -93,8 +98,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_RemoveComponent_ThrowsSimulationException_WhenNoAuthority()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = false };
+            var simulation = new Simulation(logger) { IsAuthority = false };
             simulation.RegisterComponentType<TestComponent>();
 
             // Spawn new object by ingesting spawn object command
@@ -117,10 +121,17 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_RemoveComponent_RemovesSimulationComponent_SendsRemoveComponentCommand_WhenHasAuthority()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            var simulation = new Simulation(logger) { IsAuthority = true };
             simulation.RegisterComponentType<TestComponent>();
 
+            RemoveComponentSimulationCommand command = null;
+            simulation.CommandCreated += cmd =>
+            {
+                if (cmd is RemoveComponentSimulationCommand)
+                {
+                    command = (RemoveComponentSimulationCommand)cmd;
+                }
+            };
             SimulationObject simObject = null;
             TestComponent testComponent = null;
             simulation.EnqueueAction(() => {
@@ -137,7 +148,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             Assert.IsFalse(simObject.GetComponents().Contains(testComponent));
 
             // Check if command was sent
-            Assert.IsTrue(listener.TryGetCommand<AddComponentSimulationCommand>(out var command));
+            Assert.IsNotNull(command);
             Assert.AreEqual(simObject.Id, command.ObjectId);
             Assert.AreEqual(simulation.GetComponentTypeHash<TestComponent>(), command.ComponentTypeHash);
         }
@@ -148,8 +159,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_TryGetComponent_ReturnsTrue_ProvidesSimulationComponent_WhenHasAuthority()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            var simulation = new Simulation(logger) { IsAuthority = true };
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = simulation.SpawnObject();
@@ -166,8 +176,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_GetComponents_ReturnsSimulationComponents_WhenHasAuthority()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            var simulation = new Simulation(logger) { IsAuthority = true };
             simulation.RegisterComponentType<TestComponent>();
             simulation.RegisterComponentType<OtherTestComponent>();
 
@@ -188,8 +197,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_GetOrAddComponent_AddsSimulationComponent_IfNotAdded_WhenHasAuthority()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            var simulation = new Simulation(logger) { IsAuthority = true };
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = null;
@@ -213,8 +221,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_GetOrAddComponent_ReturnsSimulationComponent_IfWasAddedBefore_WhenHasAuthority()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = true };
+            var simulation = new Simulation(logger) { IsAuthority = true };
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = null;
@@ -238,8 +245,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void SimulationObject_GetOrAddComponent_ThrowsSimulationException_WhenNoAuthority()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = false };
+            var simulation = new Simulation(logger) { IsAuthority = false };
             simulation.RegisterComponentType<TestComponent>();
 
             SimulationObject simObject = new SimulationObject(simulation, logger, 123);
@@ -253,8 +259,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void Simulation_IngestCommand_AddComponentSimulationCommand_AddsSimulationComponent()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = false };
+            var simulation = new Simulation(logger) { IsAuthority = false };
             simulation.RegisterComponentType<TestComponent>();
 
             // Create object
@@ -292,8 +297,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         public void Simulation_IngestCommand_RemoveComponentSimulationCommand_RemovesSimulationComponent()
         {
             var logger = new TestLogger();
-            var listener = new TestSimulationListener();
-            var simulation = new Simulation(listener, logger) { IsAuthority = false };
+            var simulation = new Simulation(logger) { IsAuthority = false };
             simulation.RegisterComponentType<TestComponent>();
 
             // Create object

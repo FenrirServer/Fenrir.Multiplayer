@@ -79,8 +79,8 @@ namespace Fenrir.Multiplayer.Sim
             // Add to list of components
             _componentsByType.Add(componentType, component);
 
-            // Invoke component callback
-            component.OnAdded(this);
+            // Initialize component 
+            component.Initialize(this);
         }
         #endregion
 
@@ -141,17 +141,20 @@ namespace Fenrir.Multiplayer.Sim
 
             // Get component
             SimulationComponent component = (SimulationComponent)_componentsByType[componentType];
-            
+
+            // Invoke before destroyed
+            component.BeforeDestroy();
+
             // Remove from the list
             _componentsByType.Remove(componentType);
 
             // Re-add to the list of removed components, allowing to get it's state if we roll back this operation
             _removedComponentsByType.Add(componentType, component);
 
-            // Invoked component callback
-            component.OnRemoved();
+            // Destroy component
+            component.Destroy();
         }
-
+        
         public virtual void Tick()
         {
             // Get all components attached to this object and tick them
@@ -173,7 +176,7 @@ namespace Fenrir.Multiplayer.Sim
             while (componentEnumerator.MoveNext())
             {
                 SimulationComponent component = (SimulationComponent)componentEnumerator.Value;
-                if (component.TimeRemoved > Simulation.Time + TimeSpan.FromMilliseconds(Simulation.MaxRollbackTimeMs))
+                if (component.TimeDestroyed > Simulation.Time + TimeSpan.FromMilliseconds(Simulation.MaxRollbackTimeMs))
                 {
                     // We can't rollback past this point anymore, so ready to remove this component (and let GC destroy it)
                     _removedComponentsByType.Remove(component.GetType());
@@ -183,6 +186,15 @@ namespace Fenrir.Multiplayer.Sim
 
         public void Destroy()
         {
+            // Remove all components
+            IEnumerable<SimulationComponent> components = GetComponents();
+
+            foreach(SimulationComponent component in components)
+            {
+                RemoveComponent(component.GetType());
+            }
+
+            // Set flags
             IsDestroyed = true;
             TimeDestroyed = DateTime.UtcNow;
         }
