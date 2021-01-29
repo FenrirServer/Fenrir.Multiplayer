@@ -1,5 +1,6 @@
 ﻿using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
+using Fenrir.Multiplayer.Server;
 using System;
 using System.Collections.Generic;
 
@@ -30,6 +31,11 @@ namespace Fenrir.Multiplayer.Rooms
         /// Logger
         /// </summary>
         protected IFenrirLogger Logger { get; private set; }
+        
+        /// <summary>
+        /// Fenrir server
+        /// </summary>
+        public IFenrirServer Server { get; private set; }
 
         /// <summary>
         /// Room creation callback
@@ -45,9 +51,14 @@ namespace Fenrir.Multiplayer.Rooms
         /// Creates room manager
         /// </summary>
         /// <param name="logger">Logger</param>
-        protected ServerRoomManager(IFenrirLogger logger)
+        /// <param name="server">Server</param>
+        protected ServerRoomManager(IFenrirLogger logger, IFenrirServer server)
         {
             Logger = logger;
+            Server = server;
+
+            Server.AddRequestHandler<RoomJoinRequest, RoomJoinResponse>(this);
+            Server.AddRequestHandler<RoomLeaveRequest, RoomLeaveResponse>(this);
         }
 
         /// <summary>
@@ -56,8 +67,9 @@ namespace Fenrir.Multiplayer.Rooms
         /// </summary>
         /// <param name="roomFactory">Room factory that creates a room of a type <seealso cref="TRoom"/></param>
         /// <param name="logger">Logger</param>
-        public ServerRoomManager(IServerRoomFactory<TRoom> roomFactory, IFenrirLogger logger)
-            : this(logger)
+        /// <param name="server">Server</param>
+        public ServerRoomManager(IServerRoomFactory<TRoom> roomFactory, IFenrirLogger logger, IFenrirServer server)
+            : this(logger, server)
         {
             if(roomFactory == null)
             {
@@ -68,23 +80,14 @@ namespace Fenrir.Multiplayer.Rooms
         }
 
         /// <summary>
-        /// Creates server room manager with a given room factory.
-        /// Implement IServerRoomFactory interface for custom room creation
-        /// </summary>
-        /// <param name="roomFactory">Room factory that creates a room of a type <seealso cref="TRoom"/></param>
-        public ServerRoomManager(IServerRoomFactory<TRoom> roomFactory)
-            : this(roomFactory, new EventBasedLogger())
-        {
-        }
-
-        /// <summary>
         /// Creates server room manager with a given room factory method.
         /// Pass in a callback that creates new room, e.g. new ServerRoomManager(() => new MyRoom(logger, ...))
         /// </summary>
         /// <param name="roomFactoryMethod">Factory method that creates new room of type <seealso cref="TRoom"/></param>
         /// <param name="logger">Logger</param>
-        public ServerRoomManager(CreateRoomHandler roomFactoryMethod, IFenrirLogger logger)
-            : this(logger)
+        /// <param name="server">Server</param>
+        public ServerRoomManager(CreateRoomHandler roomFactoryMethod, IFenrirLogger logger, IFenrirServer server)
+            : this(logger, server)
         {
             if (roomFactoryMethod == null)
             {
@@ -94,15 +97,6 @@ namespace Fenrir.Multiplayer.Rooms
             _roomFactoryMethod = roomFactoryMethod;
         }
 
-        /// <summary>
-        /// Creates server room manager with a given room factory method.
-        /// Pass in a callback that creates new room, e.g. new ServerRoomManager(() => new MyRoom(logger, ...))
-        /// </summary>
-        /// <param name="roomFactoryMethod">Factory method that creates new room of type <seealso cref="TRoom"/></param>
-        public ServerRoomManager(CreateRoomHandler roomFactoryMethod)
-            : this(roomFactoryMethod, new EventBasedLogger())
-        {
-        }
 
         private bool TryGetOrCreateRoom(IServerPeer peer, string roomId, string token, out TRoom room)
         {

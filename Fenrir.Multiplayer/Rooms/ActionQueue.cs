@@ -158,9 +158,9 @@ namespace Fenrir.Multiplayer.Rooms
         }
 
         /// <inheritdoc/>
-        public async void Schedule(Action action, int delayMs)
+        public async void Schedule(Action action, double delayMs)
         {
-            await Task.Delay(delayMs);
+            await Task.Delay(TimeSpan.FromMilliseconds(delayMs));
 
             if(_isDisposed)
             {

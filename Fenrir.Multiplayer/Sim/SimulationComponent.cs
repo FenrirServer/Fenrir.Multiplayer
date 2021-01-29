@@ -21,7 +21,7 @@ namespace Fenrir.Multiplayer.Sim
             TypeHash = Object.Simulation.GetComponentTypeHash(GetType());
 
             // Invoke callback
-            OnInitialized();
+            OnAdded();
         }
         internal void BeforeDestroy()
         {
@@ -40,7 +40,7 @@ namespace Fenrir.Multiplayer.Sim
             OnTick();
         }
 
-        protected virtual void OnInitialized() { }
+        protected virtual void OnAdded() { }
 
         protected virtual void OnBeforeDestroyed() { }
 

@@ -1,4 +1,5 @@
-﻿using Fenrir.Multiplayer.Exceptions;
+﻿using Fenrir.Multiplayer.Events;
+using Fenrir.Multiplayer.Exceptions;
 using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
 using Newtonsoft.Json;
@@ -14,7 +15,17 @@ namespace Fenrir.Multiplayer.Client
     /// Fenrir Networking Client
     /// </summary>
     public class FenrirClient : IFenrirClient, IDisposable
-    {
+    {        
+        /// <summary>
+        /// Invoked when client is disconnected
+        /// </summary>
+        public event EventHandler<DisconnectedEventArgs> Disconnected;
+
+        /// <summary>
+        /// Invoked when network error occurs
+        /// </summary>
+        public event EventHandler<NetworkErrorEventArgs> NetworkError;
+
         /// <summary>
         /// Http Client to query Server Info service
         /// </summary>
@@ -124,6 +135,8 @@ namespace Fenrir.Multiplayer.Client
             }
 
             _protocolConnector = _supportedProtocolConnectors.Where(protocol => protocol.ProtocolType == selectedProtocolInfo.ProtocolType).First();
+            _protocolConnector.Disconnected += OnProtocolConnectorDisconnected;
+            _protocolConnector.NetworkError += OnProtocolConnectorNetworkError;
 
             // Get protocol data
             IProtocolConnectionData protocolData = (IProtocolConnectionData)selectedProtocolInfo.GetConnectionData(_protocolConnector.ConnectionDataType);
@@ -205,6 +218,16 @@ namespace Fenrir.Multiplayer.Client
             {
                 eventHandlerInstaller.Invoke(protocolConnector);
             }
+        }
+
+        private void OnProtocolConnectorDisconnected(object sender, DisconnectedEventArgs e)
+        {
+            Disconnected?.Invoke(sender, e);
+        }
+
+        private void OnProtocolConnectorNetworkError(object sender, NetworkErrorEventArgs e)
+        {
+            NetworkError?.Invoke(sender, e);
         }
 
         public void Dispose()

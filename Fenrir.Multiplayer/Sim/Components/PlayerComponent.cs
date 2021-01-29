@@ -20,16 +20,11 @@ namespace Fenrir.Multiplayer.Sim.Components
         /// </summary>
         public IServerPeer ServerPeer { get; set; }
 
-        /// <summary>
-        /// True if player is initialized (first snapshot of the simulation is sent)
-        /// </summary>
-        private bool _initialized = false;
-
         public PlayerComponent()
         {
         }
 
-        protected override void OnInitialized()
+        protected override void OnAdded()
         {
             Simulation.CommandCreated += OnCommandCreated;
         }
@@ -38,6 +33,7 @@ namespace Fenrir.Multiplayer.Sim.Components
         {
             Simulation.CommandCreated -= OnCommandCreated;
         }
+
         protected override void OnDestroyed()
         {
         }
@@ -57,27 +53,24 @@ namespace Fenrir.Multiplayer.Sim.Components
                 }
             }
         }
-
+        
         protected override void OnTick()
         {
             if (ServerPeer != null)
             {
-                if(!_initialized)
-                {
-                    // If first tick, send full snapshot
-                    SimulationTickSnapshot simulationTickSnapshot = new SimulationTickSnapshot() { Time = Simulation.Time, Snapshots = GetFullSimulationSnapshot() };
-                    SimulationInitEvent simulationInitEvent = new SimulationInitEvent() { SimulationSnapshot = simulationTickSnapshot };
-                    _initialized = true;
-                }
-                else
-                {
-                    // TODO: For state command, remove per-state duplicates
+                // TODO: For state command, remove per-state duplicates
 
-                    // Send outgoing commands to this peer
-                    SimulationTickSnapshotEvent tickSnapshotEvent = new SimulationTickSnapshotEvent() { TickSnapshots = _outgoingTickSnapshots }; // TODO: Object pool
-                    ServerPeer.SendEvent(tickSnapshotEvent);
-                }
+                // Send outgoing commands to this peer
+                SimulationTickSnapshotEvent tickSnapshotEvent = new SimulationTickSnapshotEvent() { TickSnapshots = _outgoingTickSnapshots }; // TODO: Object pool
+                ServerPeer.SendEvent(tickSnapshotEvent);
             }
+        }
+
+        public void SendSimulationInitEvent()
+        {
+            SimulationTickSnapshot simulationTickSnapshot = new SimulationTickSnapshot() { Time = Simulation.CurrentTickTime, Snapshots = GetFullSimulationSnapshot() };
+            SimulationInitEvent simulationInitEvent = new SimulationInitEvent() { SimulationSnapshot = simulationTickSnapshot };
+            ServerPeer.SendEvent(simulationInitEvent);
         }
 
         private Dictionary<CommandType, SimulationCommandListSnapshot> GetFullSimulationSnapshot()
@@ -90,7 +83,7 @@ namespace Fenrir.Multiplayer.Sim.Components
             var simObjects = Simulation.GetObjects();
             foreach(SimulationObject simObject in simObjects)
             {
-                SpawnObjectSimulationCommand cmd = new SpawnObjectSimulationCommand(Simulation.Time, simObject.Id);
+                SpawnObjectSimulationCommand cmd = new SpawnObjectSimulationCommand(Simulation.CurrentTickTime, simObject.Id);
                 spawnObjectCommandListSnapshot.Commands.Add(cmd);
             }
 
@@ -101,7 +94,7 @@ namespace Fenrir.Multiplayer.Sim.Components
             {
                 foreach(SimulationComponent component in simObject.GetComponents())
                 {
-                    AddComponentSimulationCommand cmd = new AddComponentSimulationCommand(Simulation.Time, simObject.Id, component.TypeHash);
+                    AddComponentSimulationCommand cmd = new AddComponentSimulationCommand(Simulation.CurrentTickTime, simObject.Id, component.TypeHash);
                     addComponentCommandListSnapshot.Commands.Add(cmd);
                 }
             }

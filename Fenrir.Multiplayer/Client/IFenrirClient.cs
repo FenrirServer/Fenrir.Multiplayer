@@ -1,4 +1,5 @@
-﻿using Fenrir.Multiplayer.Network;
+﻿using Fenrir.Multiplayer.Events;
+using Fenrir.Multiplayer.Network;
 using System;
 using System.Threading.Tasks;
 
@@ -10,6 +11,16 @@ namespace Fenrir.Multiplayer.Client
     /// </summary>
     public interface IFenrirClient
     {
+        /// <summary>
+        /// Invoked when client is disconnected
+        /// </summary>
+        event EventHandler<DisconnectedEventArgs> Disconnected;
+
+        /// <summary>
+        /// Invoked when network error occurs
+        /// </summary>
+        event EventHandler<NetworkErrorEventArgs> NetworkError;
+
         /// <summary>
         /// Unique id of the client
         /// </summary>

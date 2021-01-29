@@ -76,7 +76,7 @@ namespace Fenrir.Multiplayer.Rooms
         /// </summary>
         /// <param name="action">Callback</param>
         /// <param name="delayMs">Delay after which callback will be invoked</param>
-        protected void Schedule(Action action, int delayMs)
+        protected void Schedule(Action action, double delayMs)
         {
             _actionQueue.Schedule(action, delayMs);
         }

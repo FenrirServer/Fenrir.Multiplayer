@@ -12,9 +12,9 @@ namespace Fenrir.Multiplayer.Sim
     public class SimulationRoom : ServerRoom
     {
         /// <summary>
-        /// Simulation tick rate - ~66 times a second
+        /// Simulation tick rate, how many ticks per second
         /// </summary>
-        public int TickRateMs { get; set; } = 15;
+        public int TickRate { get; set; } = 66;
 
         /// <summary>
         /// Contains server simulation
@@ -41,7 +41,7 @@ namespace Fenrir.Multiplayer.Sim
         public SimulationRoom(IFenrirLogger logger, string roomId)
             : base(logger, roomId)
         {
-            Simulation = new Simulation(logger);
+            Simulation = new Simulation(logger) { IsAuthority = true };
             _simulationTickStopwatch = new Stopwatch();
 
             // Do first simulation tick, calling this method schedule next tick and so on
@@ -51,6 +51,8 @@ namespace Fenrir.Multiplayer.Sim
         private void TickSimulation()
         {
             _simulationTickStopwatch.Start();
+
+            double delayBetweenTicksMs = (TickRate / 1000d);
 
             try
             {
@@ -63,18 +65,18 @@ namespace Fenrir.Multiplayer.Sim
 
             _simulationTickStopwatch.Stop();
 
-            long timeElapsedMs = _simulationTickStopwatch.ElapsedMilliseconds;
+            double timeElapsedMs = (double)_simulationTickStopwatch.ElapsedTicks / TimeSpan.TicksPerMillisecond;
 
             _simulationTickStopwatch.Reset();
 
-            if (timeElapsedMs > TickRateMs)
+            if (timeElapsedMs > delayBetweenTicksMs)
             {
-                Logger.Warning("Simulation tick took {0} milliseconds, which is longer than tick rate {1} milliseconds. Scheduling next tick immediately", timeElapsedMs, TickRateMs);
+                Logger.Warning("Simulation tick took {0} milliseconds, which is longer than tick rate {1} milliseconds. Scheduling next tick immediately", timeElapsedMs, delayBetweenTicksMs);
                 Enqueue(TickSimulation);
             }
             else
             {
-                Schedule(TickSimulation, TickRateMs);
+                Schedule(TickSimulation, delayBetweenTicksMs - timeElapsedMs);
             }
         }
 
@@ -85,6 +87,7 @@ namespace Fenrir.Multiplayer.Sim
                 SimulationObject playerObject = Simulation.SpawnObject();
                 PlayerComponent playerComponent = playerObject.AddComponent<PlayerComponent>();
                 playerComponent.ServerPeer = peer; // TODO: Introduce parameterized AddComponent. It should take in T1, T2, T3 etc parameters and pass into component factory
+                playerComponent.SendSimulationInitEvent();
                 _playerObjects.Add(peer.Id, playerComponent);
                 OnPlayerObjectCreated(playerObject, playerComponent);
             });

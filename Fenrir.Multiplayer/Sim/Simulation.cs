@@ -31,6 +31,11 @@ namespace Fenrir.Multiplayer.Sim
         private readonly IFenrirLogger _logger;
 
         /// <summary>
+        /// Simulation clock
+        /// </summary>
+        private readonly Clock _clock = new Clock();
+
+        /// <summary>
         /// Simulation objects by ushort id
         ///  TODO: Every time we do object lookups we have boxing because our key is ushort. TODO: Replace with a better structure
         /// </summary>
@@ -68,6 +73,7 @@ namespace Fenrir.Multiplayer.Sim
         /// </summary>
         public int MaxRollbackTimeMs { get; set; } = 50;
 
+
         /// <summary>
         /// Incoming command delay, in ms
         /// Indicates for how long incoming commands are being buffered before processing.
@@ -88,7 +94,7 @@ namespace Fenrir.Multiplayer.Sim
         /// <summary>
         /// Indicates current time of the simulation
         /// </summary>
-        public DateTime Time { get; private set; }
+        public DateTime CurrentTickTime { get; private set; }
 
         /// <summary>
         /// True if this simulation is authority
@@ -230,7 +236,7 @@ namespace Fenrir.Multiplayer.Sim
             {
                 SimulationObject simObject = (SimulationObject)objectEnumerator.Value;
                 
-                if(IsRolledBack && simObject.TimeCreated > Time)
+                if(IsRolledBack && simObject.TimeCreated > CurrentTickTime)
                 {
                     // Rolling back simulation and object was created after our timestamp, skip
                     continue;
@@ -377,7 +383,7 @@ namespace Fenrir.Multiplayer.Sim
         public virtual void Tick()
         {
             // Set tick time
-            Time = DateTime.UtcNow;
+            CurrentTickTime = _clock.UtcNow;
 
             // Check if we can tick simulation. If simulation is being rolled back for reconciliation, we can't tick.
             if(IsRolledBack)
@@ -543,8 +549,8 @@ namespace Fenrir.Multiplayer.Sim
         #region ExecuteRollBack
         public void ExecuteRollBack(DateTime time, Action callback)
         {
-            DateTime currentSimTime = Time;
-            Time = time;
+            DateTime currentTickTime = CurrentTickTime;
+            CurrentTickTime = time;
             IsRolledBack = true;
 
             // TODO: Restore state by traversing outgoing command buffer
@@ -555,11 +561,21 @@ namespace Fenrir.Multiplayer.Sim
             }
             finally
             {
-                Time = currentSimTime;
+                CurrentTickTime = currentTickTime;
                 IsRolledBack = false;
             }
         }
 
+        #endregion
+
+        #region Clock
+        /// <summary>
+        /// Sets simulation clock offset
+        /// </summary>
+        public void SetClockOffset(TimeSpan offset)
+        {
+            _clock.Offset = offset;
+        }
         #endregion
 
         #region Utility Methods
