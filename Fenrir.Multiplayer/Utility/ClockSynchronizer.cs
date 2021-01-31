@@ -87,12 +87,12 @@ namespace Fenrir.Multiplayer.Utility
         /// <summary>
         /// Recorded round trip times, in DateTime ticks
         /// </summary>
-        private LinkedList<long> _roundTrips = new LinkedList<long>();
+        private Queue<long> _roundTrips = new Queue<long>();
 
         /// <summary>
         /// Recorded round trip deviations, in DateTime ticks
         /// </summary>
-        private LinkedList<long> _roundTripDeviationsSquared = new LinkedList<long>();
+        private Queue<long> _roundTripDeviationsSquared = new Queue<long>();
 
         /// <summary>
         /// Total number of round trips we have recorded
@@ -150,15 +150,14 @@ namespace Fenrir.Multiplayer.Utility
         public void RecordSyncResult(DateTime timeSentRequest, DateTime timeReceivedRequest, DateTime timeSentResponse, DateTime timeReceivedResponse)
         {
             // Check if we have room for another sample, if not, remove the oldest sample we have
-            if (_numRoundTripsRecorded == RoundTripsMaxSampleSize) // Have reached max size, remove first sample from both lists
+            if (_numRoundTripsRecorded == RoundTripsMaxSampleSize) // Have reached max size, remove value from both lists
             {
-                // Remove first round-trip value
-                _roundTripSum -= _roundTrips.First.Value;
-                _roundTrips.RemoveFirst();
+                // Remove oldest round-trip value
+                _roundTripSum -= _roundTrips.Dequeue();
 
                 // Remove first round-trip squared deviation value
-                _roundTripSumDeviationsSquared -= (_roundTripDeviationsSquared.First.Value * _roundTripDeviationsSquared.First.Value);
-                _roundTripDeviationsSquared.RemoveFirst();
+                long oldestDeviationSquared = _roundTripDeviationsSquared.Dequeue();
+                _roundTripSumDeviationsSquared -= (oldestDeviationSquared * oldestDeviationSquared);
 
             }
             else // Have not reached max size yet
@@ -170,14 +169,14 @@ namespace Fenrir.Multiplayer.Utility
             TimeSpan roundTripTime = timeReceivedResponse - timeSentRequest;
 
             // Record received round-trip time
-            _roundTrips.AddLast(roundTripTime.Ticks);
+            _roundTrips.Enqueue(roundTripTime.Ticks);
             _roundTripSum += roundTripTime.Ticks;
 
             // Record received round-trip squared deviation from the average round-trip time
             long roundTripTimeAvg = _roundTripSum / _numRoundTripsRecorded;
             long roundTripDeviation = roundTripTime.Ticks - roundTripTimeAvg;
             long roundTripDeviationSquared = (roundTripDeviation * roundTripDeviation);
-            _roundTripDeviationsSquared.AddLast(roundTripDeviationSquared);
+            _roundTripDeviationsSquared.Enqueue(roundTripDeviationSquared);
             _roundTripSumDeviationsSquared += roundTripDeviationSquared;
 
             // Calculate standard deviation for the whole sample (all values)
