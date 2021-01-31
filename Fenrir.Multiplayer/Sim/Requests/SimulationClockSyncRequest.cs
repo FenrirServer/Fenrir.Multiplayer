@@ -7,9 +7,9 @@ namespace Fenrir.Multiplayer.Sim.Requests
     /// <summary>
     /// Request sent to synchronize simulation clock
     /// </summary>
-    public class SimulationClockSyncRequest : IRequest<SimulationClockSyncResponse>, IByteStreamSerializable
+    public class SimulationClockSyncRequest : IRequest, IByteStreamSerializable
     {
-        public DateTime ClientTime;
+        public DateTime RequestSentTime;
 
         public SimulationClockSyncRequest()
         {
@@ -17,44 +17,18 @@ namespace Fenrir.Multiplayer.Sim.Requests
 
         public SimulationClockSyncRequest(DateTime clientTime)
         {
-            ClientTime = clientTime;
+            RequestSentTime = clientTime;
         }
 
         public void Deserialize(IByteStreamReader reader)
         {
-            ClientTime = new DateTime(reader.ReadLong());
+            RequestSentTime = new DateTime(reader.ReadLong());
         }
 
         public void Serialize(IByteStreamWriter writer)
         {
-            writer.Write(ClientTime.Ticks);
+            writer.Write(RequestSentTime.Ticks);
         }
     }
 
-    /// <summary>
-    /// Response to clock synchronization request
-    /// </summary>
-    public class SimulationClockSyncResponse : IResponse, IByteStreamSerializable
-    {
-        public DateTime ServerTime;
-
-        public SimulationClockSyncResponse()
-        {
-        }
-
-        public SimulationClockSyncResponse(DateTime serverTime)
-        {
-            ServerTime = serverTime;
-        }
-
-        public void Deserialize(IByteStreamReader reader)
-        {
-            ServerTime = new DateTime(reader.ReadLong());
-        }
-
-        public void Serialize(IByteStreamWriter writer)
-        {
-            writer.Write(ServerTime.Ticks);
-        }
-    }
 }

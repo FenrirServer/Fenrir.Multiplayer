@@ -5,6 +5,7 @@ using Fenrir.Multiplayer.Rooms;
 using Fenrir.Multiplayer.Sim.Command;
 using Fenrir.Multiplayer.Sim.Events;
 using Fenrir.Multiplayer.Sim.Requests;
+using Fenrir.Multiplayer.Utility;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,6 +17,7 @@ namespace Fenrir.Multiplayer.Sim
     public class SimulationClient
         : IEventHandler<SimulationInitEvent>
         , IEventHandler<SimulationTickSnapshotEvent>
+        , IEventHandler<SimulationClockSyncAckEvent>
     {
         private readonly IFenrirLogger _logger;
         private readonly IFenrirClient _client;
@@ -24,37 +26,15 @@ namespace Fenrir.Multiplayer.Sim
 
         private readonly Stopwatch _simulationTickStopwatch = new Stopwatch();
 
+        private readonly ClockSynchronizer _clockSynchronizer;
+
         private string _roomId = null;
 
         private bool _isJoined => _roomId != null;
 
         private bool _isRunningSimulation = false;
 
-        /// <summary>
-        /// Total sum of all offsets we have received from clock sync
-        /// </summary>
-        private long _clockOffsetSumTicks = 0;
 
-        /// <summary>
-        /// Total sum of all roundtrip delays we have received from clock sync
-        /// </summary>
-        private long _clockRoundTripSumTicks = 0;
-
-        /// <summary>
-        /// Total sum of all squared deviations for all roundtrip delays received from clock sync
-        /// </summary>
-        private long _clockRoundTripSumDeviationsSqr = 0;
-
-        /// <summary>
-        /// Number of clock offsets we have received from clock sync
-        /// </summary>
-        private long _numClockSyncsReceived = 0;
-
-        /// <summary>
-        /// Last time simulation clock was synced
-        /// </summary>
-        private DateTime _lastClockSyncTime;
-        
         /// <summary>
         /// Task completion source, completes when
         /// simulation synchronization is completed
@@ -65,11 +45,6 @@ namespace Fenrir.Multiplayer.Sim
         /// Simulation tick rate, how many ticks per second
         /// </summary>
         public int TickRate { get; set; } = 66;
-
-        /// <summary>
-        /// Simulation clock sync rate
-        /// </summary>
-        public float ClockSyncRate { get; set; } = 0.2f; // once every 5 seconds
 
         /// <summary>
         /// Number of initial clock synchronization request
@@ -88,6 +63,7 @@ namespace Fenrir.Multiplayer.Sim
             _client.Disconnected += OnDisconnected;
 
             _simulation = new Simulation(logger) { IsAuthority = false };
+            _clockSynchronizer = new ClockSynchronizer();
         }
 
         public async Task<SimulationJoinResult> Join(string roomId, string joinToken)
@@ -103,7 +79,7 @@ namespace Fenrir.Multiplayer.Sim
             }
 
             // Synchronize simulation clock
-            await SyncSimulationClockInitially();
+            await SyncClockInit();
 
             // Join simulation room
             var joinRequest = new RoomJoinRequest(roomId, joinToken);
@@ -158,18 +134,16 @@ namespace Fenrir.Multiplayer.Sim
 
         private async void RunSimulationTickLoop()
         {
-            while (_isRunningSimulation) 
+            while (_isRunningSimulation)
             {
+                // Check if we need to sync simulation clock
+                if (DateTime.UtcNow > _clockSynchronizer.NextSyncTime)
+                {
+                    SendSyncClockRequest().FireAndForget(_logger);
+                }
+
                 // Tick simulation
                 await TickSimulation();
-
-                // Check if we need to sync clock again
-                double delayBetweenClockSyncs = 1000 / ClockSyncRate;
-                DateTime nextClockSyncTime = _lastClockSyncTime + TimeSpan.FromMilliseconds(delayBetweenClockSyncs);
-                if(DateTime.UtcNow > nextClockSyncTime)
-                {
-                    _ = SendSyncClockRequest();
-                }
             }
         }
 
@@ -218,18 +192,12 @@ namespace Fenrir.Multiplayer.Sim
         }
 
         #region Clock Sync
-        private void SetSimulationClockOffset(TimeSpan offset)
-        {
-            _simulation.SetClockOffset(offset);
-        }
-
-        private async Task SyncSimulationClockInitially()
+        private async Task SyncClockInit()
         {
             await Task.WhenAll(SyncSimulationClockTasks());
 
-            long offsetAvg = _clockOffsetSumTicks / _numClockSyncsReceived;
-
-            _simulation.SetClockOffset(TimeSpan.FromTicks(offsetAvg));
+            // Set offset
+            _simulation.SetClockOffset(_clockSynchronizer.AvgOffset);
         }
 
         private IEnumerable<Task> SyncSimulationClockTasks()
@@ -246,44 +214,20 @@ namespace Fenrir.Multiplayer.Sim
 
             var simClockSyncRequest = new SimulationClockSyncRequest(DateTime.UtcNow);
 
-            DateTime timeSentRequest = DateTime.UtcNow;
-
-            var simClockSyncResponse = await _client.Peer.SendRequest<SimulationClockSyncRequest, SimulationClockSyncResponse>(simClockSyncRequest);
-
-            DateTime timeReceivedResponse = DateTime.UtcNow;
-
-
-            // Check if this response is an outlier, by comparing it's roundtrip time against the standard deviation
-            TimeSpan roundTripTime = timeReceivedResponse - timeSentRequest;
-
-            // Calculate standard deviation for previously received roundtrip times
-            // https://en.wikipedia.org/wiki/Standard_deviation
-            long roundTripTotalVariance = _clockRoundTripSumDeviationsSqr / _numClockSyncsReceived;
-            long roundTripTotalStandardDeviation = (long)Math.Sqrt(roundTripTotalVariance);
-
-            // Calculate deviation of this sync round trip time from the average
-            long roundTripTotalTicksAvg = _clockRoundTripSumTicks / _numClockSyncsReceived;
-            long roundTripDeviation = roundTripTime.Ticks - roundTripTotalTicksAvg;
-
-            // Check if current round trip deviation is too big, if so, filter out this response.
-            // For this case too big means smaller than half the standard deviation or bigger than twice the standard deviation
-            if(roundTripDeviation < roundTripTotalStandardDeviation / 2 ||  roundTripDeviation > roundTripTotalStandardDeviation * 2)
-            {
-                return; // Outlier, ignore
-            }
-
-            // Calculate time offset and record this sync clock result
-
-            // https://en.wikipedia.org/wiki/Network_Time_Protocol
-            long offsetDelayTicks = ((simClockSyncResponse.ServerTime - timeSentRequest) + (simClockSyncResponse.ServerTime - timeReceivedResponse)).Ticks / 2;
-            _clockOffsetSumTicks += offsetDelayTicks;
-            _clockRoundTripSumTicks += roundTripTime.Ticks;
-            _clockRoundTripSumDeviationsSqr += (roundTripDeviation * roundTripDeviation);
-            _numClockSyncsReceived++;
+            _client.Peer.SendRequest<SimulationClockSyncRequest>(simClockSyncRequest, 0, MessageDeliveryMethod.Unreliable);
         }
         #endregion
 
         #region Event Handlers
+
+        void IEventHandler<SimulationClockSyncAckEvent>.OnReceiveEvent(SimulationClockSyncAckEvent evt)
+        {
+            DateTime timeReceivedResponse = DateTime.UtcNow;
+
+            // Record clock synchronization data
+            _clockSynchronizer.RecordSyncResult(evt.TimeSentRequest, evt.TimeReceivedRequest, evt.TimeSentResponse, timeReceivedResponse);
+        }
+
         async void IEventHandler<SimulationInitEvent>.OnReceiveEvent(SimulationInitEvent evt)
         {
             // Apply snapshot

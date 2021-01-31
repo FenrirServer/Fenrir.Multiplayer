@@ -2,6 +2,7 @@
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Sim.Command;
 using Fenrir.Multiplayer.Sim.Exceptions;
+using Fenrir.Multiplayer.Utility;
 using System;
 using System.Collections;
 using System.Collections.Generic;

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Fenrir.Multiplayer.Network
+namespace Fenrir.Multiplayer.Utility
 {
     /// <summary>
     /// Network clock that allows synchronization between

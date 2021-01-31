@@ -2,6 +2,7 @@
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Rooms;
 using Fenrir.Multiplayer.Server;
+using Fenrir.Multiplayer.Sim.Events;
 using Fenrir.Multiplayer.Sim.Requests;
 using System;
 
@@ -9,7 +10,7 @@ namespace Fenrir.Multiplayer.Sim
 {
     public class SimulationRoomManager : ServerRoomManager<SimulationRoom>
         , IRequestHandler<SimulationTickSnapshotAckRequest>
-        , IRequestHandler<SimulationClockSyncRequest, SimulationClockSyncResponse>
+        , IRequestHandler<SimulationClockSyncRequest>
     {
         public SimulationRoomManager(IFenrirLogger logger, IFenrirServer server) : base(logger, server)
         {
@@ -35,9 +36,14 @@ namespace Fenrir.Multiplayer.Sim
             room.AcknowledgeTickSnapshot(peer, request.TickTime);
         }
 
-        SimulationClockSyncResponse IRequestHandler<SimulationClockSyncRequest, SimulationClockSyncResponse>.HandleRequest(SimulationClockSyncRequest request, IServerPeer peer)
+        void IRequestHandler<SimulationClockSyncRequest>.HandleRequest(SimulationClockSyncRequest request, IServerPeer peer)
         {
-            return new SimulationClockSyncResponse(request.ClientTime, DateTime.UtcNow);
+            DateTime requestReceivedTime = DateTime.UtcNow;
+
+            // Respond with an ack
+            var simulationClockSyncAckEvent = new SimulationClockSyncAckEvent(request.RequestSentTime, requestReceivedTime);'
+
+            return new SimulationClockSyncResponse(request.RequestSentTime, DateTime.UtcNow);
         }
     }
 }
