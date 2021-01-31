@@ -41,9 +41,8 @@ namespace Fenrir.Multiplayer.Sim
             DateTime requestReceivedTime = DateTime.UtcNow;
 
             // Respond with an ack
-            var simulationClockSyncAckEvent = new SimulationClockSyncAckEvent(request.RequestSentTime, requestReceivedTime);'
-
-            return new SimulationClockSyncResponse(request.RequestSentTime, DateTime.UtcNow);
+            var simulationClockSyncAckEvent = new SimulationClockSyncAckEvent(request.RequestSentTime, requestReceivedTime);
+            peer.SendEvent(simulationClockSyncAckEvent);
         }
     }
 }

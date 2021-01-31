@@ -27,6 +27,11 @@ namespace Fenrir.Multiplayer.Server
         /// <inheritdoc/>
         public string Hostname { get; set; } = "127.0.0.1";
 
+        /// <summary>
+        /// Fenrir Logger
+        /// </summary>
+        public IFenrirLogger Logger { get; private set; }
+
         /// <inheritdoc/>
         public IEnumerable<IProtocolListener> Listeners => _protocolListeners;
 
@@ -45,11 +50,6 @@ namespace Fenrir.Multiplayer.Server
         /// List of services that this server is using
         /// </summary>
         private List<IFenrirService> _services;
-
-        /// <summary>
-        /// Fenrir Logger
-        /// </summary>
-        private IFenrirLogger _logger;
 
         /// <summary>
         /// Server status
@@ -72,7 +72,7 @@ namespace Fenrir.Multiplayer.Server
         {
             ServerId = Guid.NewGuid().ToString();
 
-            _logger = logger;
+            Logger = logger;
 
             _protocolListeners = new List<IProtocolListener>();
             _services = new List<IFenrirService>();

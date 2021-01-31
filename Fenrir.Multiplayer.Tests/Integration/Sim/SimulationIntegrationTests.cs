@@ -1,5 +1,6 @@
 ﻿using Fenrir.Multiplayer.Client;
 using Fenrir.Multiplayer.LiteNet;
+using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Rooms;
 using Fenrir.Multiplayer.Server;
 using Fenrir.Multiplayer.Sim;
@@ -7,6 +8,7 @@ using Fenrir.Multiplayer.Tests.Fixtures;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -16,7 +18,7 @@ namespace Fenrir.Multiplayer.Tests.Integration.Sim
     public class SimulationIntegrationTests
     {
         [TestMethod]
-        public async Task Simulation_Integration_ConnectAndJoinFlow()
+        public async Task Simulation_Integration_ConnectAndJoin()
         {
             using var logger = new TestLogger();
             
@@ -37,12 +39,18 @@ namespace Fenrir.Multiplayer.Tests.Integration.Sim
             fenrirClient.AddLiteNetProtocol();
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
 
-            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
+            // Create simulation client
+            var simulationClient = new SimulationClient(fenrirClient, logger);
+
+            // Connect
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
 
-            var response = await fenrirClient.Peer.SendRequest<TestRequestWithResponse, TestResponse>(new TestRequestWithResponse() { Value = "request_test" });
+            // Join simulation
+            await simulationClient.Join("testRoom", "testToken");
 
-            Assert.AreEqual(response.Value, "response_test");
+            // Make sure there is one simulation entity - our player
+            Assert.AreEqual(1, simulationClient.Simulation.GetObjects().Count());
 
         }
     }

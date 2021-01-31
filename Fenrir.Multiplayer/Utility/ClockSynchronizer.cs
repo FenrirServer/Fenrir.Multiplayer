@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Fenrir.Multiplayer.Utility
@@ -23,10 +24,10 @@ namespace Fenrir.Multiplayer.Utility
     /// Squared deviations: [25, 25, 225, 225]
     /// Variance (mean, or average of squared deviations): (25+25+225+225)/4 = 125
     /// Standard deviation: Sqrt(125) = ~11.18
-    /// Coefficient of variation: 11.180/95 = ~0.12
+    /// Coefficient of variation: 11.180/95 = ~0.1176
     /// 
     /// Next sync delay is a Coefficient of variation lerped between <see cref="MinSyncDelay"/> and <see cref="MaxSyncDelay"/>:
-    /// Delay = 1 * (1 - 0.12) + 10 * 0.12 = 2.08
+    /// Delay = 0.5 * (1 - 0.1176) + 10 * 0.1176 = 1.62 sec
     /// 
     /// If next ping comes in as a [150], it will be detected as an outlier:
     /// Deviation from avg: 150-95=55
@@ -69,7 +70,7 @@ namespace Fenrir.Multiplayer.Utility
         {
             get
             {
-                long roundTripVariationCoefficientLerped = (long)(MinSyncDelay.Ticks * (1 - _roundTripVariationCoefficient) + MaxSyncDelay.Ticks * _roundTripVariationCoefficient);
+                long roundTripVariationCoefficientLerped = (long)Lerp(MinSyncDelay.Ticks, MaxSyncDelay.Ticks, _roundTripVariationCoefficient);
                 long syncDelayClamped = Math.Min(Math.Max(MinSyncDelay.Ticks, roundTripVariationCoefficientLerped), MaxSyncDelay.Ticks);
                 return _lastSyncTime + TimeSpan.FromTicks(syncDelayClamped);
             }
@@ -173,16 +174,18 @@ namespace Fenrir.Multiplayer.Utility
             _roundTripSum += roundTripTime.Ticks;
 
             // Record received round-trip squared deviation from the average round-trip time
-            long roundTripTimeAvg = _roundTripSum / _numClockOffsetsRecorded;
+            long roundTripTimeAvg = _roundTripSum / _numRoundTripsRecorded;
             long roundTripDeviation = roundTripTime.Ticks - roundTripTimeAvg;
             long roundTripDeviationSquared = (roundTripDeviation * roundTripDeviation);
             _roundTripDeviationsSquared.AddLast(roundTripDeviationSquared);
             _roundTripSumDeviationsSquared += roundTripDeviationSquared;
 
             // Calculate standard deviation for the whole sample (all values)
-            long roundTripTotalVariance = _roundTripSumDeviationsSquared / _numClockOffsetsRecorded;
+            // long roundTripTotalVariance = _roundTripSumDeviationsSquared / _numRoundTripsRecorded
+            long roundTripTotalVariance = _roundTrips.Select(rt => (rt - roundTripTimeAvg) * (rt - roundTripTimeAvg)).Sum() / _numRoundTripsRecorded;
+
             _roundTripStandardDeviation = (long)Math.Sqrt(roundTripTotalVariance);
-            _roundTripVariationCoefficient = _roundTripStandardDeviation / roundTripTimeAvg;
+            _roundTripVariationCoefficient = (double)_roundTripStandardDeviation / roundTripTimeAvg;
 
             if (IsRoundTripOutlier(roundTripDeviation))
             {
@@ -206,9 +209,8 @@ namespace Fenrir.Multiplayer.Utility
             long clockOffset = ((timeReceivedRequest - timeSentRequest) + (timeSentResponse - timeReceivedResponse)).Ticks / 2;
             _clockOffsets.AddLast(clockOffset);
             _clockOffsetSumTicks += clockOffset; // Set clock offset
-            _numClockOffsetsRecorded++; // Record number of offsets
 
-            _lastSyncTime = DateTime.UtcNow;
+            _lastSyncTime = timeReceivedResponse;
         }
 
         /// <summary>
@@ -226,5 +228,10 @@ namespace Fenrir.Multiplayer.Utility
             return Math.Abs(roundTripDeviation) > _roundTripStandardDeviation * RoundTripOutlierThreshold;
         }
 
+
+        private double Lerp(double a, double b, double x)
+        {
+            return a * (1 - x) + b * x;
+        }
     }
 }

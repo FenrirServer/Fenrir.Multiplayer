@@ -19,27 +19,20 @@ namespace Fenrir.Multiplayer.Sim
         , IEventHandler<SimulationTickSnapshotEvent>
         , IEventHandler<SimulationClockSyncAckEvent>
     {
-        private readonly IFenrirLogger _logger;
+        /// <summary>
+        /// Fenrir client
+        /// </summary>
         private readonly IFenrirClient _client;
 
-        private readonly Simulation _simulation;
-
-        private readonly Stopwatch _simulationTickStopwatch = new Stopwatch();
-
-        private readonly ClockSynchronizer _clockSynchronizer;
-
-        private string _roomId = null;
-
-        private bool _isJoined => _roomId != null;
-
-        private bool _isRunningSimulation = false;
-
+        /// <summary>
+        /// Logger
+        /// </summary>
+        private readonly IFenrirLogger _logger;
 
         /// <summary>
-        /// Task completion source, completes when
-        /// simulation synchronization is completed
+        /// Simulation
         /// </summary>
-        private TaskCompletionSource<bool> _initTcs = null;
+        public Simulation Simulation { get; private set; }
 
         /// <summary>
         /// Simulation tick rate, how many ticks per second
@@ -56,13 +49,47 @@ namespace Fenrir.Multiplayer.Sim
         /// </summary>
         public double InitialClockSyncDelayMs { get; set; } = 5;
 
-        public SimulationClient(IFenrirLogger logger, IFenrirClient client)
+        /// <summary>
+        /// Stopwatch used to tick simulation
+        /// </summary>
+        private readonly Stopwatch _simulationTickStopwatch = new Stopwatch();
+
+        /// <summary>
+        /// Clock synchronizer - keeps track of the clock
+        /// offset between client and server
+        /// </summary>
+        private readonly ClockSynchronizer _clockSynchronizer;
+
+        /// <summary>
+        /// Current room id
+        /// </summary>
+        private string _roomId = null;
+
+        /// <summary>
+        /// True if join simulation room
+        /// </summary>
+        private bool _isJoined => _roomId != null;
+
+        /// <summary>
+        /// True if simulation is running
+        /// </summary>
+        private bool _isRunningSimulation = false;
+
+        /// <summary>
+        /// Task completion source, completes when
+        /// simulation synchronization is completed
+        /// </summary>
+        private TaskCompletionSource<bool> _initTcs = null;
+
+
+        public SimulationClient(IFenrirClient client, IFenrirLogger logger)
         {
-            _logger = logger;
             _client = client;
+            _logger = logger;
+
             _client.Disconnected += OnDisconnected;
 
-            _simulation = new Simulation(logger) { IsAuthority = false };
+            Simulation = new Simulation(logger) { IsAuthority = false };
             _clockSynchronizer = new ClockSynchronizer();
         }
 
@@ -155,7 +182,7 @@ namespace Fenrir.Multiplayer.Sim
 
             try
             {
-                _simulation.Tick();
+                Simulation.Tick();
             }
             catch (Exception e)
             {
@@ -186,7 +213,7 @@ namespace Fenrir.Multiplayer.Sim
             {
                 foreach(ISimulationCommand command in commandListSnapshot.Commands)
                 {
-                    _simulation.IngestCommand(command);
+                    Simulation.IngestCommand(command);
                 }
             }
         }
@@ -197,7 +224,7 @@ namespace Fenrir.Multiplayer.Sim
             await Task.WhenAll(SyncSimulationClockTasks());
 
             // Set offset
-            _simulation.SetClockOffset(_clockSynchronizer.AvgOffset);
+            Simulation.SetClockOffset(_clockSynchronizer.AvgOffset);
         }
 
         private IEnumerable<Task> SyncSimulationClockTasks()
@@ -236,8 +263,9 @@ namespace Fenrir.Multiplayer.Sim
             // Start ticking
             RunSimulationTickLoop();
 
-            // Wait until we buffer simulation ticks
-            await Task.Delay(TimeSpan.FromMilliseconds(_simulation.IncomingCommandDelayMs));
+            // Wait until we buffer simulation ticks until the first command is executed
+            // TODO: Maybe use Simulation.CommandCreated to detect first ever command ?
+            await Task.Delay(TimeSpan.FromMilliseconds(Simulation.IncomingCommandDelayMs));
 
             // If we are still joined, start running. 
             // We should already have enough commands in the buffer to start running and interpolate.

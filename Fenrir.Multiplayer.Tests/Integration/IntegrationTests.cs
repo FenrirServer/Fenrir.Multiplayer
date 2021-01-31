@@ -125,7 +125,7 @@ namespace Fenrir.Multiplayer.Tests
             fenrirClient.AddLiteNetProtocol();
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080", new CustomConnectionRequestData() { Token = "test" });
 
-            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
 
             await connectionRequestTcs.Task;
@@ -232,7 +232,7 @@ namespace Fenrir.Multiplayer.Tests
             fenrirClient.AddLiteNetProtocol();
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
 
-            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
 
             fenrirClient.Peer.SendRequest(new TestRequest() { Value = "test_value" });
@@ -265,7 +265,7 @@ namespace Fenrir.Multiplayer.Tests
             fenrirClient.AddLiteNetProtocol();
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
 
-            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
 
             var response = await fenrirClient.Peer.SendRequest<TestRequestWithResponse, TestResponse>(new TestRequestWithResponse() { Value = "request_test" });
@@ -294,7 +294,7 @@ namespace Fenrir.Multiplayer.Tests
             fenrirClient.AddLiteNetProtocol();
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
 
-            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
 
             await Assert.ThrowsExceptionAsync<RequestFailedException>(async () => 
@@ -325,7 +325,7 @@ namespace Fenrir.Multiplayer.Tests
             fenrirClient.AddLiteNetProtocol();
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
 
-            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
 
             await Assert.ThrowsExceptionAsync<RequestFailedException>(async () =>
@@ -357,7 +357,7 @@ namespace Fenrir.Multiplayer.Tests
             fenrirClient.AddLiteNetProtocol();
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
 
-            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
 
             var response = await fenrirClient.Peer.SendRequest<TestRequestWithResponse, TestResponse>(new TestRequestWithResponse() { Value = "request_test" });
@@ -386,7 +386,7 @@ namespace Fenrir.Multiplayer.Tests
             fenrirClient.AddLiteNetProtocol();
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
 
-            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
 
             await Assert.ThrowsExceptionAsync<RequestFailedException>(async () =>
@@ -417,7 +417,7 @@ namespace Fenrir.Multiplayer.Tests
             fenrirClient.AddLiteNetProtocol();
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
 
-            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
 
             await Assert.ThrowsExceptionAsync<RequestFailedException>(async () =>
@@ -449,7 +449,7 @@ namespace Fenrir.Multiplayer.Tests
             fenrirClient.AddProtocol(new LiteNetProtocolConnector() { RequestTimeoutMs = 100 });
             var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
 
-            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not disconnected");
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
 
             await Assert.ThrowsExceptionAsync<RequestTimeoutException>(async () =>

@@ -12,7 +12,7 @@
     /// that requires a response
     /// </summary>
     /// <typeparam name="TResponse">Type of response</typeparam>
-    public interface IRequest<TResponse>
+    public interface IRequest<TResponse> : IRequest
         where TResponse : IResponse
     {
     }

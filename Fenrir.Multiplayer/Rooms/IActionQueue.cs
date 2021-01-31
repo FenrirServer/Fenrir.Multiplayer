@@ -33,7 +33,7 @@ namespace Fenrir.Multiplayer.Rooms
         /// </summary>
         /// <param name="action">Callback</param>
         /// <param name="delayMs">Delay, in MS</param>
-        void Schedule(Action action, int delayMs);
+        void Schedule(Action action, double delayMs);
 
         /// <summary>
         /// Schedules action with a specified delay
