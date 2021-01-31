@@ -63,7 +63,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
             double variationCoefficient = deviation / roundTripAvg; // ~0.12
             double expectedNextDelay = Lerp(clockSynchronizer.MinSyncDelay.TotalMilliseconds, clockSynchronizer.MaxSyncDelay.TotalMilliseconds, variationCoefficient); // 1.62 sec
 
-            Assert.AreEqual(timeReceivedResponse + TimeSpan.FromMilliseconds(expectedNextDelay), clockSynchronizer.NextSyncTime);
+            Assert.AreEqual((timeReceivedResponse + TimeSpan.FromMilliseconds(expectedNextDelay)).Ticks, clockSynchronizer.NextSyncTime.Ticks, TimeSpan.TicksPerMillisecond);
         }
 
         private double Lerp(double a, double b, double x)
