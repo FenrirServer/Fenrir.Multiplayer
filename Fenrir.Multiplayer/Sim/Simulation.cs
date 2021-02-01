@@ -19,12 +19,17 @@ namespace Fenrir.Multiplayer.Sim
         /// Delegate that describes event when simulation creates an outgoing command
         /// </summary>
         /// <param name="command">Outgoing command</param>
-        public delegate void CommandCreatedHandler(ISimulationCommand command);
+        public delegate void SimulationCommandHandler(ISimulationCommand command);
 
         /// <summary>
         /// Invokes when simulation creates an outgoing command
         /// </summary>
-        public event CommandCreatedHandler CommandCreated;
+        public event SimulationCommandHandler CommandCreated;
+
+        /// <summary>
+        /// Invokes when simulation executes a command
+        /// </summary>
+        public event SimulationCommandHandler CommandExecuted;
 
         /// <summary>
         /// Logger
@@ -543,6 +548,8 @@ namespace Fenrir.Multiplayer.Sim
                 case CommandType.SetComponentState:
                     break; // TODO
             }
+
+            CommandExecuted?.Invoke(command);
         }
 
         #endregion

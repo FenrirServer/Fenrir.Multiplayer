@@ -80,7 +80,7 @@ namespace Fenrir.Multiplayer.Sim
         /// Task completion source, completes when
         /// simulation synchronization is completed
         /// </summary>
-        private TaskCompletionSource<bool> _initTcs = null;
+        private TaskCompletionSource<bool> _firstCommandTcs = null;
 
 
         public SimulationClient(IFenrirClient client, IFenrirLogger logger)
@@ -95,10 +95,13 @@ namespace Fenrir.Multiplayer.Sim
             _client.Disconnected += OnDisconnected;
 
             Simulation = new Simulation(logger) { IsAuthority = false };
+            Simulation.CommandExecuted += OnSimulationCommandExecuted;
+
             _clockSynchronizer = new ClockSynchronizer();
 
             RegisterBuiltInSimulationComponents();
         }
+
 
         private void RegisterBuiltInSimulationComponents()
         {
@@ -133,8 +136,8 @@ namespace Fenrir.Multiplayer.Sim
             _roomId = roomId;
 
             // Successfully joined simulation. Let's wait until we receive Simulation init event before running the simulation
-            _initTcs = new TaskCompletionSource<bool>();
-            await _initTcs.Task; // Wait until simulation sync-up is completed
+            _firstCommandTcs = new TaskCompletionSource<bool>();
+            await _firstCommandTcs.Task; // Wait until simulation sync-up is completed
 
             return new SimulationJoinResult(joinResponse);
         }
@@ -168,11 +171,13 @@ namespace Fenrir.Multiplayer.Sim
         {
             _isRunningSimulation = false;
             _roomId = null;
-            _initTcs = null;
+            _firstCommandTcs = null;
         }
 
-        private async void RunSimulationTickLoop()
+        private async void RunSimulation()
         {
+            _isRunningSimulation = true;
+
             while (_isRunningSimulation)
             {
                 // Check if we need to sync simulation clock
@@ -230,6 +235,18 @@ namespace Fenrir.Multiplayer.Sim
             }
         }
 
+        private void OnSimulationCommandExecuted(ISimulationCommand command)
+        {
+            if (_isJoined && _firstCommandTcs != null)
+            {
+                // First command ever, assume simulation has finished initialization
+                _firstCommandTcs?.SetResult(true);
+                _firstCommandTcs = null;
+            }
+
+            Simulation.CommandExecuted -= OnSimulationCommandExecuted;
+        }
+
         #region Clock Sync
         private async Task SyncClockInit()
         {
@@ -267,7 +284,7 @@ namespace Fenrir.Multiplayer.Sim
             _clockSynchronizer.RecordSyncResult(evt.TimeSentRequest, evt.TimeReceivedRequest, evt.TimeSentResponse, timeReceivedResponse);
         }
 
-        async void IEventHandler<SimulationInitEvent>.OnReceiveEvent(SimulationInitEvent evt)
+        void IEventHandler<SimulationInitEvent>.OnReceiveEvent(SimulationInitEvent evt)
         {
             if(!_isJoined)
             {
@@ -277,20 +294,8 @@ namespace Fenrir.Multiplayer.Sim
             // Apply snapshot
             ApplyTickSnapshot(evt.SimulationSnapshot);
 
-            // Wait until we buffer simulation ticks until the first command is executed
-            // TODO: Maybe use Simulation.CommandCreated to detect first ever command ?
-            await Task.Delay(TimeSpan.FromMilliseconds(Simulation.IncomingCommandDelayMs));
-
-            if (!_isJoined)
-            {
-                return;
-            }
-
-            _initTcs?.SetResult(true);
-            _isRunningSimulation = true;
-
             // Start ticking
-            RunSimulationTickLoop();
+            RunSimulation();
         }
 
         void IEventHandler<SimulationTickSnapshotEvent>.OnReceiveEvent(SimulationTickSnapshotEvent evt)
