@@ -58,7 +58,7 @@ namespace Fenrir.Multiplayer.Utility
         /// <summary>
         /// Current average offset between local and remote clock
         /// </summary>
-        public TimeSpan AvgOffset => TimeSpan.FromTicks(_clockOffsetSumTicks / _numClockOffsetsRecorded);
+        public TimeSpan AvgOffset => TimeSpan.FromTicks(_clockOffsetSumTicks / _clockOffsets.Count);
 
         /// <summary>
         /// Next recommended clock sync time
@@ -70,7 +70,7 @@ namespace Fenrir.Multiplayer.Utility
         {
             get
             {
-                long roundTripVariationCoefficientLerped = (long)Lerp(MinSyncDelay.Ticks, MaxSyncDelay.Ticks, _roundTripVariationCoefficient);
+                long roundTripVariationCoefficientLerped = (long)Lerp(MinSyncDelay.Ticks, MaxSyncDelay.Ticks, 1 - _roundTripVariationCoefficient);
                 long syncDelayClamped = Math.Min(Math.Max(MinSyncDelay.Ticks, roundTripVariationCoefficientLerped), MaxSyncDelay.Ticks);
                 return _lastSyncTime + TimeSpan.FromTicks(syncDelayClamped);
             }
@@ -90,24 +90,15 @@ namespace Fenrir.Multiplayer.Utility
         private Queue<long> _roundTrips = new Queue<long>();
 
         /// <summary>
-        /// Recorded round trip deviations, in DateTime ticks
-        /// </summary>
-        private Queue<long> _roundTripDeviationsSquared = new Queue<long>();
-
-        /// <summary>
-        /// Total number of round trips we have recorded
-        /// </summary>
-        private long _numRoundTripsRecorded = 0;
-
-        /// <summary>
         /// Total sum of all roundtrip delays we have received from clock sync
         /// </summary>
         private long _roundTripSum = 0;
 
         /// <summary>
-        /// Total sum of all squared deviations for all roundtrip delays received from clock sync
+        /// Total sum of all round-trip deviatons from average
+        /// Same thing as round-trip variance, multiplied by number of received values
         /// </summary>
-        private long _roundTripSumDeviationsSquared = 0;
+        private long _roundTripSumSquaredDeviations = 0;
 
         /// <summary>
         /// Round trip time standard deviation
@@ -122,12 +113,7 @@ namespace Fenrir.Multiplayer.Utility
         /// <summary>
         /// Linked list of clock offsets recorded
         /// </summary>
-        private LinkedList<long> _clockOffsets = new LinkedList<long>();
-
-        /// <summary>
-        /// Number of clock offsets we have received from clock sync
-        /// </summary>
-        private long _numClockOffsetsRecorded = 0;
+        private Queue<long> _clockOffsets = new Queue<long>();
 
         /// <summary>
         /// Total sum of all offsets we have received from clock sync
@@ -149,39 +135,43 @@ namespace Fenrir.Multiplayer.Utility
         /// <param name="timeReceivedResponse">Time when sync was received by local party</param>
         public void RecordSyncResult(DateTime timeSentRequest, DateTime timeReceivedRequest, DateTime timeSentResponse, DateTime timeReceivedResponse)
         {
-            // Check if we have room for another sample, if not, remove the oldest sample we have
-            if (_numRoundTripsRecorded == RoundTripsMaxSampleSize) // Have reached max size, remove value from both lists
+            long roundTripTimePrevAvg = _roundTrips.Count == 0 ? 0 : _roundTripSum / _roundTrips.Count;
+
+            // Check if we have room for another value, if not, remove the oldest value we have
+            if (_roundTrips.Count == RoundTripsMaxSampleSize) // Have reached max size, remove oldest value
             {
                 // Remove oldest round-trip value
-                _roundTripSum -= _roundTrips.Dequeue();
+                long oldestRoundTrip = _roundTrips.Dequeue();
 
-                // Remove first round-trip squared deviation value
-                long oldestDeviationSquared = _roundTripDeviationsSquared.Dequeue();
-                _roundTripSumDeviationsSquared -= (oldestDeviationSquared * oldestDeviationSquared);
+                // Remove from the sum (used to calculate avg)
+                _roundTripSum -= oldestRoundTrip;
 
+                // Remove from the sum of squared deviations
+                long oldestRoundTripDeviation = oldestRoundTrip - roundTripTimePrevAvg;
+                long oldestRoundTripDeviationSquared = oldestRoundTripDeviation * oldestRoundTripDeviation;
+                _roundTripSumSquaredDeviations -= (oldestRoundTripDeviationSquared * oldestRoundTripDeviationSquared);
             }
-            else // Have not reached max size yet
-            {
-                _numRoundTripsRecorded++;
-            }
 
-            // Round-trip between two parties
+            // Calculate new round-trip value
             TimeSpan roundTripTime = timeReceivedResponse - timeSentRequest;
 
-            // Record received round-trip time
+            // Record newly received round-trip time
             _roundTrips.Enqueue(roundTripTime.Ticks);
             _roundTripSum += roundTripTime.Ticks;
 
             // Record received round-trip squared deviation from the average round-trip time
-            long roundTripTimeAvg = _roundTripSum / _numRoundTripsRecorded;
+            long roundTripTimeAvg = _roundTripSum / _roundTrips.Count;
             long roundTripDeviation = roundTripTime.Ticks - roundTripTimeAvg;
-            long roundTripDeviationSquared = (roundTripDeviation * roundTripDeviation);
-            _roundTripDeviationsSquared.Enqueue(roundTripDeviationSquared);
-            _roundTripSumDeviationsSquared += roundTripDeviationSquared;
 
-            // Calculate standard deviation for the whole sample (all values)
-            // long roundTripTotalVariance = _roundTripSumDeviationsSquared / _numRoundTripsRecorded
-            long roundTripTotalVariance = _roundTrips.Select(rt => (rt - roundTripTimeAvg) * (rt - roundTripTimeAvg)).Sum() / _numRoundTripsRecorded;
+            // Calculate standard deviation for the whole sample (all values) using Welford's method
+
+            // Calculate difference between old and new sum of squared deviations
+            long roundTripSumSquaredDeviationsDiff = (roundTripTime.Ticks - roundTripTimeAvg) * (roundTripTime.Ticks - roundTripTimePrevAvg);
+
+            // Calculate new variance
+            _roundTripSumSquaredDeviations += roundTripSumSquaredDeviationsDiff;
+            long roundTripTotalVariance = _roundTripSumSquaredDeviations / _roundTrips.Count;
+
 
             _roundTripStandardDeviation = (long)Math.Sqrt(roundTripTotalVariance);
             _roundTripVariationCoefficient = (double)_roundTripStandardDeviation / roundTripTimeAvg;
@@ -194,19 +184,15 @@ namespace Fenrir.Multiplayer.Utility
             // Record time offset
 
             // Check if we have room for another offset, if not, remove the oldest clock offset we have
-            if (_numClockOffsetsRecorded == TimeOffsetsMaxSampleSize) // Have reached max size, remove first sample from both lists
+            if (_clockOffsets.Count == TimeOffsetsMaxSampleSize) // Have reached max size, remove oldest value
             {
-                // Remove first offset value
-                _clockOffsetSumTicks -= _clockOffsets.First.Value;
-                _clockOffsets.RemoveFirst();
-            }
-            else // Have not reached max size yet
-            {
-                _numClockOffsetsRecorded++;
+                // Remove oldest offset value
+                long oldestTimeOffset = _clockOffsets.Dequeue();
+                _clockOffsetSumTicks -= oldestTimeOffset;
             }
 
             long clockOffset = ((timeReceivedRequest - timeSentRequest) + (timeSentResponse - timeReceivedResponse)).Ticks / 2;
-            _clockOffsets.AddLast(clockOffset);
+            _clockOffsets.Enqueue(clockOffset);
             _clockOffsetSumTicks += clockOffset; // Set clock offset
 
             _lastSyncTime = timeReceivedResponse;
@@ -220,7 +206,6 @@ namespace Fenrir.Multiplayer.Utility
         /// <returns>True if round-trip time is an outlier, otherwise false</returns>
         private bool IsRoundTripOutlier(long roundTripDeviation)
         {
-
             // Check if current round trip deviation is too big, if so, do not record this as an time offset.
             // For this case too big means smaller than half the standard deviation or bigger than twice the standard deviation
             // We do not want this outlier to affect our datetime offset
