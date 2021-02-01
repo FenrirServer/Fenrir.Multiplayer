@@ -122,7 +122,7 @@ namespace Fenrir.Multiplayer.Sim.Events
                         {
                             ushort objectId = reader.ReadUShort();
                             var cmd = new SpawnObjectSimulationCommand(commandTime, objectId);
-                            Commands[i] = cmd;
+                            Commands.Add(cmd);
                         }
                     }
                     break;
@@ -136,7 +136,7 @@ namespace Fenrir.Multiplayer.Sim.Events
                         {
                             ushort objectId = reader.ReadUShort();
                             var cmd = new DestroyObjectSimulationCommand(commandTime, objectId);
-                            Commands[numObject] = cmd;
+                            Commands.Add(cmd);
                         }
                     }
                     break;
@@ -158,7 +158,7 @@ namespace Fenrir.Multiplayer.Sim.Events
                             {
                                 ulong componentTypeHash = reader.ReadULong();
                                 var cmd = new AddComponentSimulationCommand(commandTime, objectId, componentTypeHash);
-                                Commands[numObject] = cmd;
+                                Commands.Add(cmd);
                             }
                         }
                     }
@@ -181,7 +181,7 @@ namespace Fenrir.Multiplayer.Sim.Events
                             {
                                 ulong componentTypeHash = reader.ReadULong();
                                 var cmd = new RemoveComponentSimulationCommand(commandTime, objectId, componentTypeHash);
-                                Commands[numObject] = cmd;
+                                Commands.Add(cmd);
                             }
                         }
                     }

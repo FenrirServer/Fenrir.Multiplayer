@@ -14,7 +14,7 @@ namespace Fenrir.Multiplayer.Sim
     {
         public SimulationRoomManager(IFenrirLogger logger, IFenrirServer server) : base(logger, server)
         {
-            server.AddRequestHandler<SimulationTickSnapshotAckRequest>(this);
+            server.AddRequestHandler<SimulationClockSyncRequest>(this);
             server.AddRequestHandler<SimulationTickSnapshotAckRequest>(this);
         }
 

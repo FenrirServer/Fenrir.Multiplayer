@@ -129,7 +129,7 @@ namespace Fenrir.Multiplayer.Rooms
 
             try
             {
-                room = _roomFactoryMethod(peer, roomId, token);
+                room = CreateRoom(peer, roomId, token);
             }
             catch(Exception e)
             {

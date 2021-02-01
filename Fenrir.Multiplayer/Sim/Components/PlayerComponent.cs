@@ -68,6 +68,11 @@ namespace Fenrir.Multiplayer.Sim.Components
 
         public void SendSimulationInitEvent()
         {
+            if(ServerPeer == null)
+            {
+                throw new InvalidOperationException("Can not send simulation init event, no server peer assigned (not an authority?)");
+            }
+
             SimulationTickSnapshot simulationTickSnapshot = new SimulationTickSnapshot() { Time = Simulation.CurrentTickTime, Snapshots = GetFullSimulationSnapshot() };
             SimulationInitEvent simulationInitEvent = new SimulationInitEvent() { SimulationSnapshot = simulationTickSnapshot };
             ServerPeer.SendEvent(simulationInitEvent);

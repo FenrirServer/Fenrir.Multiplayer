@@ -1,8 +1,6 @@
 ﻿using Fenrir.Multiplayer.Utility;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Fenrir.Multiplayer.Tests.Unit
 {
@@ -16,39 +14,28 @@ namespace Fenrir.Multiplayer.Tests.Unit
             DateTime serverTime = DateTime.UtcNow;
             DateTime clientTime;
 
-            DateTime timeSentRequest, timeReceivedRequest, timeSentResponse, timeReceivedResponse;
+            var data = new[]
+            {
+                new { ClockOffset = 52, ProcessingTime = 5, RoundTrip = 90 },
+                new { ClockOffset = 55, ProcessingTime = 4, RoundTrip = 100 },
+                new { ClockOffset = 45, ProcessingTime = 6, RoundTrip = 110 },
+                new { ClockOffset = 48, ProcessingTime = 5, RoundTrip = 80 },
+            };
 
-            // Sync 0 - difference 52ms, processing 5ms, round trip 90ms
-            clientTime = serverTime + TimeSpan.FromMilliseconds(52);
-            timeSentRequest = clientTime + TimeSpan.FromMilliseconds(0);
-            timeReceivedRequest = serverTime + TimeSpan.FromMilliseconds(45);
-            timeSentResponse = serverTime + TimeSpan.FromMilliseconds(45);
-            timeReceivedResponse = clientTime + TimeSpan.FromMilliseconds(90);
-            clockSynchronizer.RecordSyncResult(timeSentRequest, timeReceivedRequest, timeSentResponse, timeReceivedResponse);
+            DateTime timeSentRequest, timeReceivedRequest, timeSentResponse, timeReceivedResponse = DateTime.MinValue;
 
-            // Sync 1 - difference 55ms, processing 4ms, round trip 100ms
-            clientTime = serverTime + TimeSpan.FromMilliseconds(55);
-            timeSentRequest = clientTime + TimeSpan.FromMilliseconds(100);
-            timeReceivedRequest = serverTime + TimeSpan.FromMilliseconds(150);
-            timeSentResponse = serverTime + TimeSpan.FromMilliseconds(150);
-            timeReceivedResponse = clientTime + TimeSpan.FromMilliseconds(200);
-            clockSynchronizer.RecordSyncResult(timeSentRequest, timeReceivedRequest, timeSentResponse, timeReceivedResponse);
+            for (int i = 0; i < data.Length; i++)
+            {
+                var syncData = data[i];
+                int startTime = i * 1000;
 
-            // Sync 2 - difference 45ms, processing 6ms, round trip 110ms
-            clientTime = serverTime + TimeSpan.FromMilliseconds(45);
-            timeSentRequest = clientTime + TimeSpan.FromMilliseconds(200);
-            timeReceivedRequest = serverTime + TimeSpan.FromMilliseconds(255);
-            timeSentResponse = serverTime + TimeSpan.FromMilliseconds(255);
-            timeReceivedResponse = clientTime + TimeSpan.FromMilliseconds(310);
-            clockSynchronizer.RecordSyncResult(timeSentRequest, timeReceivedRequest, timeSentResponse, timeReceivedResponse);
-
-            // Sync 3 - difference 48ms, processing 5ms, round trip 80ms
-            clientTime = serverTime + TimeSpan.FromMilliseconds(48);
-            timeSentRequest = clientTime + TimeSpan.FromMilliseconds(300);
-            timeReceivedRequest = serverTime + TimeSpan.FromMilliseconds(340);
-            timeSentResponse = serverTime + TimeSpan.FromMilliseconds(340);
-            timeReceivedResponse = clientTime + TimeSpan.FromMilliseconds(380);
-            clockSynchronizer.RecordSyncResult(timeSentRequest, timeReceivedRequest, timeSentResponse, timeReceivedResponse);
+                clientTime = serverTime + TimeSpan.FromMilliseconds(syncData.ClockOffset);
+                timeSentRequest = clientTime + TimeSpan.FromMilliseconds(startTime);
+                timeReceivedRequest = serverTime + TimeSpan.FromMilliseconds(startTime + syncData.RoundTrip / 2 - syncData.ProcessingTime / 2);
+                timeSentResponse = serverTime + TimeSpan.FromMilliseconds(startTime + syncData.RoundTrip / 2 + syncData.ProcessingTime / 2);
+                timeReceivedResponse = clientTime + TimeSpan.FromMilliseconds(startTime + syncData.RoundTrip);
+                clockSynchronizer.RecordSyncResult(timeSentRequest, timeReceivedRequest, timeSentResponse, timeReceivedResponse);
+            }
 
             // Verify average time difference - 50ms
             Assert.AreEqual(TimeSpan.FromMilliseconds(-50), clockSynchronizer.AvgOffset);
@@ -102,6 +89,49 @@ namespace Fenrir.Multiplayer.Tests.Unit
                 timeSentRequest = clientTime + TimeSpan.FromMilliseconds(startTime);
                 timeReceivedRequest = serverTime + TimeSpan.FromMilliseconds(startTime + syncData.RoundTrip/2 - syncData.ProcessingTime/2);
                 timeSentResponse = serverTime + TimeSpan.FromMilliseconds(startTime + syncData.RoundTrip / 2 + syncData.ProcessingTime/2);
+                timeReceivedResponse = clientTime + TimeSpan.FromMilliseconds(startTime + syncData.RoundTrip);
+                clockSynchronizer.RecordSyncResult(timeSentRequest, timeReceivedRequest, timeSentResponse, timeReceivedResponse);
+            }
+
+            // Verify average time difference - 50ms. Outliers are ignored
+            Assert.AreEqual(TimeSpan.FromMilliseconds(-50), clockSynchronizer.AvgOffset);
+        }
+
+
+        [TestMethod]
+        public void ClockSynchronizer_RecordSyncResult_RemovesOldData()
+        {
+            var clockSynchronizer = new ClockSynchronizer()
+            {
+                RoundTripsMaxSampleSize = 4,
+                TimeOffsetsMaxSampleSize = 4
+            };
+
+            DateTime serverTime = DateTime.UtcNow;
+            DateTime clientTime;
+
+            var data = new[]
+            {
+                 // this data point should be removed, so avg offset will be 50
+                new { ClockOffset = 52, ProcessingTime = 5, RoundTrip = 90 },
+
+                new { ClockOffset = 52, ProcessingTime = 5, RoundTrip = 90 },
+                new { ClockOffset = 55, ProcessingTime = 4, RoundTrip = 100 },
+                new { ClockOffset = 45, ProcessingTime = 6, RoundTrip = 110 },
+                new { ClockOffset = 48, ProcessingTime = 5, RoundTrip = 80 },
+            };
+
+            DateTime timeSentRequest, timeReceivedRequest, timeSentResponse, timeReceivedResponse;
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                var syncData = data[i];
+                int startTime = i * 1000;
+
+                clientTime = serverTime + TimeSpan.FromMilliseconds(syncData.ClockOffset);
+                timeSentRequest = clientTime + TimeSpan.FromMilliseconds(startTime);
+                timeReceivedRequest = serverTime + TimeSpan.FromMilliseconds(startTime + syncData.RoundTrip / 2 - syncData.ProcessingTime / 2);
+                timeSentResponse = serverTime + TimeSpan.FromMilliseconds(startTime + syncData.RoundTrip / 2 + syncData.ProcessingTime / 2);
                 timeReceivedResponse = clientTime + TimeSpan.FromMilliseconds(startTime + syncData.RoundTrip);
                 clockSynchronizer.RecordSyncResult(timeSentRequest, timeReceivedRequest, timeSentResponse, timeReceivedResponse);
             }

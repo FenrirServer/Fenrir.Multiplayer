@@ -41,18 +41,26 @@ namespace Fenrir.Multiplayer.Sim
         public SimulationRoom(IFenrirLogger logger, string roomId)
             : base(logger, roomId)
         {
-            Simulation = new Simulation(logger) { IsAuthority = true };
             _simulationTickStopwatch = new Stopwatch();
+
+            Simulation = new Simulation(logger) { IsAuthority = true };
+
+            RegisterBuiltInSimulationComponents();
 
             // Do first simulation tick, calling this method schedule next tick and so on
             TickSimulation();
+        }
+
+        private void RegisterBuiltInSimulationComponents()
+        {
+            Simulation.RegisterComponentType<PlayerComponent>();
         }
 
         private void TickSimulation()
         {
             _simulationTickStopwatch.Start();
 
-            double delayBetweenTicksMs = (TickRate / 1000d);
+            double delayBetweenTicksMs = 1000d / TickRate;
 
             try
             {

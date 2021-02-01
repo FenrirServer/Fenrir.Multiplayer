@@ -3,6 +3,7 @@ using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Rooms;
 using Fenrir.Multiplayer.Sim.Command;
+using Fenrir.Multiplayer.Sim.Components;
 using Fenrir.Multiplayer.Sim.Events;
 using Fenrir.Multiplayer.Sim.Requests;
 using Fenrir.Multiplayer.Utility;
@@ -87,10 +88,21 @@ namespace Fenrir.Multiplayer.Sim
             _client = client;
             _logger = logger;
 
+            _client.AddEventHandler<SimulationInitEvent>(this);
+            _client.AddEventHandler<SimulationTickSnapshotEvent>(this);
+            _client.AddEventHandler<SimulationClockSyncAckEvent>(this);
+
             _client.Disconnected += OnDisconnected;
 
             Simulation = new Simulation(logger) { IsAuthority = false };
             _clockSynchronizer = new ClockSynchronizer();
+
+            RegisterBuiltInSimulationComponents();
+        }
+
+        private void RegisterBuiltInSimulationComponents()
+        {
+            Simulation.RegisterComponentType<PlayerComponent>();
         }
 
         public async Task<SimulationJoinResult> Join(string roomId, string joinToken)
@@ -257,23 +269,28 @@ namespace Fenrir.Multiplayer.Sim
 
         async void IEventHandler<SimulationInitEvent>.OnReceiveEvent(SimulationInitEvent evt)
         {
+            if(!_isJoined)
+            {
+                return;
+            }
+
             // Apply snapshot
             ApplyTickSnapshot(evt.SimulationSnapshot);
-
-            // Start ticking
-            RunSimulationTickLoop();
 
             // Wait until we buffer simulation ticks until the first command is executed
             // TODO: Maybe use Simulation.CommandCreated to detect first ever command ?
             await Task.Delay(TimeSpan.FromMilliseconds(Simulation.IncomingCommandDelayMs));
 
-            // If we are still joined, start running. 
-            // We should already have enough commands in the buffer to start running and interpolate.
-            if (_isJoined)
+            if (!_isJoined)
             {
-                _initTcs?.SetResult(true);
-                _isRunningSimulation = true;
+                return;
             }
+
+            _initTcs?.SetResult(true);
+            _isRunningSimulation = true;
+
+            // Start ticking
+            RunSimulationTickLoop();
         }
 
         void IEventHandler<SimulationTickSnapshotEvent>.OnReceiveEvent(SimulationTickSnapshotEvent evt)

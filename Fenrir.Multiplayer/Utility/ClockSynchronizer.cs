@@ -58,7 +58,7 @@ namespace Fenrir.Multiplayer.Utility
         /// <summary>
         /// Current average offset between local and remote clock
         /// </summary>
-        public TimeSpan AvgOffset => TimeSpan.FromTicks(_clockOffsetSumTicks / _clockOffsets.Count);
+        public TimeSpan AvgOffset => _clockOffsets.Count == 0 ? TimeSpan.Zero : TimeSpan.FromTicks(_clockOffsetSumTicks / _clockOffsets.Count);
 
         /// <summary>
         /// Next recommended clock sync time
