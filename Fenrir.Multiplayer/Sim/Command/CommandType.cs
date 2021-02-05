@@ -11,7 +11,5 @@
         RemoveComponent,
 
         InvokeRpc,
-
-        SetComponentState
     }
 }

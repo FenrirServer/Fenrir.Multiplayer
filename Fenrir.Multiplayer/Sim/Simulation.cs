@@ -1,6 +1,8 @@
 ﻿using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Sim.Command;
+using Fenrir.Multiplayer.Sim.Dto;
+using Fenrir.Multiplayer.Sim.Events;
 using Fenrir.Multiplayer.Sim.Exceptions;
 using Fenrir.Multiplayer.Utility;
 using System;
@@ -9,7 +11,9 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
+using WebSocketSharp;
 
 namespace Fenrir.Multiplayer.Sim
 {
@@ -22,6 +26,11 @@ namespace Fenrir.Multiplayer.Sim
         public delegate void SimulationCommandHandler(ISimulationCommand command);
 
         /// <summary>
+        /// Delegate that describes event when simulation tick processes snapshot
+        /// </summary>
+        public delegate void SimulationSnapshotProcessedHandler(SimulationTickSnapshot snapshot);
+
+        /// <summary>
         /// Invokes when simulation creates an outgoing command
         /// </summary>
         public event SimulationCommandHandler CommandCreated;
@@ -30,6 +39,11 @@ namespace Fenrir.Multiplayer.Sim
         /// Invokes when simulation executes a command
         /// </summary>
         public event SimulationCommandHandler CommandExecuted;
+
+        /// <summary>
+        /// Invoked when simulation finishes it's tick
+        /// </summary>
+        public event SimulationSnapshotProcessedHandler TickSnapshotProcessed;
 
         /// <summary>
         /// Logger
@@ -63,16 +77,25 @@ namespace Fenrir.Multiplayer.Sim
         private Queue<Action> _actionQueue = new Queue<Action>();
 
         /// <summary>
-        /// Log of all outgoing commands, regardless of when they were sent (immediately vs bulked)
+        /// Stores current snapshot that's being built during the tick
         /// </summary>
-        private Queue<ISimulationCommand> _outgoingCommandLog = new Queue<ISimulationCommand>();
+        private SimulationTickSnapshot _currentTickSnapshot = null;
 
         /// <summary>
-        /// List of buffered incoming commands, before they are processed
-        /// TODO: Use sorted list to avoid sorting on every tick
+        /// Snapshot history, allowing to roll back (used by server sim)
         /// </summary>
-        private List<ISimulationCommand> _incomingCommandBuffer = new List<ISimulationCommand>();
-        
+        private Queue<SimulationTickSnapshot> _snapshotHistory = new Queue<SimulationTickSnapshot>();
+
+        /// <summary>
+        /// Incoming tick snapshots (used by client sim)
+        /// </summary>
+        private Queue<SimulationTickSnapshot> _incomingSnapshotBuffer = new Queue<SimulationTickSnapshot>();
+
+        /// <summary>
+        /// Tick time of the snapshot tick time. Same as _incomingSnapshotBuffer.Last().TickTime
+        /// </summary>
+        private DateTime _lastIncomingSnapshotTickTime;
+
         /// <summary>
         /// Time to keep outgoing commands in the log, in ms
         /// This is basically the maximum rollback time
@@ -103,10 +126,15 @@ namespace Fenrir.Multiplayer.Sim
         public DateTime CurrentTickTime { get; private set; }
 
         /// <summary>
+        /// True if simulation is not currently processing a tick
+        /// </summary>
+        public bool InTick { get; private set; } 
+
+        /// <summary>
         /// True if this simulation is authority
         /// </summary>
         public bool IsAuthority { get; set; }
-        
+
         #region Constructor
         public Simulation(IFenrirLogger logger)
         {
@@ -124,7 +152,7 @@ namespace Fenrir.Multiplayer.Sim
             where TComponent : SimulationComponent, new()
         {
             // Register component using a primitive factory, that uses empty constructor to create a component
-            RegisterComponentType<TComponent>(() => 
+            RegisterComponentType<TComponent>(() =>
             {
                 return new TComponent();
             });
@@ -156,15 +184,14 @@ namespace Fenrir.Multiplayer.Sim
 
         public SimulationObject SpawnObject()
         {
-            if (!IsAuthority)
-            {
-                throw new SimulationException("Client simulation is not allowed to spawn objects directly. Please invoke server RPC using a component");
-            }
+            // Checks
+            CheckAuthority();
+            CheckInTick();
 
             ushort objectId = GetNextObjectId();
 
             // TODO: Use command object pool
-            var command = new SpawnObjectSimulationCommand(DateTime.UtcNow, objectId);
+            var command = new SpawnObjectSimulationCommand(objectId);
 
             // Execute command on self
             SimulationObject simObject = ExecuteSpawnObjectCommand(command);
@@ -189,10 +216,9 @@ namespace Fenrir.Multiplayer.Sim
 
         public void DestroyObject(SimulationObject obj)
         {
-            if (!IsAuthority)
-            {
-                throw new SimulationException("Client simulation is not allowed to remove objects directly. Please invoke server RPC using a component");
-            }
+            // Checks
+            CheckAuthority();
+            CheckInTick();
 
             if (obj == null)
             {
@@ -200,7 +226,7 @@ namespace Fenrir.Multiplayer.Sim
             }
 
             // TODO: Use command object pool
-            var command = new DestroyObjectSimulationCommand(DateTime.UtcNow, obj.Id);
+            var command = new DestroyObjectSimulationCommand(obj.Id);
 
             // Execute command on self
             ExecuteDestroyObjectCommand(command);
@@ -221,10 +247,9 @@ namespace Fenrir.Multiplayer.Sim
 
         public void DestroyObject(ushort objectId)
         {
-            if (!IsAuthority)
-            {
-                throw new SimulationException("Client simulation is not allowed to remove objects directly. Please invoke server RPC using a component");
-            }
+            // Checks
+            CheckAuthority();
+            CheckInTick();
 
             if (!TryGetObject(objectId, out SimulationObject simObject))
             {
@@ -241,8 +266,8 @@ namespace Fenrir.Multiplayer.Sim
             while (objectEnumerator.MoveNext())
             {
                 SimulationObject simObject = (SimulationObject)objectEnumerator.Value;
-                
-                if(IsRolledBack && simObject.TimeCreated > CurrentTickTime)
+
+                if (IsRolledBack && simObject.TimeCreated > CurrentTickTime)
                 {
                     // Rolling back simulation and object was created after our timestamp, skip
                     continue;
@@ -254,7 +279,7 @@ namespace Fenrir.Multiplayer.Sim
 
         public SimulationObject GetObject(ushort objectId)
         {
-            if(!TryGetObject(objectId, out SimulationObject simObject))
+            if (!TryGetObject(objectId, out SimulationObject simObject))
             {
                 return null;
             }
@@ -285,17 +310,16 @@ namespace Fenrir.Multiplayer.Sim
         internal TComponent AddComponent<TComponent>(SimulationObject simObject)
             where TComponent : SimulationComponent
         {
-            if (!IsAuthority)
-            {
-                throw new SimulationException("Client simulation is not allowed to add components directly. Please invoke server RPC using a component method");
-            }
+            // Checks
+            CheckAuthority();
+            CheckInTick();
 
             if (simObject == null)
             {
                 throw new ArgumentNullException(nameof(simObject));
             }
 
-            if(!ComponentRegistered<TComponent>())
+            if (!ComponentRegistered<TComponent>())
             {
                 throw new SimulationException($"Failed to add component {typeof(TComponent).Name}, component is not registered");
             }
@@ -304,7 +328,7 @@ namespace Fenrir.Multiplayer.Sim
             ulong componentTypeHash = GetComponentTypeHash<TComponent>();
 
             // TODO: Use command object pool
-            var command = new AddComponentSimulationCommand(DateTime.UtcNow, simObject.Id, componentTypeHash);
+            var command = new AddComponentSimulationCommand(simObject.Id, componentTypeHash);
 
             // Execute command on self simulation
             TComponent component = (TComponent)ExecuteAddComponentCommand(command);
@@ -318,7 +342,7 @@ namespace Fenrir.Multiplayer.Sim
         private SimulationComponent ExecuteAddComponentCommand(AddComponentSimulationCommand command)
         {
             // Try to get the object
-            if(!TryGetObject(command.ObjectId, out SimulationObject simObject))
+            if (!TryGetObject(command.ObjectId, out SimulationObject simObject))
             {
                 throw new ArgumentException($"Failed to add component with hash {command.ComponentTypeHash}, component type is not registered with Simulation. Please call {nameof(Simulation.RegisterComponentType)}");
             }
@@ -330,7 +354,7 @@ namespace Fenrir.Multiplayer.Sim
             }
 
             // Get component factory method
-            if(!_componentFactories.TryGetValue(componentType, out Func<SimulationComponent> factoryMethod))
+            if (!_componentFactories.TryGetValue(componentType, out Func<SimulationComponent> factoryMethod))
             {
                 throw new ArgumentException($"Failed to create component of type {componentType.Name}, component factry is not registered with Simulation. Please call {nameof(Simulation.RegisterComponentType)}");
             }
@@ -348,16 +372,15 @@ namespace Fenrir.Multiplayer.Sim
         internal void RemoveComponent<TComponent>(SimulationObject simObject)
             where TComponent : SimulationComponent
         {
-            if (!IsAuthority)
-            {
-                throw new SimulationException("Client simulation is not allowed to add components directly. Please invoke server RPC using a component method");
-            }
+            // Checks
+            CheckAuthority();
+            CheckInTick();
 
             // Get component type hash
             ulong componentTypeHash = GetComponentTypeHash<TComponent>();
 
             // TODO: Use command object pool
-            var command = new RemoveComponentSimulationCommand(DateTime.UtcNow, simObject.Id, componentTypeHash);
+            var command = new RemoveComponentSimulationCommand(simObject.Id, componentTypeHash);
 
             // Execute command on self simulation
             ExecuteRemoveComponentCommand(command);
@@ -391,40 +414,56 @@ namespace Fenrir.Multiplayer.Sim
             // Set tick time
             CurrentTickTime = _clock.UtcNow;
 
+            InTick = true;
+            TickInternal();
+            InTick = false;
+        }
+
+        private void TickInternal()
+        {
             // Check if we can tick simulation. If simulation is being rolled back for reconciliation, we can't tick.
-            if(IsRolledBack)
+            if (IsRolledBack)
             {
                 throw new SimulationException("Can not tick simulation while simulation is being rolled back.");
             }
 
-            // Process incoming commands sorted by time. We sort descending because it's O(1) to remove element from the end
-            // TODO: This is shit, use sorted list data structure / linked list?
-            lock (_incomingCommandBuffer)
+            // Authority and using snapshot history, create new slice TODO use object pool
+            if (IsAuthority)
             {
-                // Sort commands by time, descending (newer elements in the end)
-                _incomingCommandBuffer.Sort((cmd1, cmd2) => cmd2.Time.CompareTo(cmd1.Time));
-
-                // Iterate over commands that are OLDER than sim time + delay
-                for (int i = _incomingCommandBuffer.Count - 1; i >= 0; i--)
+                _currentTickSnapshot = new SimulationTickSnapshot() { TickTime = CurrentTickTime };
+            }
+            else // If not authority, dispatch incoming snapshots
+            {
+                lock (_incomingSnapshotBuffer)
                 {
-                    ISimulationCommand incomingCommand = _incomingCommandBuffer[i];
-                    if (DateTime.UtcNow < incomingCommand.Time + TimeSpan.FromMilliseconds(IncomingCommandDelayMs))
+                    // Iterate over snapshots that are OLDER than sim time + delay
+                    while (_incomingSnapshotBuffer.Count > 0)
                     {
-                        break; // This command and all commands after it are too new for us to process
+                        if (DateTime.UtcNow < _incomingSnapshotBuffer.Peek().TickTime + TimeSpan.FromMilliseconds(IncomingCommandDelayMs))
+                        {
+                            break; // Next snapshot and all snapshots after it are not ready yet to be dispatched
+                        }
+
+                        // Dispatch snapshot
+                        SimulationTickSnapshot snapshot = _incomingSnapshotBuffer.Dequeue();
+
+                        // Enqueue command for execution during this tick
+                        EnqueueAction(() => ProcessTickSnapshot(snapshot));
                     }
-
-                    // Enqueue command for execution during this tick
-                    EnqueueAction(() => ProcessIncomingCommand(incomingCommand));
-
-                    // Remove current element from the end
-                    _incomingCommandBuffer.RemoveAt(_incomingCommandBuffer.Count - 1);
                 }
             }
 
-            // Tick enqueued actions and commands
+            // Tick enqueued actions and incoming commands
             while (TryDequeueAction(out Action action))
             {
-                action.Invoke();
+                try
+                {
+                    action.Invoke();
+                }
+                catch(Exception e)
+                {
+                    _logger.Error("Error during simulation action: " + e.ToString());
+                }
             }
 
             // Tick simulation objects
@@ -433,30 +472,62 @@ namespace Fenrir.Multiplayer.Sim
             while (objectEnumerator.MoveNext())
             {
                 SimulationObject simObject = (SimulationObject)objectEnumerator.Value;
-                simObject.Tick();
+
+                try
+                {
+                    simObject.Tick();
+                }
+                catch(Exception e)
+                {
+                    _logger.Error($"Error during object {simObject.Id} Tick: " + e.ToString());
+                }
             }
 
+            // Late tick simulation objects
+            objectEnumerator = _objectsById.GetEnumerator();
 
-            // Trim the rollback command log
-            TrimOutgoingCommandLog();
+            while (objectEnumerator.MoveNext())
+            {
+                SimulationObject simObject = (SimulationObject)objectEnumerator.Value;
+
+                try
+                {
+                    simObject.LateTick();
+                }
+                catch (Exception e)
+                {
+                    _logger.Error($"Error during object {simObject.Id} Late Tick: " + e.ToString());
+                }
+            }
+
+            // Snapshot history
+            if (IsAuthority)
+            {
+                // Save the snapshot of this tick
+                _snapshotHistory.Enqueue(_currentTickSnapshot);
+                _currentTickSnapshot = null;
+
+                // Trim the rollback snapshot log
+                TrimSnapshotHistory();
+            }
         }
 
-        private void TrimOutgoingCommandLog()
+        private void TrimSnapshotHistory()
         {
-            // Remove commands from log older than rollback time
-            ISimulationCommand command;
+            // Remove snapshots from history older than rollback time
+            SimulationTickSnapshot snapshot;
 
-            while(_outgoingCommandLog.Count > 0)
+            while (_snapshotHistory.Count > 0)
             {
-                command = _outgoingCommandLog.Peek();
-                if(DateTime.UtcNow > command.Time + TimeSpan.FromMilliseconds(MaxRollbackTimeMs))
+                snapshot = _snapshotHistory.Peek();
+                if (DateTime.UtcNow > snapshot.TickTime + TimeSpan.FromMilliseconds(MaxRollbackTimeMs))
                 {
-                    _outgoingCommandLog.Dequeue();
-                    // TODO: Release the command. Instead of going straight to GC, return to object pool here.
+                    _snapshotHistory.Dequeue();
+                    // TODO: Release the snapshot. Instead of going straight to GC, return to object pool here.
                 }
                 else
                 {
-                    break; // No more old commands, current command (and all after) are new
+                    break; // No more old snapshots
                 }
             }
         }
@@ -479,12 +550,12 @@ namespace Fenrir.Multiplayer.Sim
 
         public void EnqueueAction(Action action)
         {
-            if(action == null)
+            if (action == null)
             {
                 throw new ArgumentNullException(nameof(action));
             }
 
-            lock(_actionQueue)
+            lock (_actionQueue)
             {
                 _actionQueue.Enqueue(action);
             }
@@ -506,27 +577,42 @@ namespace Fenrir.Multiplayer.Sim
         #region Command Processing
         internal void SendOutgoingCommand(ISimulationCommand command)
         {
-            // If this is an authority, log command to be able to roll back
+            // If this is an authority, log command in this snapshot
             if (IsAuthority)
             {
-                _outgoingCommandLog.Enqueue(command);
+                _currentTickSnapshot.Commands.Add(command);
             }
 
             // Produce outgoing command
             CommandCreated?.Invoke(command);
         }
 
-        public void IngestCommand(ISimulationCommand command)
+        public void IngestTickSnapshot(SimulationTickSnapshot snapshot)
         {
-            // This method can be executed outside of tick, to schedule client commands to be processed on the next tick
-
-            lock(_incomingCommandBuffer)
+            lock(_incomingSnapshotBuffer)
             {
-                _incomingCommandBuffer.Add(command);
+                // Make sure we do not ingest the same snapshot twice,
+                // as server will attempt to send those until it receives an ack 
+
+                if (snapshot.TickTime > _lastIncomingSnapshotTickTime)
+                {
+                    _incomingSnapshotBuffer.Enqueue(snapshot);
+                    _lastIncomingSnapshotTickTime = snapshot.TickTime;
+                }
             }
         }
 
-        public void ProcessIncomingCommand(ISimulationCommand command)
+        private void ProcessTickSnapshot(SimulationTickSnapshot snapshot)
+        {
+            foreach (ISimulationCommand command in snapshot.Commands)
+            {
+                ExecuteCommand(command);
+            }
+
+            TickSnapshotProcessed?.Invoke(snapshot);
+        }
+
+        private void ExecuteCommand(ISimulationCommand command)
         {
             // Process command based on it's type
             switch (command.Type)
@@ -544,8 +630,6 @@ namespace Fenrir.Multiplayer.Sim
                     ExecuteRemoveComponentCommand((RemoveComponentSimulationCommand)command);
                     break;
                 case CommandType.InvokeRpc:
-                    break; // TODO
-                case CommandType.SetComponentState:
                     break; // TODO
             }
 
@@ -587,6 +671,22 @@ namespace Fenrir.Multiplayer.Sim
         #endregion
 
         #region Utility Methods
+        private void CheckInTick()
+        {
+            if(!InTick)
+            {
+                throw new NotInTickException($"Simulation is not currently executing a Tick(). Call {nameof(Simulation.EnqueueAction)} to run an action during next tick.");
+            }
+        }
+
+        private void CheckAuthority()
+        {
+            if (!IsAuthority)
+            {
+                throw new SimulationException($"Action is not allowed for non-authority simulation. Invoke comonent RPC to execute this action.");
+            }
+        }
+
         protected ushort GetNextObjectId()
         {
             if (_objectsById.Count == ushort.MaxValue)

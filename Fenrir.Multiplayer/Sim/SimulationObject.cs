@@ -8,12 +8,12 @@ using System.Collections.Specialized;
 
 namespace Fenrir.Multiplayer.Sim
 {
-    public class SimulationObject
+    public sealed class SimulationObject
     {
         /// <summary>
         /// Logger
         /// </summary>
-        protected IFenrirLogger Logger { get; private set; }
+        public IFenrirLogger Logger { get; private set; }
 
         /// <summary>
         /// Reference to a simulation object
@@ -155,7 +155,7 @@ namespace Fenrir.Multiplayer.Sim
             component.Destroy();
         }
         
-        public virtual void Tick()
+        public void Tick()
         {
             // Get all components attached to this object and tick them
             foreach (var component in GetComponents())
@@ -167,6 +167,22 @@ namespace Fenrir.Multiplayer.Sim
                 catch (Exception e)
                 {
                     Logger.Error($"Uncaught exception during component {nameof(SimulationComponent.Tick)}: {e.ToString()}");
+                }
+            }
+        }
+
+        public void LateTick()
+        {
+            // Get all components attached to this object and late tick them
+            foreach (var component in GetComponents())
+            {
+                try
+                {
+                    component.LateTick();
+                }
+                catch (Exception e)
+                {
+                    Logger.Error($"Uncaught exception during component {nameof(SimulationComponent.LateTick)}: {e.ToString()}");
                 }
             }
 

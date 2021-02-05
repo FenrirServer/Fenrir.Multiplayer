@@ -1,9 +1,10 @@
 ﻿using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Sim.Command;
+using Fenrir.Multiplayer.Sim.Dto;
 using Fenrir.Multiplayer.Sim.Events;
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using WebSocketSharp;
 
 namespace Fenrir.Multiplayer.Sim.Components
 {
@@ -13,6 +14,11 @@ namespace Fenrir.Multiplayer.Sim.Components
         /// List of outgoing tick snapshots
         /// </summary>
         private LinkedList<SimulationTickSnapshot> _outgoingTickSnapshots = new LinkedList<SimulationTickSnapshot>();
+
+        /// <summary>
+        /// Current tick snapshot
+        /// </summary>
+        private SimulationTickSnapshot _currentTickSnapshot = null;
 
         /// <summary>
         /// Only assigned on the server. 
@@ -42,7 +48,7 @@ namespace Fenrir.Multiplayer.Sim.Components
         {
             while(_outgoingTickSnapshots.First != null)
             {
-                if (_outgoingTickSnapshots.First.Value.Time > tickTime)
+                if (_outgoingTickSnapshots.First.Value.TickTime > tickTime)
                 {
                     break; // Subsequent commands should be packed and sent unless client acks them
                 }
@@ -53,14 +59,28 @@ namespace Fenrir.Multiplayer.Sim.Components
                 }
             }
         }
-        
-        protected override void OnTick()
+
+        private void RecycleCurrentTickSnapshot()
+        {
+            _outgoingTickSnapshots.AddLast(_currentTickSnapshot);
+            _currentTickSnapshot = new SimulationTickSnapshot() { TickTime = Simulation.CurrentTickTime };
+
+            CompressStateSnapshots();
+        }
+
+        private void CompressStateSnapshots()
+        {
+            // TODO: For each tick snapshot, go over states and remove state updates
+            // that update the same value. Only keep the most recent update
+        }
+
+        protected override void OnLateTick()
         {
             if (ServerPeer != null)
             {
-                // TODO: For state command, remove per-state duplicates
+                // TODO: For state snapshots, remove per-state duplicates
 
-                // Send outgoing commands to this peer
+                // Send outgoing commands to this peer. Keep sending until we get an ACK from the client
                 SimulationTickSnapshotEvent tickSnapshotEvent = new SimulationTickSnapshotEvent() { TickSnapshots = _outgoingTickSnapshots }; // TODO: Object pool
                 ServerPeer.SendEvent(tickSnapshotEvent);
             }
@@ -73,66 +93,55 @@ namespace Fenrir.Multiplayer.Sim.Components
                 throw new InvalidOperationException("Can not send simulation init event, no server peer assigned (not an authority?)");
             }
 
-            SimulationTickSnapshot simulationTickSnapshot = new SimulationTickSnapshot() { Time = Simulation.CurrentTickTime, Snapshots = GetFullSimulationSnapshot() };
-            SimulationInitEvent simulationInitEvent = new SimulationInitEvent() { SimulationSnapshot = simulationTickSnapshot };
+            SimulationInitEvent simulationInitEvent = new SimulationInitEvent() { SimulationSnapshot = GetFullSimulationSnapshot() };
             ServerPeer.SendEvent(simulationInitEvent);
         }
 
-        private Dictionary<CommandType, SimulationCommandListSnapshot> GetFullSimulationSnapshot()
+        private SimulationTickSnapshot GetFullSimulationSnapshot()
         {
-            Dictionary<CommandType, SimulationCommandListSnapshot> commands = new Dictionary<CommandType, SimulationCommandListSnapshot>();
+            SimulationTickSnapshot snapshot = new SimulationTickSnapshot() { TickTime = Simulation.CurrentTickTime };
+
+            // Generate commands 
 
             // Get objects
-            SimulationCommandListSnapshot spawnObjectCommandListSnapshot = new SimulationCommandListSnapshot() { CommandType = CommandType.SpawnObject };
-            commands.Add(CommandType.SpawnObject, spawnObjectCommandListSnapshot);
             var simObjects = Simulation.GetObjects();
             foreach(SimulationObject simObject in simObjects)
             {
-                SpawnObjectSimulationCommand cmd = new SpawnObjectSimulationCommand(Simulation.CurrentTickTime, simObject.Id);
-                spawnObjectCommandListSnapshot.Commands.Add(cmd);
+                SpawnObjectSimulationCommand cmd = new SpawnObjectSimulationCommand(simObject.Id);
+                snapshot.Commands.Add(cmd);
             }
 
             // Get components
-            SimulationCommandListSnapshot addComponentCommandListSnapshot = new SimulationCommandListSnapshot() { CommandType = CommandType.AddComponent };
-            commands.Add(CommandType.AddComponent, addComponentCommandListSnapshot);
             foreach (SimulationObject simObject in simObjects)
             {
                 foreach(SimulationComponent component in simObject.GetComponents())
                 {
-                    AddComponentSimulationCommand cmd = new AddComponentSimulationCommand(Simulation.CurrentTickTime, simObject.Id, component.TypeHash);
-                    addComponentCommandListSnapshot.Commands.Add(cmd);
+                    AddComponentSimulationCommand cmd = new AddComponentSimulationCommand(simObject.Id, component.TypeHash);
+                    snapshot.Commands.Add(cmd);
                 }
             }
 
             // Component states
             // TODO
 
-            return commands;
+            return snapshot;
         }
 
         private void OnCommandCreated(ISimulationCommand command)
         {
-            SimulationTickSnapshot tickSnapshot;
-
-            if (_outgoingTickSnapshots.Last == null || _outgoingTickSnapshots.Last.Value.Time != command.Time)
+            if(_currentTickSnapshot == null)
             {
-                tickSnapshot = new SimulationTickSnapshot() { Time = command.Time }; // TODO: Use object pool
-                _outgoingTickSnapshots.AddLast(tickSnapshot);
+                _currentTickSnapshot = new SimulationTickSnapshot() { TickTime = Simulation.CurrentTickTime }; // TODO: Use object pool
             }
-            else
+            else if(Simulation.CurrentTickTime > _currentTickSnapshot.TickTime)
             {
-                tickSnapshot = _outgoingTickSnapshots.Last.Value;
-            }
-
-            // Add command list snapshot
-            if(!tickSnapshot.Snapshots.TryGetValue(command.Type, out SimulationCommandListSnapshot commandListSnapshot))
-            {
-                commandListSnapshot = new SimulationCommandListSnapshot() { CommandType = command.Type };
-                tickSnapshot.Snapshots.Add(command.Type, commandListSnapshot);
+                // This should not normally happen, this means something went wrong and 
+                // simulation tick was advanced in between LateTicks ?
+                RecycleCurrentTickSnapshot();
             }
 
-            // Add command
-            commandListSnapshot.Commands.Add(command);
+            // Add command to our last snapshot
+            _currentTickSnapshot.Commands.Add(command);
         }
     }
 }

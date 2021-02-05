@@ -3,7 +3,7 @@ using System;
 
 namespace Fenrir.Multiplayer.Sim.Exceptions
 {
-    class SimulationException : FenrirException
+    public class SimulationException : FenrirException
     {
         public SimulationException()
         {

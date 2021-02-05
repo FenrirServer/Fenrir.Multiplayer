@@ -1,15 +1,12 @@
 ﻿using Fenrir.Multiplayer.Client;
 using Fenrir.Multiplayer.LiteNet;
 using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Rooms;
 using Fenrir.Multiplayer.Server;
 using Fenrir.Multiplayer.Sim;
+using Fenrir.Multiplayer.Sim.Components;
 using Fenrir.Multiplayer.Tests.Fixtures;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.Tests.Integration.Sim
@@ -52,6 +49,8 @@ namespace Fenrir.Multiplayer.Tests.Integration.Sim
             // Make sure there is one simulation entity - our player
             Assert.AreEqual(1, simulationClient.Simulation.GetObjects().Count());
 
+            // Get player component
+            Assert.IsNotNull(simulationClient.Simulation.GetObjects().First().GetComponent<PlayerComponent>());
         }
     }
 }

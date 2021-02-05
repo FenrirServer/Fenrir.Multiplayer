@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Fenrir.Multiplayer.Logging;
+using System;
 
 namespace Fenrir.Multiplayer.Sim
 {
@@ -13,6 +14,8 @@ namespace Fenrir.Multiplayer.Sim
         public DateTime TimeInitialized { get; private set; }
 
         public DateTime TimeDestroyed { get; private set; }
+
+        protected IFenrirLogger Logger => Object?.Logger;
 
         internal void Initialize(SimulationObject simulationObject)
         {
@@ -40,6 +43,11 @@ namespace Fenrir.Multiplayer.Sim
             OnTick();
         }
 
+        internal void LateTick()
+        {
+            OnLateTick();
+        }
+
         protected virtual void OnAdded() { }
 
         protected virtual void OnBeforeDestroyed() { }
@@ -47,5 +55,7 @@ namespace Fenrir.Multiplayer.Sim
         protected virtual void OnDestroyed() { }
 
         protected virtual void OnTick(){ }
+
+        protected virtual void OnLateTick() { }
     }
 }

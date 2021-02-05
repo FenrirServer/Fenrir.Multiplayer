@@ -4,6 +4,7 @@ using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Rooms;
 using Fenrir.Multiplayer.Sim.Command;
 using Fenrir.Multiplayer.Sim.Components;
+using Fenrir.Multiplayer.Sim.Dto;
 using Fenrir.Multiplayer.Sim.Events;
 using Fenrir.Multiplayer.Sim.Requests;
 using Fenrir.Multiplayer.Utility;
@@ -78,9 +79,11 @@ namespace Fenrir.Multiplayer.Sim
 
         /// <summary>
         /// Task completion source, completes when
-        /// simulation synchronization is completed
+        /// simulation synchronization is completed.
+        /// This happens when client simulation processes 
+        /// first server tick snapshot
         /// </summary>
-        private TaskCompletionSource<bool> _firstCommandTcs = null;
+        private TaskCompletionSource<bool> _firstSnapshotTcs = null;
 
 
         public SimulationClient(IFenrirClient client, IFenrirLogger logger)
@@ -95,7 +98,7 @@ namespace Fenrir.Multiplayer.Sim
             _client.Disconnected += OnDisconnected;
 
             Simulation = new Simulation(logger) { IsAuthority = false };
-            Simulation.CommandExecuted += OnSimulationCommandExecuted;
+            Simulation.TickSnapshotProcessed += OnTickSnapshotProcessed;
 
             _clockSynchronizer = new ClockSynchronizer();
 
@@ -136,8 +139,8 @@ namespace Fenrir.Multiplayer.Sim
             _roomId = roomId;
 
             // Successfully joined simulation. Let's wait until we receive Simulation init event before running the simulation
-            _firstCommandTcs = new TaskCompletionSource<bool>();
-            await _firstCommandTcs.Task; // Wait until simulation sync-up is completed
+            _firstSnapshotTcs = new TaskCompletionSource<bool>();
+            await _firstSnapshotTcs.Task; // Wait until simulation sync-up is completed
 
             return new SimulationJoinResult(joinResponse);
         }
@@ -171,7 +174,7 @@ namespace Fenrir.Multiplayer.Sim
         {
             _isRunningSimulation = false;
             _roomId = null;
-            _firstCommandTcs = null;
+            _firstSnapshotTcs = null;
         }
 
         private async void RunSimulation()
@@ -223,28 +226,22 @@ namespace Fenrir.Multiplayer.Sim
         }
 
 
-        private void ApplyTickSnapshot(SimulationTickSnapshot tickSnapshot)
+        private void IngestTickSnapshot(SimulationTickSnapshot tickSnapshot)
         {
             // Ingest initial commands
-            foreach(SimulationCommandListSnapshot commandListSnapshot in tickSnapshot.Snapshots.Values)
-            {
-                foreach(ISimulationCommand command in commandListSnapshot.Commands)
-                {
-                    Simulation.IngestCommand(command);
-                }
-            }
+            Simulation.IngestTickSnapshot(tickSnapshot);
         }
 
-        private void OnSimulationCommandExecuted(ISimulationCommand command)
+        private void OnTickSnapshotProcessed(SimulationTickSnapshot tickSnapshot)
         {
-            if (_isJoined && _firstCommandTcs != null)
+            if (_isJoined && _firstSnapshotTcs != null)
             {
                 // First command ever, assume simulation has finished initialization
-                _firstCommandTcs?.SetResult(true);
-                _firstCommandTcs = null;
+                _firstSnapshotTcs?.SetResult(true);
+                _firstSnapshotTcs = null;
             }
 
-            Simulation.CommandExecuted -= OnSimulationCommandExecuted;
+            Simulation.TickSnapshotProcessed -= OnTickSnapshotProcessed;
         }
 
         #region Clock Sync
@@ -266,7 +263,10 @@ namespace Fenrir.Multiplayer.Sim
 
         private async Task SendSyncClockRequest(double delayMs = 0)
         {
-            await Task.Delay(TimeSpan.FromMilliseconds(delayMs));
+            if (delayMs > 0)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(delayMs));
+            }
 
             var simClockSyncRequest = new SimulationClockSyncRequest(DateTime.UtcNow);
 
@@ -292,7 +292,7 @@ namespace Fenrir.Multiplayer.Sim
             }
 
             // Apply snapshot
-            ApplyTickSnapshot(evt.SimulationSnapshot);
+            IngestTickSnapshot(evt.SimulationSnapshot);
 
             // Start ticking
             RunSimulation();
@@ -303,7 +303,7 @@ namespace Fenrir.Multiplayer.Sim
             // Dispatch tick snapshots
             foreach(SimulationTickSnapshot snapshot in evt.TickSnapshots)
             {
-                ApplyTickSnapshot(snapshot);
+                IngestTickSnapshot(snapshot);
             }
         }
         #endregion

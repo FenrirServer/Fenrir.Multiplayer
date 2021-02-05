@@ -1,14 +1,11 @@
 ﻿using Fenrir.Multiplayer.Sim;
 using Fenrir.Multiplayer.Sim.Command;
+using Fenrir.Multiplayer.Sim.Dto;
 using Fenrir.Multiplayer.Sim.Exceptions;
 using Fenrir.Multiplayer.Tests.Fixtures;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using NuGet.Frameworks;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Fenrir.Multiplayer.Tests.Unit.Sim
 {
@@ -17,15 +14,22 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
     {
         #region SimulationObject.AddComponent
 
-        [TestMethod, ExpectedException(typeof(SimulationException))]
+        [TestMethod]
         public void SimulationObject_AddComponent_ThrowsSimulationException_WhenNoAuthority()
         {
             var logger = new TestLogger();
             var simulation = new Simulation(logger) { IsAuthority = false };
             simulation.RegisterComponentType<TestComponent>();
 
-            SimulationObject simObject = new SimulationObject(simulation, logger, 123);
-            simObject.AddComponent<TestComponent>();
+            simulation.EnqueueAction(() =>
+            {
+                Assert.ThrowsException<SimulationException>(() =>
+                {
+                    SimulationObject simObject = new SimulationObject(simulation, logger, 123);
+                    simObject.AddComponent<TestComponent>();
+                });
+            });
+            simulation.Tick();
         }
 
         [TestMethod]
@@ -69,25 +73,39 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             Assert.AreEqual(component.Object.Id, command.ObjectId);
         }
 
-        [TestMethod, ExpectedException(typeof(SimulationException))]
+        [TestMethod]
         public void SimulationObject_AddComponent_ThrowsSimulationException_IfComponentNotRegistered_UsingDefaultConstructor_WhenHasAuthority()
         {
             var logger = new TestLogger();
             var simulation = new Simulation(logger) { IsAuthority = true };
 
-            SimulationObject simObject = simulation.SpawnObject();
-            TestComponent testComponent = simObject.AddComponent<TestComponent>();
+            simulation.EnqueueAction(() =>
+            {
+                Assert.ThrowsException<SimulationException>(() =>
+                {
+                    SimulationObject simObject = simulation.SpawnObject();
+                    TestComponent testComponent = simObject.AddComponent<TestComponent>();
+                });
+            });
+            simulation.Tick();
         }
 
-        [TestMethod, ExpectedException(typeof(SimulationException))]
+        [TestMethod]
         public void SimulationObject_AddComponent_ThrowsSimulationException_IfComponentOfTheSameTypeWasAdded_WhenHasAuthority()
         {
             var logger = new TestLogger();
             var simulation = new Simulation(logger) { IsAuthority = true };
 
-            SimulationObject simObject = simulation.SpawnObject();
-            simObject.AddComponent<TestComponent>();
-            simObject.AddComponent<TestComponent>();
+            simulation.EnqueueAction(() =>
+            {
+                Assert.ThrowsException<SimulationException>(() =>
+                {
+                    SimulationObject simObject = simulation.SpawnObject();
+                    simObject.AddComponent<TestComponent>();
+                    simObject.AddComponent<TestComponent>();
+                });
+            });
+            simulation.Tick();
         }
 
         #endregion
@@ -103,8 +121,10 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
 
             // Spawn new object by ingesting spawn object command
             DateTime commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
-            var spawnObjectCommand = new SpawnObjectSimulationCommand(commandTime, 123);
-            simulation.IngestCommand(spawnObjectCommand);
+            var spawnObjectCommand = new SpawnObjectSimulationCommand(123);
+            var tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            tickSnapshot.Commands.Add(spawnObjectCommand);
+            simulation.IngestTickSnapshot(tickSnapshot);
 
             simulation.Tick();
 
@@ -162,8 +182,15 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var simulation = new Simulation(logger) { IsAuthority = true };
             simulation.RegisterComponentType<TestComponent>();
 
-            SimulationObject simObject = simulation.SpawnObject();
-            TestComponent testComponent = simObject.AddComponent<TestComponent>();
+            SimulationObject simObject = null;
+            TestComponent testComponent = null;
+
+            simulation.EnqueueAction(() =>
+            {
+                simObject = simulation.SpawnObject();
+                testComponent = simObject.AddComponent<TestComponent>();
+            });
+            simulation.Tick();
 
             // Get component
             Assert.IsTrue(simObject.TryGetComponent<TestComponent>(out TestComponent comp));
@@ -180,9 +207,17 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             simulation.RegisterComponentType<TestComponent>();
             simulation.RegisterComponentType<OtherTestComponent>();
 
-            SimulationObject simObject = simulation.SpawnObject();
-            TestComponent testComponent = simObject.AddComponent<TestComponent>();
-            OtherTestComponent testComponent2 = simObject.AddComponent<OtherTestComponent>();
+            SimulationObject simObject = null;
+            TestComponent testComponent = null;
+            OtherTestComponent testComponent2 = null;
+
+            simulation.EnqueueAction(() =>
+            {
+                simObject = simulation.SpawnObject();
+                testComponent = simObject.AddComponent<TestComponent>();
+                testComponent2 = simObject.AddComponent<OtherTestComponent>();
+            });
+            simulation.Tick();
 
             // Get component
             var components = simObject.GetComponents();
@@ -241,15 +276,22 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             Assert.AreEqual(comp1, comp2); // same object
         }
 
-        [TestMethod, ExpectedException(typeof(SimulationException))]
+        [TestMethod]
         public void SimulationObject_GetOrAddComponent_ThrowsSimulationException_WhenNoAuthority()
         {
             var logger = new TestLogger();
             var simulation = new Simulation(logger) { IsAuthority = false };
             simulation.RegisterComponentType<TestComponent>();
 
-            SimulationObject simObject = new SimulationObject(simulation, logger, 123);
-            TestComponent comp1 = simObject.GetOrAddComponent<TestComponent>();
+            simulation.EnqueueAction(() =>
+            {
+                Assert.ThrowsException<SimulationException>(() =>
+                {
+                    SimulationObject simObject = new SimulationObject(simulation, logger, 123);
+                    TestComponent comp1 = simObject.GetOrAddComponent<TestComponent>();
+                });
+            });
+            simulation.Tick();
         }
         #endregion
 
@@ -264,16 +306,20 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
 
             // Create object
             DateTime commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
-            var spawnObjectCommand = new SpawnObjectSimulationCommand(commandTime, 123);
-            simulation.IngestCommand(spawnObjectCommand);
+            var spawnObjectCommand = new SpawnObjectSimulationCommand(123);
+            var tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            tickSnapshot.Commands.Add(spawnObjectCommand);
+            simulation.IngestTickSnapshot(tickSnapshot);
             simulation.Tick();
 
             Assert.IsTrue(simulation.HasObject(spawnObjectCommand.ObjectId));
 
             // Add component
             commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
-            var addComponentCommand = new AddComponentSimulationCommand(commandTime, 123, simulation.GetComponentTypeHash<TestComponent>());
-            simulation.IngestCommand(addComponentCommand);
+            var addComponentCommand = new AddComponentSimulationCommand(123, simulation.GetComponentTypeHash<TestComponent>());
+            tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            tickSnapshot.Commands.Add(addComponentCommand);
+            simulation.IngestTickSnapshot(tickSnapshot);
             simulation.Tick();
 
             // Get component
@@ -302,16 +348,20 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
 
             // Create object
             DateTime commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
-            var spawnObjectCommand = new SpawnObjectSimulationCommand(commandTime, 123);
-            simulation.IngestCommand(spawnObjectCommand);
+            var spawnObjectCommand = new SpawnObjectSimulationCommand( 123);
+            var tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            tickSnapshot.Commands.Add(spawnObjectCommand);
+            simulation.IngestTickSnapshot(tickSnapshot);
             simulation.Tick();
 
             Assert.IsTrue(simulation.HasObject(spawnObjectCommand.ObjectId));
 
             // Add component
             commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
-            var addComponentCommand = new AddComponentSimulationCommand(commandTime, 123, simulation.GetComponentTypeHash<TestComponent>());
-            simulation.IngestCommand(addComponentCommand);
+            var addComponentCommand = new AddComponentSimulationCommand(123, simulation.GetComponentTypeHash<TestComponent>());
+            tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            tickSnapshot.Commands.Add(addComponentCommand);
+            simulation.IngestTickSnapshot(tickSnapshot);
             simulation.Tick();
 
             // Get component
@@ -328,8 +378,10 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
 
             // Remove component
             commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
-            var removeComponentCommand = new RemoveComponentSimulationCommand(commandTime, 123, simulation.GetComponentTypeHash<TestComponent>());
-            simulation.IngestCommand(removeComponentCommand);
+            var removeComponentCommand = new RemoveComponentSimulationCommand(123, simulation.GetComponentTypeHash<TestComponent>());
+            tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            tickSnapshot.Commands.Add(removeComponentCommand);
+            simulation.IngestTickSnapshot(tickSnapshot);
             simulation.Tick();
 
             simulation.EnqueueAction(() =>

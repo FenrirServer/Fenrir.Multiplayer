@@ -1,5 +1,6 @@
 ﻿using Fenrir.Multiplayer.Sim;
 using Fenrir.Multiplayer.Sim.Command;
+using Fenrir.Multiplayer.Sim.Dto;
 using Fenrir.Multiplayer.Sim.Exceptions;
 using Fenrir.Multiplayer.Tests.Fixtures;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -16,15 +17,22 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
     public class SimulationTests
     {
         #region Simulation.SpawnObject
-        [TestMethod, ExpectedException(typeof(SimulationException))]
+        [TestMethod]
         public void Simulation_SpawnObject_ThrowsSimulationException_WhenNoAuthority()
         {
             // Client simulation does not allow creating objects
 
             var logger = new TestLogger();
-            var simulation = new Simulation(logger) { IsAuthority = false }; 
+            var simulation = new Simulation(logger) { IsAuthority = false };
 
-            simulation.SpawnObject();
+            simulation.EnqueueAction(() => 
+            {
+                Assert.ThrowsException<SimulationException>(() =>
+                {
+                    simulation.SpawnObject();
+                });
+            });
+            simulation.Tick();
         }
 
         [TestMethod]
@@ -108,7 +116,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         #endregion
 
         #region Simulation.RemoveObject
-        [TestMethod, ExpectedException(typeof(SimulationException))]
+        [TestMethod]
         public void Simulation_DestroyObject_ThrowsSimulationException_UsingObjectRef_WhenNoAuthority()
         {
             // Client simulation does not allow removing objects
@@ -116,10 +124,17 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var logger = new TestLogger();
             var simulation = new Simulation(logger) { IsAuthority = false };
 
-            simulation.DestroyObject(new SimulationObject(simulation, logger, 123));
+            simulation.EnqueueAction(() =>
+            {
+                Assert.ThrowsException<SimulationException>(() =>
+                {
+                    simulation.DestroyObject(new SimulationObject(simulation, logger, 123));
+                });
+            });
+            simulation.Tick();
         }
 
-        [TestMethod, ExpectedException(typeof(SimulationException))]
+        [TestMethod]
         public void Simulation_DestroyObject_ThrowsSimulationException_UsingObjectId_WhenNoAuthority()
         {
             // Client simulation does not allow removing objects
@@ -127,7 +142,14 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var logger = new TestLogger();
             var simulation = new Simulation(logger) { IsAuthority = false };
 
-            simulation.DestroyObject(123);
+            simulation.EnqueueAction(() =>
+            {
+                Assert.ThrowsException<SimulationException>(() =>
+                {
+                    simulation.DestroyObject(123);
+                });
+            });
+            simulation.Tick();
         }
 
         [TestMethod]
@@ -179,9 +201,14 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
                 }
             };
 
-            SimulationObject simObject = simulation.SpawnObject();
+            SimulationObject simObject = null;
+            simulation.EnqueueAction(() =>
+            {
+                simObject = simulation.SpawnObject();
+                Assert.IsNotNull(simObject);
+            });
 
-            Assert.IsNotNull(simObject);
+            simulation.Tick();
 
             Assert.IsTrue(simulation.GetObjects().Contains(simObject));
 
@@ -194,22 +221,36 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             Assert.AreEqual(simObject.Id, command.ObjectId);
         }
 
-        [TestMethod, ExpectedException(typeof(SimulationException))]
+        [TestMethod]
         public void ServerSimulation_RemoveObject_ThrowsSimulationException_UsingObjectRef_WhenNoObjectFound()
         {
             var logger = new TestLogger();
             var simulation = new Simulation(logger) { IsAuthority = true };
 
-            simulation.DestroyObject(new SimulationObject(simulation, logger, 123)); // bad object id
+            simulation.EnqueueAction(() =>
+            {
+                Assert.ThrowsException<SimulationException>(() =>
+                {
+                    simulation.DestroyObject(new SimulationObject(simulation, logger, 123)); // bad object id
+                });
+            });
+            simulation.Tick();
         }
 
-        [TestMethod, ExpectedException(typeof(SimulationException))]
+        [TestMethod]
         public void ServerSimulation_RemoveObject_ThrowsSimulationException_UsingObjectId_WhenNoObjectFound()
         {
             var logger = new TestLogger(); 
-            var simulation = new Simulation(logger);
+            var simulation = new Simulation(logger) { IsAuthority = true };
 
-            simulation.DestroyObject(123); // bad object id
+            simulation.EnqueueAction(() =>
+            {
+                Assert.ThrowsException<SimulationException>(() =>
+                {
+                    simulation.DestroyObject(123); // bad object id
+                });
+            });
+            simulation.Tick();
         }
         #endregion
 
@@ -226,19 +267,21 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
         }
         #endregion
 
-        #region Simulation.IngestCommand
+        #region Simulation.ProcessTickSnapshot
 
-        #region Simulation.IngestCommand(SpawnObjectSimulationCommand)
+        #region Simulation.ProcessTickSnapshot - SpawnObjectSimulationCommand
         [TestMethod]
-        public void Simulation_IngestCommand_SpawnObjectSimulationCommand_SpawnsSimulationObject()
+        public void Simulation_ProcessTichSnapshot_SpawnObjectSimulationCommand_SpawnsSimulationObject()
         {
             var logger = new TestLogger();
             var simulation = new Simulation(logger) { IsAuthority = false };
 
             DateTime commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
-            var spawnObjectCommand = new SpawnObjectSimulationCommand(commandTime, 123);
+            var spawnObjectCommand = new SpawnObjectSimulationCommand(123);
+            var tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            tickSnapshot.Commands.Add(spawnObjectCommand);
 
-            simulation.IngestCommand(spawnObjectCommand);
+            simulation.IngestTickSnapshot(tickSnapshot);
 
             simulation.Tick();
 
@@ -253,18 +296,25 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             var logger = new TestLogger();
             var simulation = new Simulation(logger) { IsAuthority = false };
 
-            // Create object
             DateTime commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
-            var spawnObjectCommand = new SpawnObjectSimulationCommand(commandTime, 123);
-            simulation.IngestCommand(spawnObjectCommand);
+
+            // Create object
+            var spawnObjectCommand = new SpawnObjectSimulationCommand(123);
+            var tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            tickSnapshot.Commands.Add(spawnObjectCommand);
+
+            simulation.IngestTickSnapshot(tickSnapshot);
+
             simulation.Tick();
 
             Assert.IsTrue(simulation.HasObject(spawnObjectCommand.ObjectId));
 
             // Destroy object
             commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
-            var destroyObjectCommand = new DestroyObjectSimulationCommand(commandTime, 123);
-            simulation.IngestCommand(destroyObjectCommand); 
+            var destroyObjectCommand = new DestroyObjectSimulationCommand(123);
+            tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            tickSnapshot.Commands.Add(destroyObjectCommand);
+            simulation.IngestTickSnapshot(tickSnapshot);
             simulation.Tick();
 
             Assert.IsFalse(simulation.HasObject(spawnObjectCommand.ObjectId));
@@ -282,10 +332,14 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
 
             simulation.RegisterComponentType<TestTickingComponent>();
 
-            SimulationObject simObject = simulation.SpawnObject();
-            TestTickingComponent comp = simObject.AddComponent<TestTickingComponent>();
             bool componentDidTick = false;
-            comp.TickHandler = () => componentDidTick = true;
+
+            simulation.EnqueueAction(() =>
+            {
+                SimulationObject simObject = simulation.SpawnObject();
+                TestTickingComponent comp = simObject.AddComponent<TestTickingComponent>();
+                comp.TickHandler = () => componentDidTick = true;
+            });
 
             simulation.Tick();
             Assert.IsTrue(componentDidTick);
