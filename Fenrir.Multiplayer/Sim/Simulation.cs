@@ -109,7 +109,7 @@ namespace Fenrir.Multiplayer.Sim
 
 
         /// <summary>
-        /// Incoming command delay, in ms
+        /// Incoming command delay, in milliseconds. AKA client interpolation time
         /// Indicates for how long incoming commands are being buffered before processing.
         /// For client, this allows to render the state that is slightly older than server state, allowing to normalize everyone's viewpoint.
         /// </summary>

@@ -55,7 +55,7 @@ namespace Fenrir.Multiplayer.Tests.Integration.Sim
 
 
         [TestMethod]
-        public async Task Simulation_Integration_SpawnObjectAddComponent()
+        public async Task Simulation_Integration_SpawnObject_AddComponent_DestroyObject_RemoveComponent()
         {
             using var logger = new TestLogger();
 
@@ -96,6 +96,7 @@ namespace Fenrir.Multiplayer.Tests.Integration.Sim
             serverSimulation.RegisterComponentType<TestComponent>();
             clientSimulation.RegisterComponentType<TestComponent>();
 
+            // --------------------------------------------
             // Spawn server object
             SimulationObject testServerObject = null;
             TaskCompletionSource<bool> serverTickTcs = new TaskCompletionSource<bool>();
@@ -104,8 +105,6 @@ namespace Fenrir.Multiplayer.Tests.Integration.Sim
                 testServerObject = serverSimulation.SpawnObject();
                 serverTickTcs.SetResult(true);
             });
-
-            // Wait for server simulation tick
             await serverTickTcs.Task;
 
             // Verify object spawned
@@ -118,7 +117,6 @@ namespace Fenrir.Multiplayer.Tests.Integration.Sim
             await Task.Delay(clientSimulation.IncomingCommandDelayMs);
 
             // Wait until next client tick
-            TaskCompletionSource<bool> clientTickTcs = new TaskCompletionSource<bool>();
             await clientSimulation.WaitForNextTick();
 
             // Verify object has spawned on the client
@@ -130,6 +128,7 @@ namespace Fenrir.Multiplayer.Tests.Integration.Sim
             // Verify same object id...
             Assert.AreEqual(testServerObject.Id, testClientObject.Id);
 
+            // --------------------------------------------
             // Add component on the server
             TestComponent testServerComponent = null;
             serverTickTcs = new TaskCompletionSource<bool>();
@@ -150,6 +149,54 @@ namespace Fenrir.Multiplayer.Tests.Integration.Sim
             // Verify client has this component
             Assert.IsNotNull(testClientObject.GetComponent<TestComponent>());
 
+            // --------------------------------------------
+            // Remove component on the server
+            serverTickTcs = new TaskCompletionSource<bool>();
+            serverSimulation.EnqueueAction(() =>
+            {
+                testServerObject.RemoveComponent<TestComponent>();
+                serverTickTcs.SetResult(true);
+            });
+            await serverTickTcs.Task;
+
+            // Verify component was removed on the server
+            Assert.IsNull(testServerObject.GetComponent<TestComponent>());
+
+            // Verify component still exists on the client
+            Assert.IsNotNull(testClientObject.GetComponent<TestComponent>());
+
+            // Wait for client to dispatch incoming tick
+            await Task.Delay(clientSimulation.IncomingCommandDelayMs);
+            await clientSimulation.WaitForNextTick();
+
+            // Verify client no longer has this component
+            Assert.IsNull(testClientObject.GetComponent<TestComponent>());
+
+            // --------------------------------------------
+            // Destroy server object
+            serverTickTcs = new TaskCompletionSource<bool>();
+            serverSimulation.EnqueueAction(() =>
+            {
+                serverSimulation.DestroyObject(testServerObject.Id);
+                serverTickTcs.SetResult(true);
+            });
+            await serverTickTcs.Task;
+
+
+            // Verify object was destroyed on the server
+            Assert.AreEqual(1, serverSimulation.GetObjects().Count());
+
+            // Verify object still exists on the client.
+            Assert.AreEqual(2, clientSimulation.GetObjects().Count());
+
+            // Wait for client to dispatch incoming tick
+            await Task.Delay(clientSimulation.IncomingCommandDelayMs);
+
+            // Wait until next client tick
+            await clientSimulation.WaitForNextTick();
+
+            // Verify object is not in fact destroyed on the client
+            Assert.AreEqual(1, clientSimulation.GetObjects().Count());
         }
     }
 }
