@@ -1,4 +1,5 @@
-﻿using Fenrir.Multiplayer.Sim;
+﻿using Fenrir.Multiplayer.Logging;
+using Fenrir.Multiplayer.Sim;
 using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.Tests.Integration.Sim

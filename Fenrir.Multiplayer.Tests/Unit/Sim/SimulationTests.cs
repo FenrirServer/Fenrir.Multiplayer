@@ -265,6 +265,51 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
 
             Assert.IsTrue(simulation.ComponentRegistered<TestComponent>());
         }
+
+        [TestMethod, ExpectedException(typeof(SimulationException))]
+        public void Simulation_RegisterComponentType_ThrowsSimulationException_WhenComponentRegistered()
+        {
+            var logger = new TestLogger();
+            var simulation = new Simulation(logger);
+
+            simulation.RegisterComponentType<TestComponent>();
+            simulation.RegisterComponentType<TestComponent>();
+        }
+
+
+        [TestMethod]
+        public void Simulation_RegisterComponentType_RegistersComponent_WithComponentFactory()
+        {
+            var logger = new TestLogger();
+            var simulation = new Simulation(logger);
+
+            simulation.RegisterComponentType<TestComponent>(() => new TestComponent());
+
+            Assert.IsTrue(simulation.ComponentRegistered<TestComponent>());
+        }
+
+        [TestMethod, ExpectedException(typeof(SimulationException))]
+        public void Simulation_RegisterComponentType_ThrowsSimulationException_WhenComponentRegistered_WithComponentFactory()
+        {
+            var logger = new TestLogger();
+            var simulation = new Simulation(logger);
+
+            simulation.RegisterComponentType<TestComponent>(() => new TestComponent());
+            simulation.RegisterComponentType<TestComponent>(() => new TestComponent());
+
+            Assert.IsTrue(simulation.ComponentRegistered<TestComponent>());
+        }
+
+        [TestMethod, ExpectedException(typeof(ArgumentNullException))]
+        public void Simulation_RegisterComponentType_ThrowsArgumentNullException_WhenFactoryMethodIsNull()
+        {
+            var logger = new TestLogger();
+            var simulation = new Simulation(logger);
+
+            simulation.RegisterComponentType<TestComponent>(null);
+
+            Assert.IsTrue(simulation.ComponentRegistered<TestComponent>());
+        }
         #endregion
 
         #region Simulation.ProcessTickSnapshot

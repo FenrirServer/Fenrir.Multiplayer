@@ -1,7 +1,6 @@
 ﻿using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Rooms;
-using Fenrir.Multiplayer.Sim.Command;
 using Fenrir.Multiplayer.Sim.Components;
 using System;
 using System.Collections.Generic;

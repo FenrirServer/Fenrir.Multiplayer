@@ -25,7 +25,7 @@ namespace Fenrir.Multiplayer.Tests.Integration.Sim
             fenrirServer.AddInfoService();
 
             // Add server simulation
-            var simulationRoomManager = new SimulationRoomManager(logger, fenrirServer);
+            var simulationRoomManager = new SimulationRoomManager<SimulationRoom>((peer, roomId, token) => new SimulationRoom(logger, roomId), logger, fenrirServer);
             
             // Start server
             await fenrirServer.Start();
@@ -65,7 +65,7 @@ namespace Fenrir.Multiplayer.Tests.Integration.Sim
             fenrirServer.AddInfoService();
 
             // Add server simulation
-            var simulationRoomManager = new SimulationRoomManager(logger, fenrirServer);
+            var simulationRoomManager = new SimulationRoomManager<SimulationRoom>((peer, roomId, token) => new SimulationRoom(logger, roomId), logger, fenrirServer);
 
             // Start server
             await fenrirServer.Start();

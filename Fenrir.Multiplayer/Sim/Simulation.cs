@@ -166,6 +166,16 @@ namespace Fenrir.Multiplayer.Sim
         public void RegisterComponentType<TComponent>(Func<TComponent> factoryMethod)
             where TComponent : SimulationComponent
         {
+            if(ComponentRegistered<TComponent>())
+            {
+                throw new SimulationException($"Component {typeof(TComponent).Name} is already registered");
+            }
+
+            if(factoryMethod == null)
+            {
+                throw new ArgumentNullException(nameof(factoryMethod));
+            }
+
             // Register component type hash
             _componentTypeHashMap.AddType<TComponent>();
 

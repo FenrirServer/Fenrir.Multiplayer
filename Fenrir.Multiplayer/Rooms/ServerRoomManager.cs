@@ -53,7 +53,7 @@ namespace Fenrir.Multiplayer.Rooms
         /// </summary>
         /// <param name="logger">Logger</param>
         /// <param name="server">Server</param>
-        protected ServerRoomManager(IFenrirLogger logger, IFenrirServer server)
+        private ServerRoomManager(IFenrirLogger logger, IFenrirServer server)
         {
             Logger = logger;
             Server = server;
@@ -159,7 +159,7 @@ namespace Fenrir.Multiplayer.Rooms
             return true;
         }
 
-        protected virtual TRoom CreateRoom(IServerPeer peer, string roomId, string token)
+        private TRoom CreateRoom(IServerPeer peer, string roomId, string token)
         {
             return _roomFactoryMethod(peer, roomId, token);
         }

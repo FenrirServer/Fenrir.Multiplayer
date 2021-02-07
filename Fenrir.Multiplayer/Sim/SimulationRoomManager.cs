@@ -8,19 +8,33 @@ using System;
 
 namespace Fenrir.Multiplayer.Sim
 {
-    public class SimulationRoomManager : ServerRoomManager<SimulationRoom>
+    public class SimulationRoomManager<TRoom> : ServerRoomManager<TRoom>
         , IRequestHandler<SimulationTickSnapshotAckRequest>
         , IRequestHandler<SimulationClockSyncRequest>
+        where TRoom : SimulationRoom
     {
-        public SimulationRoomManager(IFenrirLogger logger, IFenrirServer server) : base(logger, server)
+        /// <summary>
+        /// Creates simulation room manager with a given room factory.
+        /// Implement IServerRoomFactory interface for custom room creation
+        /// </summary>
+        /// <param name="roomFactory">Room factory that creates a room of a type <seealso cref="TRoom"/></param>
+        /// <param name="logger">Logger</param>
+        /// <param name="server">Server</param>
+        public SimulationRoomManager(IServerRoomFactory<TRoom> roomFactory, IFenrirLogger logger, IFenrirServer server)
+            : base(roomFactory, logger, server)
         {
-            server.AddRequestHandler<SimulationClockSyncRequest>(this);
-            server.AddRequestHandler<SimulationTickSnapshotAckRequest>(this);
         }
 
-        protected override SimulationRoom CreateRoom(IServerPeer peer, string roomId, string token)
+        /// <summary>
+        /// Creates simulation room manager with a given room factory method.
+        /// Pass in a callback that creates new room, e.g. new ServerRoomManager(() => new SimulationRoom(logger, ...))
+        /// </summary>
+        /// <param name="roomFactoryMethod">Factory method that creates new room of type <seealso cref="TRoom"/></param>
+        /// <param name="logger">Logger</param>
+        /// <param name="server">Server</param>
+        public SimulationRoomManager(CreateRoomHandler roomFactoryMethod, IFenrirLogger logger, IFenrirServer server)
+            : base(roomFactoryMethod, logger, server)
         {
-            return new SimulationRoom(Logger, roomId);
         }
 
         void IRequestHandler<SimulationTickSnapshotAckRequest>.HandleRequest(SimulationTickSnapshotAckRequest request, IServerPeer peer)
