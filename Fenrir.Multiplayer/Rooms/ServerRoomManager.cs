@@ -58,8 +58,17 @@ namespace Fenrir.Multiplayer.Rooms
             Logger = logger;
             Server = server;
 
-            Server.AddRequestHandler<RoomJoinRequest, RoomJoinResponse>(this);
-            Server.AddRequestHandler<RoomLeaveRequest, RoomLeaveResponse>(this);
+            RegisterRequestHandlers(server);
+        }
+
+        /// <summary>
+        /// Registers request handlers with the server
+        /// </summary>
+        /// <param name="server">Fenrir server</param>
+        private void RegisterRequestHandlers(IFenrirServer server)
+        {
+            server.AddRequestHandler<RoomJoinRequest, RoomJoinResponse>(this);
+            server.AddRequestHandler<RoomLeaveRequest, RoomLeaveResponse>(this);
         }
 
         /// <summary>

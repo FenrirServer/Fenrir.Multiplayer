@@ -23,6 +23,7 @@ namespace Fenrir.Multiplayer.Sim
         public SimulationRoomManager(IServerRoomFactory<TRoom> roomFactory, IFenrirLogger logger, IFenrirServer server)
             : base(roomFactory, logger, server)
         {
+            RegisterRequestHandlers(server);
         }
 
         /// <summary>
@@ -35,8 +36,20 @@ namespace Fenrir.Multiplayer.Sim
         public SimulationRoomManager(CreateRoomHandler roomFactoryMethod, IFenrirLogger logger, IFenrirServer server)
             : base(roomFactoryMethod, logger, server)
         {
+            RegisterRequestHandlers(server);
         }
 
+        /// <summary>
+        /// Registers request handlers with the server
+        /// </summary>
+        /// <param name="server">Fenrir server</param>
+        private void RegisterRequestHandlers(IFenrirServer server)
+        {
+            server.AddRequestHandler<SimulationTickSnapshotAckRequest>(this);
+            server.AddRequestHandler<SimulationClockSyncRequest>(this);
+        }
+
+        #region Request Handlers
         void IRequestHandler<SimulationTickSnapshotAckRequest>.HandleRequest(SimulationTickSnapshotAckRequest request, IServerPeer peer)
         {
             if(peer.PeerData == null)
@@ -58,5 +71,6 @@ namespace Fenrir.Multiplayer.Sim
             var simulationClockSyncAckEvent = new SimulationClockSyncAckEvent(request.RequestSentTime, requestReceivedTime);
             peer.SendEvent(simulationClockSyncAckEvent);
         }
+        #endregion
     }
 }

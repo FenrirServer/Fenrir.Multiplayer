@@ -48,17 +48,21 @@ namespace Fenrir.Multiplayer.Sim.Components
         {
         }
 
+        /// <summary>
+        /// Server-side method that removes any snapshots that this client has acknowledged
+        /// </summary>
+        /// <param name="tickTime">Time of the tick of the last acknowledged snapshot</param>
         public void AcknowledgeTickSnapshot(DateTime tickTime)
         {
             while(_outgoingTickSnapshots.First != null)
             {
                 if (_outgoingTickSnapshots.First.Value.TickTime > tickTime)
                 {
-                    break; // Subsequent commands should be packed and sent unless client acks them
+                    break; // Subsequent snapshots should be packed and sent unless client acks them
                 }
                 else
                 {
-                    // Command was acked, can safely remove
+                    // Snapshot was acked, can safely remove
                     _outgoingTickSnapshots.RemoveFirst();
                 }
             }
@@ -91,7 +95,7 @@ namespace Fenrir.Multiplayer.Sim.Components
 
                 // Send outgoing commands to this peer. Keep sending until we get an ACK from the client
                 SimulationTickSnapshotEvent tickSnapshotEvent = new SimulationTickSnapshotEvent() { TickSnapshots = _outgoingTickSnapshots }; // TODO: Object pool
-                ServerPeer.SendEvent(tickSnapshotEvent);
+                ServerPeer.SendEvent(tickSnapshotEvent, deliveryMethod: MessageDeliveryMethod.Unreliable);
             }
         }
 
@@ -103,7 +107,7 @@ namespace Fenrir.Multiplayer.Sim.Components
             }
 
             SimulationInitEvent simulationInitEvent = new SimulationInitEvent() { SimulationSnapshot = GetFullSimulationSnapshot() };
-            ServerPeer.SendEvent(simulationInitEvent);
+            ServerPeer.SendEvent(simulationInitEvent, deliveryMethod: MessageDeliveryMethod.ReliableUnordered);
 
             _fullSnapshotSent = true;
         }

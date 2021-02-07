@@ -305,6 +305,10 @@ namespace Fenrir.Multiplayer.Sim
             {
                 IngestTickSnapshot(snapshot);
             }
+
+            // Acknowledge tick snapshot
+            SimulationTickSnapshotAckRequest ackRequest = new SimulationTickSnapshotAckRequest(evt.TickSnapshots.Last.Value.TickTime);
+            _client.Peer.SendRequest(ackRequest, deliveryMethod: MessageDeliveryMethod.Unreliable);
         }
         #endregion
     }
