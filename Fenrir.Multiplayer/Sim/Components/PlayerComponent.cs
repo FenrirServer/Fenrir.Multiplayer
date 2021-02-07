@@ -4,7 +4,6 @@ using Fenrir.Multiplayer.Sim.Dto;
 using Fenrir.Multiplayer.Sim.Events;
 using System;
 using System.Collections.Generic;
-using WebSocketSharp;
 
 namespace Fenrir.Multiplayer.Sim.Components
 {
@@ -19,6 +18,11 @@ namespace Fenrir.Multiplayer.Sim.Components
         /// Current tick snapshot
         /// </summary>
         private SimulationTickSnapshot _currentTickSnapshot = null;
+
+        /// <summary>
+        /// True if awaiting to send a full snapshot
+        /// </summary>
+        private bool _fullSnapshotSent = false;
 
         /// <summary>
         /// Only assigned on the server. 
@@ -62,7 +66,11 @@ namespace Fenrir.Multiplayer.Sim.Components
 
         private void RecycleCurrentTickSnapshot()
         {
-            _outgoingTickSnapshots.AddLast(_currentTickSnapshot);
+            if (_currentTickSnapshot != null)
+            {
+                _outgoingTickSnapshots.AddLast(_currentTickSnapshot);
+            }
+
             _currentTickSnapshot = new SimulationTickSnapshot() { TickTime = Simulation.CurrentTickTime };
 
             CompressStateSnapshots();
@@ -78,7 +86,8 @@ namespace Fenrir.Multiplayer.Sim.Components
         {
             if (ServerPeer != null)
             {
-                // TODO: For state snapshots, remove per-state duplicates
+                // Save current tick snapshot
+                RecycleCurrentTickSnapshot();
 
                 // Send outgoing commands to this peer. Keep sending until we get an ACK from the client
                 SimulationTickSnapshotEvent tickSnapshotEvent = new SimulationTickSnapshotEvent() { TickSnapshots = _outgoingTickSnapshots }; // TODO: Object pool
@@ -95,6 +104,8 @@ namespace Fenrir.Multiplayer.Sim.Components
 
             SimulationInitEvent simulationInitEvent = new SimulationInitEvent() { SimulationSnapshot = GetFullSimulationSnapshot() };
             ServerPeer.SendEvent(simulationInitEvent);
+
+            _fullSnapshotSent = true;
         }
 
         private SimulationTickSnapshot GetFullSimulationSnapshot()
@@ -129,6 +140,11 @@ namespace Fenrir.Multiplayer.Sim.Components
 
         private void OnCommandCreated(ISimulationCommand command)
         {
+            if(!_fullSnapshotSent)
+            {
+                return; // Waiting for full snapshot to be sent, ignore
+            }
+
             if(_currentTickSnapshot == null)
             {
                 _currentTickSnapshot = new SimulationTickSnapshot() { TickTime = Simulation.CurrentTickTime }; // TODO: Use object pool

@@ -3,6 +3,7 @@ using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Server;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Fenrir.Multiplayer.Rooms
 {
@@ -97,6 +98,17 @@ namespace Fenrir.Multiplayer.Rooms
             _roomFactoryMethod = roomFactoryMethod;
         }
 
+        /// <summary>
+        /// Returns all rooms
+        /// </summary>
+        /// <returns></returns>
+        internal TRoom[] GetRooms()
+        {
+            lock(_rooms)
+            {
+                return _rooms.Values.ToArray();
+            }
+        }
 
         private bool TryGetOrCreateRoom(IServerPeer peer, string roomId, string token, out TRoom room)
         {

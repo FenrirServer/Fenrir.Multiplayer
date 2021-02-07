@@ -2,7 +2,7 @@
 
 namespace Fenrir.Multiplayer.Sim.Command
 {
-    class RemoveComponentSimulationCommand : ISimulationCommand
+    class RemoveComponentSimulationCommand : IComponentSimulationCommand
     {
         public CommandType Type => CommandType.RemoveComponent;
 

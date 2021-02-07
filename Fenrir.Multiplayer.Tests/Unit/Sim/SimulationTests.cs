@@ -347,7 +347,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
 
         #endregion
 
-        #region Simulation.Enqueue
+        #region Simulation.EnqueueAction
         [TestMethod]
         public void Simulation_EnqueueAction_EnqueuesAction()
         {
@@ -380,6 +380,58 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             simulation.Tick();
 
             Assert.IsTrue(didInvoke);
+        }
+        #endregion
+
+        #region Simulation.EnqueueLateAction
+        [TestMethod]
+        public void Simulation_EnqueueLateAction_EnqueuesLateAction()
+        {
+            var logger = new TestLogger();
+            var simulation = new Simulation(logger);
+
+            bool didInvoke = false;
+            bool didInvokeLate = false;
+
+            simulation.EnqueueLateAction(() => didInvokeLate = true);
+            simulation.EnqueueAction(() =>
+            {
+                Assert.IsFalse(didInvokeLate, "should not execute Late action before a regular one");
+                didInvoke = true;
+            });
+            simulation.Tick();
+
+            Assert.IsTrue(didInvoke);
+            Assert.IsTrue(didInvokeLate);
+        }
+
+        [TestMethod]
+        public async Task Simulation_ScheduleLateAction_SchedulesLateAction()
+        {
+            var logger = new TestLogger();
+            var simulation = new Simulation(logger);
+
+            bool didInvoke = false;
+            bool didInvokeLate = false;
+
+            simulation.ScheduleLateAction(() => didInvokeLate = true, 50);
+            simulation.ScheduleAction(() =>
+            {
+                Assert.IsFalse(didInvokeLate, "should not execute Late action before a regular one");
+                didInvoke = true;
+            }
+            , 50);
+            simulation.Tick();
+
+            Assert.IsFalse(didInvoke);
+            Assert.IsFalse(didInvokeLate);
+
+            await Task.Delay(100);
+
+            simulation.Tick();
+
+            Assert.IsTrue(didInvoke);
+            Assert.IsTrue(didInvokeLate);
         }
         #endregion
     }

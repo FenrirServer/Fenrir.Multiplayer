@@ -77,6 +77,11 @@ namespace Fenrir.Multiplayer.Sim
         private Queue<Action> _actionQueue = new Queue<Action>();
 
         /// <summary>
+        /// Queue of actions scheduled for the next late tick
+        /// </summary>
+        private Queue<Action> _lateActionQueue = new Queue<Action>();
+
+        /// <summary>
         /// Stores current snapshot that's being built during the tick
         /// </summary>
         private SimulationTickSnapshot _currentTickSnapshot = null;
@@ -128,7 +133,7 @@ namespace Fenrir.Multiplayer.Sim
         /// <summary>
         /// True if simulation is not currently processing a tick
         /// </summary>
-        public bool InTick { get; private set; } 
+        public bool InTick { get; private set; }
 
         /// <summary>
         /// True if this simulation is authority
@@ -411,6 +416,12 @@ namespace Fenrir.Multiplayer.Sim
         #region Tick
         public virtual void Tick()
         {
+            if(InTick)
+            {
+                _logger.Warning($"Called {nameof(Simulation.Tick)} while already processing a tick. Did previous tick take too long?");
+                return;
+            }
+
             // Set tick time
             CurrentTickTime = _clock.UtcNow;
 
@@ -483,6 +494,19 @@ namespace Fenrir.Multiplayer.Sim
                 }
             }
 
+            // Late tick actions
+            while (TryDequeueLateAction(out Action action))
+            {
+                try
+                {
+                    action.Invoke();
+                }
+                catch (Exception e)
+                {
+                    _logger.Error("Error during simulation late action: " + e.ToString());
+                }
+            }
+
             // Late tick simulation objects
             objectEnumerator = _objectsById.GetEnumerator();
 
@@ -548,6 +572,22 @@ namespace Fenrir.Multiplayer.Sim
             return false;
         }
 
+        private bool TryDequeueLateAction(out Action action)
+        {
+            action = null;
+
+            lock (_lateActionQueue)
+            {
+                if (_lateActionQueue.Count > 0)
+                {
+                    action = _lateActionQueue.Dequeue();
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public void EnqueueAction(Action action)
         {
             if (action == null)
@@ -562,6 +602,30 @@ namespace Fenrir.Multiplayer.Sim
         }
 
         public async void ScheduleAction(Action action, int delayMs)
+        {
+            if (action == null)
+            {
+                throw new ArgumentNullException(nameof(action));
+            }
+
+            await Task.Delay(delayMs);
+            EnqueueAction(action);
+        }
+
+        public void EnqueueLateAction(Action action)
+        {
+            if (action == null)
+            {
+                throw new ArgumentNullException(nameof(action));
+            }
+
+            lock (_lateActionQueue)
+            {
+                _lateActionQueue.Enqueue(action);
+            }
+        }
+
+        public async void ScheduleLateAction(Action action, int delayMs)
         {
             if (action == null)
             {

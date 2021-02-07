@@ -21,12 +21,12 @@ namespace Fenrir.Multiplayer.Sim.Dto
             TickTime = new DateTime(ticks);
 
             // Read number of commands
-            int numCommands = reader.ReadByte();
+            byte numCommands = reader.ReadByte();
 
             Commands = new List<ISimulationCommand>(numCommands);
 
             // Read commands
-            int numCommand = 0;
+            byte numCommand = 0;
             while (numCommand < numCommands)
             {
                 // Read command type
@@ -125,7 +125,7 @@ namespace Fenrir.Multiplayer.Sim.Dto
             writer.Write(TickTime.Ticks);
 
             // Write commands
-            if (Commands != null && Commands.Count > 0)
+            if (Commands != null)
             {
                 WriteCommands(writer);
             }

@@ -1,6 +1,7 @@
 ﻿using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
 using Fenrir.Multiplayer.Sim.Dto;
+using System;
 using System.Collections.Generic;
 
 namespace Fenrir.Multiplayer.Sim.Events
@@ -11,6 +12,11 @@ namespace Fenrir.Multiplayer.Sim.Events
 
         public void Deserialize(IByteStreamReader reader)
         {
+            if(0 != reader.ReadByte() || 1 != reader.ReadByte() || 2 != reader.ReadByte() || 3 != reader.ReadByte())
+            {
+                throw new InvalidOperationException("WTF");
+            }
+
             // Read number of ticks
             byte numTicks = reader.ReadByte();
 
@@ -25,8 +31,13 @@ namespace Fenrir.Multiplayer.Sim.Events
 
         public void Serialize(IByteStreamWriter writer)
         {
+            writer.Write((byte)0);
+            writer.Write((byte)1);
+            writer.Write((byte)2);
+            writer.Write((byte)3);
+
             // Write number of ticks
-            if(TickSnapshots == null)
+            if (TickSnapshots == null)
             {
                 writer.Write((byte)0);
                 return;

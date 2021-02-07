@@ -19,7 +19,7 @@ namespace Fenrir.Multiplayer.Sim
         /// <summary>
         /// Contains server simulation
         /// </summary>
-        protected Simulation Simulation { get; private set; }
+        public Simulation Simulation { get; private set; }
 
         /// <summary>
         /// Stopwatch used to measure simulation tickrate

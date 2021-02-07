@@ -270,7 +270,7 @@ namespace Fenrir.Multiplayer.Sim
 
             var simClockSyncRequest = new SimulationClockSyncRequest(DateTime.UtcNow);
 
-            _client.Peer.SendRequest<SimulationClockSyncRequest>(simClockSyncRequest, 0, MessageDeliveryMethod.Unreliable);
+            _client.Peer?.SendRequest<SimulationClockSyncRequest>(simClockSyncRequest, 0, MessageDeliveryMethod.Unreliable);
         }
         #endregion
 
