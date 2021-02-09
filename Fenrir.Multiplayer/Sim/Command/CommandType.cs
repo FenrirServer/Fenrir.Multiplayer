@@ -10,6 +10,6 @@
 
         RemoveComponent,
 
-        InvokeRpc,
+        ServerRpc,
     }
 }

@@ -3,13 +3,11 @@ using System;
 
 namespace Fenrir.Multiplayer.Sim
 {
-    public abstract class SimulationComponent
+    public abstract partial class SimulationComponent
     {
         public SimulationObject Object { get; private set; }
 
         public Simulation Simulation => Object?.Simulation;
-
-        public ulong TypeHash { get; private set; }
 
         public DateTime TimeInitialized { get; private set; }
 
@@ -17,11 +15,19 @@ namespace Fenrir.Multiplayer.Sim
 
         protected IFenrirLogger Logger => Object?.Logger;
 
+        internal ulong TypeHash { get; private set; }
+
+        internal ComponentTypeWrapper TypeWrapper { get; private set; }
+
+
         internal void Initialize(SimulationObject simulationObject)
         {
+            Type componentType = GetType();
+
             TimeInitialized = DateTime.UtcNow;
             Object = simulationObject;
-            TypeHash = Object.Simulation.GetComponentTypeHash(GetType());
+            TypeHash = Object.Simulation.GetComponentTypeHash(componentType);
+            TypeWrapper = Object.Simulation.GetComponentWrapper(componentType);
 
             // Invoke callback
             OnAdded();

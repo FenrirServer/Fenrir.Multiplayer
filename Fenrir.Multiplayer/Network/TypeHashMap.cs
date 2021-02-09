@@ -1,4 +1,5 @@
 ﻿using Fenrir.Multiplayer.Exceptions;
+using Fenrir.Multiplayer.Utility;
 using System;
 using System.Collections.Generic;
 
@@ -141,18 +142,7 @@ namespace Fenrir.Multiplayer.Network
         /// <returns>Deterministic type hash</returns>
         private ulong CalculateTypeHash(Type type)
         {
-            // Calculates fnv-1 64 bit hash of the type name
-
-            ulong hash = 14695981039346656037UL; // Offset
-            string typeName = type.FullName;
-
-            for (var i = 0; i < typeName.Length; i++)
-            {
-                hash = hash ^ typeName[i];
-                hash *= 1099511628211UL; // Prime
-            }
-
-            return hash;
+            return DeterministicHashUtility.CalculateHash(type.FullName);
         }
     }
 }

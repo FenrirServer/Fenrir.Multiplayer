@@ -113,7 +113,7 @@ namespace Fenrir.Multiplayer.Sim.Dto
                             }
                         }
                         break;
-                    case CommandType.InvokeRpc:
+                    case CommandType.ServerRpc:
                         // TODO
                         throw new NotImplementedException();
                 }
@@ -165,7 +165,7 @@ namespace Fenrir.Multiplayer.Sim.Dto
                     case CommandType.RemoveComponent:
                         WriteComponentCommandBlock(writer, ref commandIndex);
                         break;
-                    case CommandType.InvokeRpc:
+                    case CommandType.ServerRpc:
                         WriteRpcCommandBlock(writer, ref commandIndex);
                         break;
                 }

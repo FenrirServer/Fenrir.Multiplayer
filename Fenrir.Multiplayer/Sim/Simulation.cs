@@ -2,22 +2,17 @@
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Sim.Command;
 using Fenrir.Multiplayer.Sim.Dto;
-using Fenrir.Multiplayer.Sim.Events;
 using Fenrir.Multiplayer.Sim.Exceptions;
 using Fenrir.Multiplayer.Utility;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
-using WebSocketSharp;
 
 namespace Fenrir.Multiplayer.Sim
 {
-    public class Simulation
+    public partial class Simulation
     {
         /// <summary>
         /// Delegate that describes event when simulation creates an outgoing command
@@ -65,6 +60,12 @@ namespace Fenrir.Multiplayer.Sim
         /// Global component type hash
         /// </summary>
         private TypeHashMap _componentTypeHashMap = new TypeHashMap();
+
+        /// <summary>
+        /// Component helper map. 
+        /// Container component helpers used to cache component members, RPCS etc
+        /// </summary>
+        private Dictionary<Type, ComponentTypeWrapper> _componentTypeWrappers = new Dictionary<Type, ComponentTypeWrapper>();
 
         /// <summary>
         /// Registered component factory methods by component type
@@ -179,6 +180,10 @@ namespace Fenrir.Multiplayer.Sim
             // Register component type hash
             _componentTypeHashMap.AddType<TComponent>();
 
+            // Register component helper
+            var componentTypeHelper = new ComponentTypeWrapper(typeof(TComponent));
+            _componentTypeWrappers.Add(typeof(TComponent), componentTypeHelper);
+
             // Register component factory
             _componentFactories.Add(typeof(TComponent), factoryMethod);
         }
@@ -192,6 +197,11 @@ namespace Fenrir.Multiplayer.Sim
         public bool ComponentRegistered(Type componentType)
         {
             return _componentTypeHashMap.HasTypeHash(componentType);
+        }
+
+        internal ComponentTypeWrapper GetComponentWrapper(Type componentType)
+        {
+            return _componentTypeWrappers[componentType];
         }
         #endregion
 
@@ -422,6 +432,26 @@ namespace Fenrir.Multiplayer.Sim
             simObject.RemoveComponent(componentType);
         }
         #endregion
+
+        #region Rpc
+
+        internal void InvokeClientRpc(SimulationComponent component, ulong methodHash, params object[] parameters)
+        {
+            // Checks
+            CheckAuthority();
+            CheckInTick();
+
+            // Get component type hash
+            ulong componentTypeHash = GetComponentTypeHash(component.GetType());
+
+            // TODO: Use command object pool
+            var command = new ServerRpcSimulationCommand(component.Object.Id, componentTypeHash, methodHash);
+
+            // Replicate to other simulations
+            SendOutgoingCommand(command);
+        }
+        #endregion
+
 
         #region Tick
         public virtual void Tick()
@@ -703,7 +733,7 @@ namespace Fenrir.Multiplayer.Sim
                 case CommandType.RemoveComponent:
                     ExecuteRemoveComponentCommand((RemoveComponentSimulationCommand)command);
                     break;
-                case CommandType.InvokeRpc:
+                case CommandType.ServerRpc:
                     break; // TODO
             }
 

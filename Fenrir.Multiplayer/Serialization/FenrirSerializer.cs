@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 
@@ -44,6 +45,7 @@ namespace Fenrir.Multiplayer.Serialization
         {
         }
 
+        #region Serialize
         /// <inheritdoc/>
         public void Serialize(object data, IByteStreamWriter byteStreamWriter)
         {
@@ -68,10 +70,25 @@ namespace Fenrir.Multiplayer.Serialization
 
         private void SerializeInternal(object data, IByteStreamWriter byteStreamWriter)
         {
-            // Check if data is null, if so, write false boolean
+            // Check if data is a null object.
             if(data == null)
             {
-                byteStreamWriter.Write(false); // Null object ahead
+                byteStreamWriter.Write(false); // No data ahead
+                return;
+            }
+
+            // Get data type
+            Type dataType = data.GetType();
+
+            // If data is a reference type, write a flag indicating that we have an object ahead
+            if(!dataType.IsValueType)
+            {
+                byteStreamWriter.Write(true); // Has data ahead
+            }
+
+            // Try to serialize known type
+            if (TrySerializeKnownType(data, byteStreamWriter))
+            {
                 return;
             }
 
@@ -81,7 +98,6 @@ namespace Fenrir.Multiplayer.Serialization
             {
                 try
                 {
-                    byteStreamWriter.Write(true); // Non-null object ahead
                     byteStreamSerializable.Serialize(byteStreamWriter);
                 }
                 catch (Exception e)
@@ -95,7 +111,6 @@ namespace Fenrir.Multiplayer.Serialization
             // Check this specific type is bound to a type serializer
             if (_typeSerializers.TryGetValue(data.GetType(), out Action<object, IByteStreamWriter> serializeHandler))
             {
-                byteStreamWriter.Write(true); // Non-null object ahead
                 serializeHandler.Invoke(data, byteStreamWriter); // Callback handles the exception
                 return;
             }
@@ -105,7 +120,6 @@ namespace Fenrir.Multiplayer.Serialization
             {
                 try
                 {
-                    byteStreamWriter.Write(true); // Non-null object ahead
                     _typeSerializer.Serialize(data, byteStreamWriter);
                 }
                 catch (Exception e)
@@ -118,7 +132,9 @@ namespace Fenrir.Multiplayer.Serialization
             // No serializer was found for this type
             throw new SerializationException($"Failed to serialize {data.GetType().Name}: type does not implement {nameof(IByteStreamSerializable)} and no type serializer is found for the type");
         }
+        #endregion
 
+        #region Deserialize
         /// <inheritdoc/>
         public TData Deserialize<TData>(IByteStreamReader byteStreamReader)
             where TData : new()
@@ -148,24 +164,34 @@ namespace Fenrir.Multiplayer.Serialization
             }
         }
 
-        private object DeserializeInternal(Type type, IByteStreamReader byteStreamReader)
+        private object DeserializeInternal(Type dataType, IByteStreamReader byteStreamReader)
         {
-            // Check if there is an object ahead
-            if(byteStreamReader.EndOfData || !byteStreamReader.TryReadBool(out bool hasObject))
+            // Check end of stream
+            if (byteStreamReader.EndOfData)
             {
-                throw new SerializationException($"Failed to deserialize {type.Name}, unexpected end of the stream");
+                throw new SerializationException($"Failed to deserialize {dataType.Name}, unexpected end of the stream");
             }
 
-            // Check if there is an object ahead
-            if(!hasObject)
+            // If data is a reference type, check if object lies ahead. If not, return null.
+            if (!dataType.IsValueType)
             {
-                return null;
+                bool hasObject = byteStreamReader.ReadBool();
+                if (!hasObject)
+                {
+                    return null;
+                }
+            }
+
+            // Try to deserialize as a known type
+            if(TryDeserializeKnownType(dataType, byteStreamReader, out object data))
+            {
+                return data;
             }
 
             // Check if type is IByteStreamSerializable
-            if (typeof(IByteStreamSerializable).IsAssignableFrom(type))
+            if (typeof(IByteStreamSerializable).IsAssignableFrom(dataType))
             {
-                IByteStreamSerializable byteStreamSerializable = (IByteStreamSerializable)Activator.CreateInstance(type);
+                IByteStreamSerializable byteStreamSerializable = (IByteStreamSerializable)Activator.CreateInstance(dataType);
 
                 try
                 {
@@ -173,16 +199,16 @@ namespace Fenrir.Multiplayer.Serialization
                 }
                 catch (Exception e)
                 {
-                    throw new SerializationException($"Failed to deserialize {type.Name} using {nameof(IByteStreamSerializable)}.{nameof(IByteStreamSerializable.Deserialize)}: " + e.Message, e);
+                    throw new SerializationException($"Failed to deserialize {dataType.Name} using {nameof(IByteStreamSerializable)}.{nameof(IByteStreamSerializable.Deserialize)}: " + e.Message, e);
                 }
 
                 return byteStreamSerializable;
             }
 
             // Check this specific type is bound to a type serializer
-            if (_typeDeserializers.TryGetValue(type, out Func<Type, IByteStreamReader, object> deserializeHandler))
+            if (_typeDeserializers.TryGetValue(dataType, out Func<Type, IByteStreamReader, object> deserializeHandler))
             {
-                return deserializeHandler.Invoke(type, byteStreamReader); // Callback handles the exception
+                return deserializeHandler.Invoke(dataType, byteStreamReader); // Callback handles the exception
             }
 
             // Check if custom type serializer is set, fall back to it
@@ -190,18 +216,20 @@ namespace Fenrir.Multiplayer.Serialization
             {
                 try
                 {
-                    return _typeSerializer.Deserialize(type, byteStreamReader);
+                    return _typeSerializer.Deserialize(dataType, byteStreamReader);
                 }
                 catch (Exception e)
                 {
-                    throw new SerializationException($"Failed to deserialize {type.Name} using {_typeSerializer.GetType().Name}: " + e.Message, e);
+                    throw new SerializationException($"Failed to deserialize {dataType.Name} using {_typeSerializer.GetType().Name}: " + e.Message, e);
                 }
             }
 
             // Nothing found
-            throw new SerializationException($"Failed to deserialize {type.Name}: type does not implement {nameof(IByteStreamSerializable)} and no type serializer is found for the type");
+            throw new SerializationException($"Failed to deserialize {dataType.Name}: type does not implement {nameof(IByteStreamSerializable)} and no type serializer is found for the type");
         }
+        #endregion
 
+        #region Type Serializer
         /// <summary>
         /// Assigns type serializer for all unknown types
         /// </summary>
@@ -273,5 +301,264 @@ namespace Fenrir.Multiplayer.Serialization
                 _typeDeserializers.Remove(typeof(T));
             }
         }
+        #endregion
+
+        #region Primitive / Known Type Serialization
+        private bool TrySerializeKnownType(object data, IByteStreamWriter byteStreamWriter)
+        {
+            Type dataType = data.GetType();
+
+            // Check primitive type
+            if (dataType.IsPrimitive)
+            {
+                if (typeof(byte) == dataType)
+                {
+                    byteStreamWriter.Write((byte)data);
+                }
+                else if (typeof(sbyte) == dataType)
+                {
+                    byteStreamWriter.Write((sbyte)data);
+                }
+                else if (typeof(char) == dataType)
+                {
+                    byteStreamWriter.Write((char)data);
+                }
+                else if (typeof(short) == dataType)
+                {
+                    byteStreamWriter.Write((short)data);
+                }
+                else if (typeof(ushort) == dataType)
+                {
+                    byteStreamWriter.Write((ushort)data);
+                }
+                else if (typeof(int) == dataType)
+                {
+                    byteStreamWriter.Write((int)data);
+                }
+                else if (typeof(uint) == dataType)
+                {
+                    byteStreamWriter.Write((uint)data);
+                }
+                else if (typeof(long) == dataType)
+                {
+                    byteStreamWriter.Write((long)data);
+                }
+                else if (typeof(ulong) == dataType)
+                {
+                    byteStreamWriter.Write((ulong)data);
+                }
+                else if (typeof(bool) == dataType)
+                {
+                    byteStreamWriter.Write((bool)data);
+                }
+                else if (typeof(float) == dataType)
+                {
+                    byteStreamWriter.Write((float)data);
+                }
+                else if (typeof(double) == dataType)
+                {
+                    byteStreamWriter.Write((double)data);
+                }
+                else
+                {
+                    throw new SerializationException("Unknown primitive type: " + dataType.FullName);
+                }
+
+                return true;
+            }
+            else if (typeof(string) == dataType)
+            {
+                byteStreamWriter.Write((string)data);
+                return true;
+            }
+            else if (typeof(DateTime) == dataType)
+            {
+                DateTime dateTime = (DateTime)data;
+                byteStreamWriter.Write(dateTime.Ticks);
+                return true;
+            }
+            else if (typeof(TimeSpan) == dataType)
+            {
+                TimeSpan dateTime = (TimeSpan)data;
+                byteStreamWriter.Write(dateTime.Ticks);
+                return true;
+            }
+            else if (typeof(Array).IsAssignableFrom(dataType))
+            {
+                Array array = data as Array;
+
+                byteStreamWriter.Write(array.Length);
+
+                foreach (object element in array)
+                {
+                    Serialize(element, byteStreamWriter);
+                }
+
+                return true;
+            }
+            else if (typeof(IList).IsAssignableFrom(dataType))
+            {
+                IList list = data as IList;
+
+                byteStreamWriter.Write(list.Count);
+
+                foreach (object element in list)
+                {
+                    Serialize(element, byteStreamWriter);
+                }
+
+                return true;
+            }
+            else if (typeof(IDictionary).IsAssignableFrom(dataType))
+            {
+                IDictionary dictionary = data as IDictionary;
+
+                byteStreamWriter.Write(dictionary.Count);
+
+                foreach (object key in dictionary.Keys)
+                {
+                    object value = dictionary[key];
+
+                    Serialize(key, byteStreamWriter);
+                    Serialize(value, byteStreamWriter);
+                }
+
+                return true;
+            }
+
+            // Unknown type
+            return false;
+        }
+
+        private bool TryDeserializeKnownType(Type dataType, IByteStreamReader byteStreamReader, out object data)
+        {
+            data = null;
+
+            if (dataType.IsPrimitive)
+            {
+                if (typeof(byte) == dataType)
+                {
+                    data = byteStreamReader.ReadByte();
+                }
+                else if (typeof(sbyte) == dataType)
+                {
+                    data = byteStreamReader.ReadSByte();
+                }
+                else if (typeof(char) == dataType)
+                {
+                    data = byteStreamReader.ReadChar();
+                }
+                else if (typeof(short) == dataType)
+                {
+                    data = byteStreamReader.ReadShort();
+                }
+                else if (typeof(ushort) == dataType)
+                {
+                    data = byteStreamReader.ReadUShort();
+                }
+                else if (typeof(int) == dataType)
+                {
+                    data = byteStreamReader.ReadInt();
+                }
+                else if (typeof(uint) == dataType)
+                {
+                    data = byteStreamReader.ReadUInt();
+                }
+                else if (typeof(long) == dataType)
+                {
+                    data = byteStreamReader.ReadLong();
+                }
+                else if (typeof(ulong) == dataType)
+                {
+                    data = byteStreamReader.ReadULong();
+                }
+                else if (typeof(bool) == dataType)
+                {
+                    data = byteStreamReader.ReadBool();
+                }
+                else if (typeof(float) == dataType)
+                {
+                    data = byteStreamReader.ReadFloat();
+                }
+                else if (typeof(double) == dataType)
+                {
+                    data = byteStreamReader.ReadDouble();
+                }
+                else
+                {
+                    throw new SerializationException("Unknown primitive type: " + dataType.FullName);
+                }
+
+                return true;
+            }
+            else if (typeof(string) == dataType)
+            {
+                data = byteStreamReader.ReadString();
+                return true;
+            }
+            else if (typeof(DateTime) == dataType)
+            {
+                long ticks = byteStreamReader.ReadLong();
+                data = new DateTime(ticks);
+                return true;
+            }
+            else if (typeof(TimeSpan) == dataType)
+            {
+                long ticks = byteStreamReader.ReadLong();
+                data = new TimeSpan(ticks);
+                return true;
+            }
+            else if (typeof(Array).IsAssignableFrom(dataType))
+            {
+                int size = byteStreamReader.ReadInt();
+                Type elementType = dataType.GetElementType();
+
+                Array array = Array.CreateInstance(elementType, size) as Array;
+
+                for (int i = 0; i < size; i++)
+                {
+                    array.SetValue(Deserialize(elementType, byteStreamReader), i);
+                }
+
+                data = array;
+                return true;
+            }
+            else if (typeof(IList).IsAssignableFrom(dataType))
+            {
+                int size = byteStreamReader.ReadInt();
+
+                IList list = Activator.CreateInstance(dataType) as IList;
+
+                for (int i = 0; i < size; i++)
+                {
+                    list.Add(Deserialize(dataType.GenericTypeArguments[0], byteStreamReader));
+                }
+
+                data = list;
+                return true;
+            }
+            else if (typeof(IDictionary).IsAssignableFrom(dataType))
+            {
+                int size = byteStreamReader.ReadInt();
+
+                IDictionary dictionary = Activator.CreateInstance(dataType) as IDictionary;
+
+                for (int i = 0; i < size; i++)
+                {
+                    object key = Deserialize(dataType.GenericTypeArguments[0], byteStreamReader);
+                    object value = Deserialize(dataType.GenericTypeArguments[1], byteStreamReader);
+
+                    dictionary.Add(key, value);
+                }
+
+                data = dictionary;
+                return true;
+            }
+
+            // Unknown type
+            return false;
+        }
+
+        #endregion
     }
 }

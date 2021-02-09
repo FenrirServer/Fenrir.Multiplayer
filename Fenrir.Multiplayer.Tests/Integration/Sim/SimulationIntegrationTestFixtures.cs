@@ -35,4 +35,16 @@ namespace Fenrir.Multiplayer.Tests.Integration.Sim
     class TestComponent : SimulationComponent
     {
     }
+
+    class TestClientRpcComponent : SimulationComponent
+    {
+        public bool Invoked;
+
+
+        [ClientRpc]
+        public void DoSomething()
+        {
+            Invoked = true;
+        }
+    }
 }

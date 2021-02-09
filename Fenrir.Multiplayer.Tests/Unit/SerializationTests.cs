@@ -51,6 +51,71 @@ namespace Fenrir.Multiplayer.Tests.Unit
         }
 
         [TestMethod]
+        public void Serializer_SerializesKnownType()
+        {
+            DateTime now = DateTime.UtcNow;
+
+            var serializer = new FenrirSerializer();
+
+            // Deserialize
+            var byteStreamWriter = new ByteStreamWriter(serializer);
+
+            serializer.Serialize((byte)100, byteStreamWriter);
+            serializer.Serialize((sbyte)-100, byteStreamWriter);
+            serializer.Serialize((char)'c', byteStreamWriter);
+            serializer.Serialize((short)-1000, byteStreamWriter);
+            serializer.Serialize((ushort)1000, byteStreamWriter);
+            serializer.Serialize((int)-1000, byteStreamWriter);
+            serializer.Serialize((uint)1000, byteStreamWriter);
+            serializer.Serialize((long)-1000, byteStreamWriter);
+            serializer.Serialize((ulong)1000, byteStreamWriter);
+            serializer.Serialize((bool)true, byteStreamWriter);
+            serializer.Serialize((float)123.456, byteStreamWriter);
+            serializer.Serialize((double)123.456, byteStreamWriter);
+
+            serializer.Serialize((object)null, byteStreamWriter);
+            serializer.Serialize((string)"test", byteStreamWriter);
+            serializer.Serialize((DateTime)now, byteStreamWriter);
+            serializer.Serialize((TimeSpan)TimeSpan.FromSeconds(12), byteStreamWriter);
+
+            serializer.Serialize(new int[] { 1,2,3 }, byteStreamWriter);
+            serializer.Serialize(new string[] { "aaa", "bbb", "ccc" }, byteStreamWriter);
+            serializer.Serialize(new List<int> { 1, 2, 3 }, byteStreamWriter);
+            serializer.Serialize(new List<string> { "aaa", "bbb", "ccc" }, byteStreamWriter);
+            serializer.Serialize(new Dictionary<int, string> { { 1, "aaa" }, { 2, "bbb" }, { 3, "ccc" } }, byteStreamWriter);
+            serializer.Serialize(new Dictionary<string, int> { { "aaa", 1 }, { "bbb", 2 }, { "ccc", 3 } }, byteStreamWriter);
+
+
+            // Deserialize
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter.Bytes, serializer);
+
+            Assert.AreEqual((byte)100, serializer.Deserialize(typeof(byte), byteStreamReader));
+            Assert.AreEqual((sbyte)-100, serializer.Deserialize(typeof(sbyte), byteStreamReader));
+            Assert.AreEqual((char)'c', serializer.Deserialize(typeof(char), byteStreamReader));
+            Assert.AreEqual((short)-1000, serializer.Deserialize(typeof(short), byteStreamReader));
+            Assert.AreEqual((ushort)1000, serializer.Deserialize(typeof(ushort), byteStreamReader));
+            Assert.AreEqual((int)-1000, serializer.Deserialize(typeof(int), byteStreamReader));
+            Assert.AreEqual((uint)1000, serializer.Deserialize(typeof(uint), byteStreamReader));
+            Assert.AreEqual((long)-1000, serializer.Deserialize(typeof(long), byteStreamReader));
+            Assert.AreEqual((ulong)1000, serializer.Deserialize(typeof(ulong), byteStreamReader));
+            Assert.AreEqual((bool)true, serializer.Deserialize(typeof(bool), byteStreamReader));
+            Assert.AreEqual((float)123.456, serializer.Deserialize(typeof(float), byteStreamReader));
+            Assert.AreEqual((double)123.456, serializer.Deserialize(typeof(double), byteStreamReader));
+
+            Assert.AreEqual(null, serializer.Deserialize(typeof(object), byteStreamReader));
+            Assert.AreEqual("test", serializer.Deserialize(typeof(string), byteStreamReader));
+            Assert.AreEqual(now, serializer.Deserialize(typeof(DateTime), byteStreamReader));
+            Assert.AreEqual(TimeSpan.FromSeconds(12), serializer.Deserialize(typeof(TimeSpan), byteStreamReader));
+
+            CollectionAssert.AreEqual(new int[] { 1, 2, 3 }, (int[])serializer.Deserialize(typeof(int[]), byteStreamReader));
+            CollectionAssert.AreEqual(new string[] { "aaa", "bbb", "ccc" }, (string[])serializer.Deserialize(typeof(string[]), byteStreamReader));
+            CollectionAssert.AreEqual(new List<int> { 1, 2, 3 }, (List<int>)serializer.Deserialize(typeof(List<int>), byteStreamReader));
+            CollectionAssert.AreEqual(new List<string> { "aaa", "bbb", "ccc" }, (List<string>)serializer.Deserialize(typeof(List<string>), byteStreamReader));
+            CollectionAssert.AreEqual(new Dictionary<int, string> { { 1, "aaa" }, { 2, "bbb" }, { 3, "ccc" } }, (Dictionary<int, string>)serializer.Deserialize(typeof(Dictionary<int, string>), byteStreamReader));
+            CollectionAssert.AreEqual(new Dictionary<string, int> { { "aaa", 1 }, { "bbb", 2 }, { "ccc", 3 } }, (Dictionary<string, int>)serializer.Deserialize(typeof(Dictionary<string, int>), byteStreamReader));
+        }
+
+        [TestMethod]
         public void Serializer_SerializesWithCustomTypeSerializer()
         {
             var test = new TestDataContract() { TestString = "test", TestInteger = 123 };
