@@ -1,6 +1,6 @@
 ﻿using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Sim.Command;
-using Fenrir.Multiplayer.Sim.Dto;
+using Fenrir.Multiplayer.Sim.Data;
 using Fenrir.Multiplayer.Sim.Events;
 using System;
 using System.Collections.Generic;

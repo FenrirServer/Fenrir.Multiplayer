@@ -1,6 +1,6 @@
 ﻿using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
-using Fenrir.Multiplayer.Sim.Dto;
+using Fenrir.Multiplayer.Sim.Data;
 
 namespace Fenrir.Multiplayer.Sim.Events
 {

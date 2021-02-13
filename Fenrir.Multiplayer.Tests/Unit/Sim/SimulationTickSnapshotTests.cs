@@ -1,6 +1,6 @@
 ﻿using Fenrir.Multiplayer.Serialization;
 using Fenrir.Multiplayer.Sim.Command;
-using Fenrir.Multiplayer.Sim.Dto;
+using Fenrir.Multiplayer.Sim.Data;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System;

@@ -1,6 +1,6 @@
 ﻿using Fenrir.Multiplayer.Sim;
 using Fenrir.Multiplayer.Sim.Command;
-using Fenrir.Multiplayer.Sim.Dto;
+using Fenrir.Multiplayer.Sim.Data;
 using Fenrir.Multiplayer.Sim.Exceptions;
 using Fenrir.Multiplayer.Tests.Fixtures;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

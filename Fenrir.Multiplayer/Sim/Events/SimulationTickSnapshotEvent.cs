@@ -1,12 +1,12 @@
 ﻿using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
-using Fenrir.Multiplayer.Sim.Dto;
+using Fenrir.Multiplayer.Sim.Data;
 using System;
 using System.Collections.Generic;
 
 namespace Fenrir.Multiplayer.Sim.Events
 {
-    public class SimulationTickSnapshotEvent : IEvent, IByteStreamSerializable
+    class SimulationTickSnapshotEvent : IEvent, IByteStreamSerializable
     {
         public LinkedList<SimulationTickSnapshot> TickSnapshots = new LinkedList<SimulationTickSnapshot>();
 
