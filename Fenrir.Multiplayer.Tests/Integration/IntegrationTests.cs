@@ -242,6 +242,44 @@ namespace Fenrir.Multiplayer.Tests
             Assert.AreEqual(request.Value, "test_value");
         }
 
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task FenrirClient_SendRequest_SendsRequest_WithRequestTypeFactory()
+        {
+            using var logger = new TestLogger();
+            using var fenrirServer = new FenrirServer(logger);
+            fenrirServer.AddLiteNetProtocol();
+            fenrirServer.AddInfoService();
+
+            TaskCompletionSource<TestRequest> requestTcs = new TaskCompletionSource<TestRequest>();
+            fenrirServer.AddRequestHandler(new TcsRequestHandler<TestRequest>(requestTcs));
+
+            bool didInvokeFactory = false;
+            fenrirServer.AddSerializableTypeFactory<TestRequest>(() =>
+            {
+                didInvokeFactory = true;
+                return new TestRequest();
+            });
+
+            await fenrirServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
+
+            using var fenrirClient = new FenrirClient(logger);
+            fenrirClient.AddLiteNetProtocol();
+            var connectionResponse = await fenrirClient.Connect("http://127.0.0.1:8080");
+
+            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is connected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            fenrirClient.Peer.SendRequest(new TestRequest() { Value = "test_value" });
+
+            TestRequest request = await requestTcs.Task;
+
+            Assert.AreEqual(request.Value, "test_value");
+
+            Assert.IsTrue(didInvokeFactory);
+        }
+
 
         [TestMethod, Timeout(TestTimeout)]
         public async Task FenrirClient_SendRequestResponse_SendsRequestWithResponse()

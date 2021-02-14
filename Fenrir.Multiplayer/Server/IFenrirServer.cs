@@ -72,7 +72,6 @@ namespace Fenrir.Multiplayer.Server
             where TRequest : IRequest<TResponse>
             where TResponse : IResponse;
 
-
         /// <summary>
         /// Adds asynchronous request handler for a given request and response type, to all installed protocols
         /// </summary>
@@ -82,5 +81,12 @@ namespace Fenrir.Multiplayer.Server
         void AddRequestHandlerAsync<TRequest, TResponse>(IRequestHandlerAsync<TRequest, TResponse> requestHandler)
             where TRequest : IRequest<TResponse>
             where TResponse : IResponse;
+
+        /// <summary>
+        /// Adds a factory method for a serializable type. If factory is not set, new instances are created using <seealso cref="Activator.CreateInstance(Type)"/>
+        /// </summary>
+        /// <typeparam name="T">Type</typeparam>
+        /// <param name="factoryMethod">Factory method</param>
+        void AddSerializableTypeFactory<T>(Func<T> factoryMethod) where T : IByteStreamSerializable;
     }
 }

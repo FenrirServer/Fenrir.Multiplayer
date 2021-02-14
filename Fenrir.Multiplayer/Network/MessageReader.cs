@@ -12,9 +12,9 @@ namespace Fenrir.Multiplayer.Network
     class MessageReader
     {
         /// <summary>
-        /// Serialization provider - used for serializing and deserializing messages
+        /// Serializer for serializing and deserializing messages
         /// </summary>
-        private readonly IFenrirSerializer _serializationProvider;
+        private readonly IFenrirSerializer _serializer;
         
         /// <summary>
         /// Type map - contians list of types and hashes
@@ -34,13 +34,13 @@ namespace Fenrir.Multiplayer.Network
         /// <summary>
         /// Default constructor
         /// </summary>
-        /// <param name="serializationProvider">Serialization Provider</param>
+        /// <param name="serializer">Serializer</param>
         /// <param name="typeHashMap">Type Hash Map</param>
         /// <param name="logger">Logger</param>
         /// <param name="byteStreamReaderPool">Object pool of Byte Stream Readers</param>
-        public MessageReader(IFenrirSerializer serializationProvider, ITypeHashMap typeHashMap, IFenrirLogger logger, RecyclableObjectPool<ByteStreamReader> byteStreamReaderPool)
+        public MessageReader(IFenrirSerializer serializer, ITypeHashMap typeHashMap, IFenrirLogger logger, RecyclableObjectPool<ByteStreamReader> byteStreamReaderPool)
         {
-            _serializationProvider = serializationProvider;
+            _serializer = serializer;
             _typeHashMap = typeHashMap;
             _logger = logger;
             _byteStreamReaderPool = byteStreamReaderPool;
@@ -110,7 +110,7 @@ namespace Fenrir.Multiplayer.Network
             object messageData;
             try
             {
-                messageData = _serializationProvider.Deserialize(dataType, byteStreamReader); 
+                messageData = _serializer.Deserialize(dataType, byteStreamReader); 
             }
             catch(SerializationException e)
             {

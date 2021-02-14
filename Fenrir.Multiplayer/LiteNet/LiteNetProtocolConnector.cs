@@ -339,6 +339,19 @@ namespace Fenrir.Multiplayer.LiteNet
             _typeHashMap.RemoveType<TEvent>();
         }
 
+        /// <inheritdoc/>
+        public void AddSerializableTypeFactory<T>(Func<T> factoryMethod) where T : IByteStreamSerializable
+        {
+            Serializer.AddTypeFactory<T>(factoryMethod);
+        }
+
+        /// <inheritdoc/>
+        public void RemoveSerializableTypeFactory<T>() where T : IByteStreamSerializable
+        {
+            Serializer.RemoveTypeFactory<T>();
+        }
+
+
         #region INetEventListener Implementation
         void INetEventListener.OnPeerConnected(NetPeer peer)
         {

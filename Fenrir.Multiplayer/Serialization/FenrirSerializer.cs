@@ -27,6 +27,11 @@ namespace Fenrir.Multiplayer.Serialization
         private Dictionary<Type, Action<object, IByteStreamWriter>> _typeSerializers = new Dictionary<Type, Action<object, IByteStreamWriter>>();
 
         /// <summary>
+        /// Factories for given types
+        /// </summary>
+        private Dictionary<Type, Func<IByteStreamSerializable>> _byteStreamSerializableTypeFactories = new Dictionary<Type, Func<IByteStreamSerializable>>();
+
+        /// <summary>
         /// Thread-static variable to detect infinite recursion in serialization.
         /// </summary>
         [ThreadStatic]
@@ -191,7 +196,18 @@ namespace Fenrir.Multiplayer.Serialization
             // Check if type is IByteStreamSerializable
             if (typeof(IByteStreamSerializable).IsAssignableFrom(dataType))
             {
-                IByteStreamSerializable byteStreamSerializable = (IByteStreamSerializable)Activator.CreateInstance(dataType);
+                IByteStreamSerializable byteStreamSerializable;
+
+                if (_byteStreamSerializableTypeFactories.TryGetValue(dataType, out Func<IByteStreamSerializable> factoryMethod))
+                {
+                    // Create new instance using factory method
+                    byteStreamSerializable = factoryMethod();
+                }
+                else
+                {
+                    // Create new instance using activator
+                    byteStreamSerializable = (IByteStreamSerializable)Activator.CreateInstance(dataType);
+                }
 
                 try
                 {
@@ -559,6 +575,18 @@ namespace Fenrir.Multiplayer.Serialization
             return false;
         }
 
+        #endregion
+
+        #region Type Factories
+        public void AddTypeFactory<T>(Func<T> factoryMethod) where T : IByteStreamSerializable
+        {
+            _byteStreamSerializableTypeFactories.Add(typeof(T), () => factoryMethod());
+        }
+
+        public void RemoveTypeFactory<T>() where T : IByteStreamSerializable
+        {
+            _byteStreamSerializableTypeFactories.Remove(typeof(T));
+        }
         #endregion
     }
 }

@@ -447,6 +447,19 @@ namespace Fenrir.Multiplayer.LiteNet
             _requestHandlerMap.RemoveRequestHandlerAsync<TRequest, TResponse>(requestHandler);
         }
 
+        /// <inheritdoc/>
+        public void AddSerializableTypeFactory<T>(Func<T> factoryMethod) where T : IByteStreamSerializable
+        {
+            Serializer.AddTypeFactory<T>(factoryMethod);
+        }
+
+        /// <inheritdoc/>
+        public void RemoveSerializableTypeFactory<T>() where T : IByteStreamSerializable
+        {
+            Serializer.RemoveTypeFactory<T>();
+        }
+
+
         #region INetEventListener Implementation
         void INetEventListener.OnConnectionRequest(ConnectionRequest connectionRequest)
         {
@@ -583,6 +596,7 @@ namespace Fenrir.Multiplayer.LiteNet
             }
         }
         #endregion
+
 
         #region IDisposable Implementation
         public void Dispose()

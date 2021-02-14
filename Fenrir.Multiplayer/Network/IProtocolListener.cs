@@ -129,5 +129,18 @@ namespace Fenrir.Multiplayer.Network
         /// Returns protocol connection data, required to pass by the client when connecting using this protocol
         /// </summary>
         IProtocolConnectionData GetConnectionData();
+
+        /// <summary>
+        /// Adds a factory method for a serializable type. If factory is not set, new instances are created using <seealso cref="Activator.CreateInstance(Type)"/>
+        /// </summary>
+        /// <typeparam name="T">Type</typeparam>
+        /// <param name="factoryMethod">Factory method</param>
+        void AddSerializableTypeFactory<T>(Func<T> factoryMethod) where T : IByteStreamSerializable;
+
+        /// <summary>
+        /// Removes factory method for a serializable type.
+        /// </summary>
+        /// <typeparam name="T">Type</typeparam>
+        void RemoveSerializableTypeFactory<T>() where T : IByteStreamSerializable;
     }
 }

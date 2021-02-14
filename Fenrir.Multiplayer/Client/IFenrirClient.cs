@@ -1,5 +1,6 @@
 ﻿using Fenrir.Multiplayer.Events;
 using Fenrir.Multiplayer.Network;
+using Fenrir.Multiplayer.Serialization;
 using System;
 using System.Threading.Tasks;
 
@@ -90,5 +91,12 @@ namespace Fenrir.Multiplayer.Client
         /// </summary>
         /// <param name="protocolConnector">Protocol connector to add</param>
         void AddProtocol(IProtocolConnector protocolConnector);
+
+        /// <summary>
+        /// Adds a factory method for a serializable type. If factory is not set, new instances are created using <seealso cref="Activator.CreateInstance(Type)"/>
+        /// </summary>
+        /// <typeparam name="T">Type</typeparam>
+        /// <param name="factoryMethod">Factory method</param>
+        void AddSerializableTypeFactory<T>(Func<T> factoryMethod) where T : IByteStreamSerializable;
     }
 }

@@ -134,5 +134,18 @@ namespace Fenrir.Multiplayer.Network
         /// <param name="eventHandler">Event handler</param>
         void RemoveEventHandler<TEvent>(IEventHandler<TEvent> eventHandler)
             where TEvent : IEvent;
+
+        /// <summary>
+        /// Adds a factory method for a serializable type. If factory is not set, new instances are created using <seealso cref="Activator.CreateInstance(Type)"/>
+        /// </summary>
+        /// <typeparam name="T">Type</typeparam>
+        /// <param name="factoryMethod">Factory method</param>
+        void AddSerializableTypeFactory<T>(Func<T> factoryMethod) where T : IByteStreamSerializable;
+
+        /// <summary>
+        /// Removes factory method for a serializable type.
+        /// </summary>
+        /// <typeparam name="T">Type</typeparam>
+        void RemoveSerializableTypeFactory<T>() where T : IByteStreamSerializable;
     }
 }

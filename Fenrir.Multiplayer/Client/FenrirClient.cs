@@ -2,6 +2,7 @@
 using Fenrir.Multiplayer.Exceptions;
 using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
+using Fenrir.Multiplayer.Serialization;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -54,6 +55,11 @@ namespace Fenrir.Multiplayer.Client
         /// Used to install event handlers when new protocol is added
         /// </summary>
         private Dictionary<Type, Action<IProtocolConnector>> _eventHandlerInstallers = new Dictionary<Type, Action<IProtocolConnector>>();
+
+        /// <summary>
+        /// Used to install type factories when new protocol is added
+        /// </summary>
+        private Dictionary<Type, Action<IProtocolConnector>> _typeFactoryIntallers = new Dictionary<Type, Action<IProtocolConnector>>();
 
         /// <summary>
         /// Creates new Fenrir Client
@@ -218,6 +224,11 @@ namespace Fenrir.Multiplayer.Client
             {
                 eventHandlerInstaller.Invoke(protocolConnector);
             }
+
+            foreach(var factoryInstaller in _typeFactoryIntallers.Values)
+            {
+                factoryInstaller.Invoke(protocolConnector);
+            }
         }
 
         private void OnProtocolConnectorDisconnected(object sender, DisconnectedEventArgs e)
@@ -228,6 +239,17 @@ namespace Fenrir.Multiplayer.Client
         private void OnProtocolConnectorNetworkError(object sender, NetworkErrorEventArgs e)
         {
             NetworkError?.Invoke(sender, e);
+        }
+        
+        /// <inheritdoc/>
+        public void AddSerializableTypeFactory<T>(Func<T> factoryMethod) where T : IByteStreamSerializable
+        {
+            foreach (var protocolConnector in _supportedProtocolConnectors)
+            {
+                protocolConnector.AddSerializableTypeFactory<T>(factoryMethod);
+            }
+
+            _typeFactoryIntallers.Add(typeof(T), (protocolConnector) => protocolConnector.AddSerializableTypeFactory<T>(factoryMethod));
         }
 
         public void Dispose()

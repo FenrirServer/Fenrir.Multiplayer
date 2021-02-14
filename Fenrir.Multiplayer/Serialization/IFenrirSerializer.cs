@@ -30,5 +30,19 @@ namespace Fenrir.Multiplayer.Serialization
         /// <param name="byteStreamReader">Byte stream reader to read values from</param>
         /// <returns>New instance of a given type</returns>
         object Deserialize(Type type, IByteStreamReader byteStreamReader);
+
+        /// <summary>
+        /// Adds type factory for a given byte stream serializable type.
+        /// If type factory is not set, <seealso cref="Activator.CreateInstance(Type)"/> is used to create a new instance.
+        /// </summary>
+        /// <typeparam name="T">Type</typeparam>
+        /// <param name="factoryMethod">Factory method</param>
+        void AddTypeFactory<T>(Func<T> factoryMethod) where T : IByteStreamSerializable;
+
+        /// <summary>
+        /// Removes type factory for a given type
+        /// </summary>
+        /// <typeparam name="T">Type</typeparam>
+        void RemoveTypeFactory<T>() where T : IByteStreamSerializable;
     }
 }

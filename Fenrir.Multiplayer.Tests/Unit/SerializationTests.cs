@@ -245,6 +245,35 @@ namespace Fenrir.Multiplayer.Tests.Unit
             var e = Assert.ThrowsException<SerializationException>(() => serializer.Serialize(test1, byteStreamWriter));
         }
 
+
+        [TestMethod]
+        public void Serializer_SerializesWithByteStreamSerializable_UsingFactoryMethod()
+        {
+            var test = new TestSerializable() { TestString = "test", TestInteger = 123 };
+            var serializer = new FenrirSerializer();
+
+            var byteStreamWriter = new ByteStreamWriter(serializer);
+            serializer.Serialize(test, byteStreamWriter);
+
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter.Bytes, serializer);
+
+            bool didInvokeFactory = false;
+            Func<TestSerializable> factoryMethod = () =>
+            {
+                didInvokeFactory = true;
+                return new TestSerializable();
+            };
+
+            serializer.AddTypeFactory<TestSerializable>(factoryMethod);
+
+            TestSerializable test2 = serializer.Deserialize<TestSerializable>(byteStreamReader);
+
+            Assert.AreEqual(test.TestString, test2.TestString);
+            Assert.AreEqual(test.TestInteger, test2.TestInteger);
+            Assert.IsTrue(didInvokeFactory);
+        }
+
+
         #region Test Fixtures
         class TestSerializable : IByteStreamSerializable
         {

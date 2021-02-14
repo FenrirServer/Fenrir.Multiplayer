@@ -237,6 +237,18 @@ namespace Fenrir.Multiplayer.Server
             };
         }
 
+        /// <inheritdoc/>
+        public void AddSerializableTypeFactory<T>(Func<T> factoryMethod) where T : IByteStreamSerializable
+        {
+            foreach (var protocolListener in _protocolListeners)
+            {
+                protocolListener.AddSerializableTypeFactory<T>(factoryMethod);
+            }
+
+            ProtocolAdded += (sender, e) => {
+                e.ProtocolListener.AddSerializableTypeFactory<T>(factoryMethod);
+            };
+        }
 
         public void Dispose()
         {
