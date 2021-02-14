@@ -1,4 +1,5 @@
-﻿using Fenrir.Multiplayer.Utility;
+﻿using Fenrir.Multiplayer.Sim.Exceptions;
+using Fenrir.Multiplayer.Utility;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -93,7 +94,7 @@ namespace Fenrir.Multiplayer.Sim
                 }
 
                 // Get return type
-                Type returnType = methodInfo.ReturnType; // TODO: Validate return type is serializable
+                Type returnType = methodInfo.ReturnType; // TODO: Validate return type is serializable?
 
                 // Build rpc method info
                 ServerRpcMethodInfo rpcMethodInfo = new ServerRpcMethodInfo(methodInfo, rpcParameterInfo, methodHash, returnType);
@@ -112,9 +113,9 @@ namespace Fenrir.Multiplayer.Sim
 
             foreach (MethodInfo methodInfo in methods)
             {
-                ServerRpcAttribute serverRpcAttr = methodInfo.GetCustomAttribute<ServerRpcAttribute>();
+                ClientRpcAttribute clientRpcAttr = methodInfo.GetCustomAttribute<ClientRpcAttribute>();
 
-                if (serverRpcAttr == null)
+                if (clientRpcAttr == null)
                 {
                     return; // We don't need this method
                 }
@@ -156,7 +157,6 @@ namespace Fenrir.Multiplayer.Sim
                 // Add more sofisticated info such as reliable, unreliable etc
             }
         }
-
 
         private void HashStateFields(Type componentType)
         {
@@ -224,7 +224,7 @@ namespace Fenrir.Multiplayer.Sim
         }
 
 
-        private ulong CalculateMethodHash(MethodInfo methodInfo)
+        internal ulong CalculateMethodHash(MethodInfo methodInfo)
         {
             StringBuilder sb = new StringBuilder();
             sb.Append(methodInfo.Name);
@@ -283,9 +283,28 @@ namespace Fenrir.Multiplayer.Sim
             return true;
         }
 
+        internal ServerRpcMethodInfo GetServerRpcMethodInfo(ulong methodHash)
+        {
+            if(!_hashToServerRpcMethodInfoDictionary.TryGetValue(methodHash, out ServerRpcMethodInfo methodInfo))
+            {
+                throw new SimulationException("Unknown server rpc method hash: " + methodHash);
+            }
+
+            return methodInfo;
+        }
+
+        internal ClientRpcMethodInfo GetClientRpcMethodInfo(ulong methodHash)
+        {
+            if (!_hashToClientRpcMethodInfoDictionary.TryGetValue(methodHash, out ClientRpcMethodInfo methodInfo))
+            {
+                throw new SimulationException("Unknown client rpc method hash: " + methodHash);
+            }
+
+            return methodInfo;
+        }
         #endregion
 
-        struct RpcParameterInfo
+        internal struct RpcParameterInfo
         {
             public int Index;
 
@@ -298,7 +317,7 @@ namespace Fenrir.Multiplayer.Sim
             }
         }
 
-        struct ClientRpcMethodInfo
+        internal struct ClientRpcMethodInfo
         {
             public MethodInfo MethodInfo;
 
@@ -314,7 +333,7 @@ namespace Fenrir.Multiplayer.Sim
             }
         }
 
-        struct ServerRpcMethodInfo
+        internal struct ServerRpcMethodInfo
         {
             public MethodInfo MethodInfo;
 

@@ -15,9 +15,12 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
     public class SimulationTickSnapshotTests
     {
         [TestMethod]
-        public void SimulationTickSnapshot_Serialize_WritesCommands()
+        public void SimulationTickSnapshot_Serialize_WritesObjectComponentCommands()
         {
             var simulation = new Simulation(new TestLogger());
+            simulation.RegisterComponentType<TestClientRpcComponent>();
+            simulation.RegisterComponentType<TestServerRpcComponent>();
+
             var serializer = new FenrirSerializer();
             ByteStreamWriter writer = new ByteStreamWriter(serializer);
 
@@ -62,6 +65,72 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             Assert.IsTrue(tickSnapshot2.Commands[8].Type == CommandType.RemoveComponent && ((RemoveComponentSimulationCommand)tickSnapshot2.Commands[8]).ObjectId == 3 && ((RemoveComponentSimulationCommand)tickSnapshot2.Commands[8]).ComponentTypeHash == 100);
             Assert.IsTrue(tickSnapshot2.Commands[9].Type == CommandType.DestroyObject && ((DestroyObjectSimulationCommand)tickSnapshot2.Commands[9]).ObjectId == 4);
             Assert.IsTrue(tickSnapshot2.Commands[10].Type == CommandType.DestroyObject && ((DestroyObjectSimulationCommand)tickSnapshot2.Commands[10]).ObjectId == 3);
+        }
+
+
+        [TestMethod]
+        public void SimulationTickSnapshot_Serialize_WritesRpcCommands()
+        {
+            var simulation = new Simulation(new TestLogger());
+            simulation.RegisterComponentType<TestClientRpcComponent>();
+            simulation.RegisterComponentType<TestServerRpcComponent>();
+
+            var serializer = new FenrirSerializer();
+            ByteStreamWriter writer = new ByteStreamWriter(serializer);
+
+            DateTime now = DateTime.UtcNow;
+
+            // Get rpc method info
+            ulong clientRpcComponentTypeHash = simulation.GetComponentTypeHash<TestClientRpcComponent>();
+            ulong serverRpcComponentTypeHash = simulation.GetComponentTypeHash<TestServerRpcComponent>();
+
+            // Get rpc component wrappers
+            var clientRpcComponentWrapper = simulation.GetComponentWrapper(typeof(TestClientRpcComponent));
+            var serverRpcComponentWrapper = simulation.GetComponentWrapper(typeof(TestServerRpcComponent));
+
+            // Get method hashes
+            var clientRpcMethodHash = clientRpcComponentWrapper.CalculateMethodHash(typeof(TestClientRpcComponent).GetMethod("DoTest"));
+            var serverRpcMethodHash = serverRpcComponentWrapper.CalculateMethodHash(typeof(TestServerRpcComponent).GetMethod("DoTest"));
+
+            // Write
+            var tickSnapshot = new SimulationTickSnapshot(simulation)
+            {
+                TickTime = now,
+                Commands = new List<ISimulationCommand>()
+                {
+                    new ClientRpcSimulationCommand(1, clientRpcComponentTypeHash, clientRpcMethodHash, new object[]{ false, 5f, "6", 7 }),
+
+                    new ServerRpcSimulationCommand(1, serverRpcComponentTypeHash, serverRpcMethodHash, new object[]{ false, 5f, "6", 7 })
+                }
+            };
+            tickSnapshot.Serialize(writer);
+
+            // Read
+            ByteStreamReader reader = new ByteStreamReader(writer, serializer);
+            var tickSnapshot2 = new SimulationTickSnapshot(simulation);
+            tickSnapshot2.Deserialize(reader);
+
+            Assert.AreEqual(2, tickSnapshot2.Commands.Count);
+
+            Assert.IsTrue(tickSnapshot2.Commands[0].Type == CommandType.ClientRpc);
+            var clientRpcCmd = ((ClientRpcSimulationCommand)tickSnapshot2.Commands[0]);
+            Assert.AreEqual(1, clientRpcCmd.ObjectId);
+            Assert.AreEqual(clientRpcComponentTypeHash, clientRpcCmd.ComponentTypeHash);
+            Assert.AreEqual(clientRpcMethodHash, clientRpcCmd.MethodHash);
+            Assert.AreEqual(false, clientRpcCmd.Parameters[0]);
+            Assert.AreEqual(5f, clientRpcCmd.Parameters[1]);
+            Assert.AreEqual("6", clientRpcCmd.Parameters[2]);
+            Assert.AreEqual(7, clientRpcCmd.Parameters[3]);
+
+            Assert.IsTrue(tickSnapshot2.Commands[1].Type == CommandType.ServerRpc);
+            var serverRpcCmd = ((ServerRpcSimulationCommand)tickSnapshot2.Commands[1]);
+            Assert.AreEqual(1, serverRpcCmd.ObjectId);
+            Assert.AreEqual(serverRpcComponentTypeHash, serverRpcCmd.ComponentTypeHash);
+            Assert.AreEqual(serverRpcMethodHash, serverRpcCmd.MethodHash);
+            Assert.AreEqual(false, serverRpcCmd.Parameters[0]);
+            Assert.AreEqual(5f, serverRpcCmd.Parameters[1]);
+            Assert.AreEqual("6", serverRpcCmd.Parameters[2]);
+            Assert.AreEqual(7, serverRpcCmd.Parameters[3]);
         }
 
 

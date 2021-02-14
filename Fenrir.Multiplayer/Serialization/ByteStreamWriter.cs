@@ -75,6 +75,18 @@ namespace Fenrir.Multiplayer.Serialization
         }
 
         ///<inheritdoc/>
+        public void Write(object obj, Type dataType)
+        {
+            if (_serializer == null)
+            {
+                throw new NullReferenceException($"Failed to write {obj.GetType().Name}, {nameof(ByteStreamReader)}.{nameof(_serializer)} is not set");
+            }
+
+            _serializer.Serialize(obj, dataType, this);
+        }
+
+
+        ///<inheritdoc/>
         public void Write(byte[] data, int offset, int length) => NetDataWriter.Put(data, offset, length);
 
         ///<inheritdoc/>

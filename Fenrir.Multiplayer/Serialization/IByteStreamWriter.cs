@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 
 namespace Fenrir.Multiplayer.Serialization
 {
@@ -27,6 +28,15 @@ namespace Fenrir.Multiplayer.Serialization
         /// </summary>
         /// <param name="data">Serializable object</param>
         void Write(object data);
+
+        /// <summary>
+        /// Writes custom object of an unknown type, using <seealso cref="IFenrirSerializer"/>
+        /// Data type is provided explicitly.
+        /// Use this method if type can be nullable
+        /// </summary>
+        /// <param name="data">Serializable object</param>
+        /// <param name="dataType">Data type</param>
+        void Write(object data, Type dataType);
 
         /// <summary>
         /// Writes byte array

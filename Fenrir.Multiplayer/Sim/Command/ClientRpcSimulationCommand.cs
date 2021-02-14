@@ -2,9 +2,9 @@
 
 namespace Fenrir.Multiplayer.Sim.Command
 {
-    class ClientRpcSimulationCommand : IComponentSimulationCommand
+    class ClientRpcSimulationCommand : IRpcSimulationCommand
     {
-        public CommandType Type => CommandType.ServerRpc;
+        public CommandType Type => CommandType.ClientRpc;
 
         public ushort ObjectId { get; private set; }
 

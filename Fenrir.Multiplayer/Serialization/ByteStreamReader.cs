@@ -94,6 +94,18 @@ namespace Fenrir.Multiplayer.Serialization
         }
 
         /// <inheritdoc/>
+        public object Read(Type dataType)
+        {
+            if (_serializer == null)
+            {
+                throw new NullReferenceException($"Failed to read {dataType.Name}, {nameof(ByteStreamReader)}.{nameof(_serializer)} is not set");
+            }
+
+            return _serializer.Deserialize(dataType, this);
+        }
+
+
+        /// <inheritdoc/>
         void IRecyclable.Recycle() => NetDataReader?.Clear();
 
         /// <inheritdoc/>

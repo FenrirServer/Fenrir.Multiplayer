@@ -3,6 +3,7 @@ using Fenrir.Multiplayer.Serialization;
 using Fenrir.Multiplayer.Sim.Command;
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 
 namespace Fenrir.Multiplayer.Sim.Data
 {
@@ -57,6 +58,7 @@ namespace Fenrir.Multiplayer.Sim.Data
                             }
                         }
                         break;
+
                     case CommandType.DestroyObject: // [byte numObjectIds] [ushort objectId] [ushort objectId] [ushort objectId]...
                         {
                             // Read number of objects
@@ -72,6 +74,7 @@ namespace Fenrir.Multiplayer.Sim.Data
                             }
                         }
                         break;
+
                     case CommandType.AddComponent: // [byte numObjects] [objectId [componentTypeHash], [componentTypeHash], ...]  [objectId [componentTypeHash], [componentTypeHash], ...] 
                         {
                             // Read number of objects
@@ -96,6 +99,7 @@ namespace Fenrir.Multiplayer.Sim.Data
                             }
                         }
                         break;
+
                     case CommandType.RemoveComponent:
                         {
                             // Read number of objects
@@ -120,9 +124,85 @@ namespace Fenrir.Multiplayer.Sim.Data
                             }
                         }
                         break;
+
+                    case CommandType.ClientRpc:
                     case CommandType.ServerRpc:
-                        // TODO
-                        throw new NotImplementedException();
+                        {
+                            // Read number of component hashes
+                            byte numComponents = reader.ReadByte();
+
+                            // Read component hashes
+                            for (int numComponent = 0; numComponent < numComponents; numComponent++)
+                            {
+                                ulong componentTypeHash = reader.ReadULong();
+
+                                // Read number of method hashes of RPCs invoked for this component
+                                byte numMethods = reader.ReadByte();
+
+                                // Read method hashes
+                                for (int numMethod = 0; numMethod < numMethods; numMethod++)
+                                {
+                                    ulong methodHash = reader.ReadULong();
+
+                                    // Read number of objects this method was invoked on
+                                    byte numObjects = reader.ReadByte();
+
+                                    // Read objects and parameters
+                                    for(int numObject = 0; numObject < numObjects; numObject++)
+                                    {
+                                        // Read object id
+                                        ushort objectId = reader.ReadUShort();
+
+                                        // Read RPC parameter types
+                                        if (!_simulation.TryGetComponentTypeByHash(componentTypeHash, out Type componentType))
+                                        {
+                                            throw new SerializationException("Unknown component type hash, component not registered with Simulation: " + componentTypeHash);
+                                        }
+
+                                        var componentWrapper = _simulation.GetComponentWrapper(componentType);
+
+                                        ComponentTypeWrapper.RpcParameterInfo[] parameterInfos;
+
+                                        if (commandType == CommandType.ServerRpc)
+                                        {
+                                            // TODO: Here and below, change to TryGet... to normalize exception type
+                                            parameterInfos = componentWrapper.GetServerRpcMethodInfo(methodHash).Parameters;
+                                        }
+                                        else
+                                        {
+                                            parameterInfos = componentWrapper.GetClientRpcMethodInfo(methodHash).Parameters;
+                                        }
+
+                                        // TODO: Remove allocation? Use object pool?
+                                        object[] parameters = new object[parameterInfos.Length];
+
+                                        // Read RPC parameter values
+                                        for (int numParam = 0; numParam < parameterInfos.Length; numParam++)
+                                        {
+                                            Type parameterType = parameterInfos[numParam].ParameterType;
+
+                                            // Read parameter value
+                                            parameters[numParam] = reader.Read(parameterType);
+                                        }
+
+                                        IRpcSimulationCommand cmd;
+
+                                        if (commandType == CommandType.ServerRpc)
+                                        {
+                                            cmd = new ServerRpcSimulationCommand(objectId, componentTypeHash, methodHash, parameters);
+                                        }
+                                        else
+                                        {
+                                            cmd = new ClientRpcSimulationCommand(objectId, componentTypeHash, methodHash, parameters);
+                                        }
+
+                                        Commands.Add(cmd);
+                                        numCommand++;
+                                    }
+                                }
+                            }
+                        }
+                        break;
                 }
             }
         }
@@ -300,18 +380,18 @@ namespace Fenrir.Multiplayer.Sim.Data
             //      byte numSameComponentTypeHashCommands (sub-block size, or number method hashes in the sub-block)
             //          ulong methodHash
             //          byte numObjectIds (sub-sub-block size, or number of objectIds in the sub-block)
-            //              ushort objectId
-            //              ushort objectId
+            //              ushort objectId, (serialized values)
+            //              ushort objectId, (serialized values)
             //          ulong methodHash
             //          byte numObjectIds (sub-sub-block size, or number of objectIds in the sub-block)
-            //              ushort objectId
-            //              ushort objectId
+            //              ushort objectId, (serialized values)
+            //              ushort objectId, (serialized values)
             //      ulong componentTypeHash
             //      byte numSameComponentTypeHashCommands (sub-block size, or number method hashes in the sub-block)
             //          ulong methodHash
             //          byte numObjectIds (sub-sub-block size, or number of objectIds in the sub-block)
-            //              ushort objectId
-            //              ushort objectId
+            //              ushort objectId, (serialized values)
+            //              ushort objectId, (serialized values)
 
 
             // We prefer to write component hash -> method hashs -> list of objectIds, (instead of objectId -> components hashes -> method hashes)
@@ -379,12 +459,33 @@ namespace Fenrir.Multiplayer.Sim.Data
                     while(commandIndex < subSubBlockStartIndex + numSameComponentTypeHashMethodHashCommands)
                     {
                         IRpcSimulationCommand subSubBlockCommand = (IRpcSimulationCommand)Commands[commandIndex];
+                        
+                        // Write object id
                         writer.Write(subSubBlockCommand.ObjectId);
 
-                        // TODO: Serialize RPC method values here.
+                        // Write RPC parameters
+                        var componentType = _simulation.GetComponentTypeByHash(subSubBlockCommand.ComponentTypeHash);
+                        var componentWrapper = _simulation.GetComponentWrapper(componentType);
 
-                        // Get value types from the 
+                        ComponentTypeWrapper.RpcParameterInfo[] parameters;
+                        if (subSubBlockCommand.Type == CommandType.ServerRpc)
+                        {
+                            parameters = componentWrapper.GetServerRpcMethodInfo(subSubBlockCommand.MethodHash).Parameters;
+                        }
+                        else
+                        {
+                            parameters = componentWrapper.GetClientRpcMethodInfo(subSubBlockCommand.MethodHash).Parameters;
+                        }
 
+                        // Write parameters
+                        for (int numParam = 0; numParam < parameters.Length; numParam++)
+                        {
+                            object parameterValue = subSubBlockCommand.Parameters[numParam];
+                            Type parameterType = parameters[numParam].ParameterType;
+
+                            // Write
+                            writer.Write(parameterValue, parameterType);
+                        }
 
                         commandIndex++;
                     }

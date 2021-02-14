@@ -835,6 +835,11 @@ namespace Fenrir.Multiplayer.Sim
         {
             return _componentTypeHashMap.GetTypeByHash(hash);
         }
+
+        internal bool TryGetComponentTypeByHash(ulong hash, out Type type)
+        {
+            return _componentTypeHashMap.TryGetTypeByHash(hash, out type);
+        }
         #endregion
     }
 }

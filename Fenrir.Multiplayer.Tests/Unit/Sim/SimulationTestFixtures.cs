@@ -36,4 +36,46 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             TickHandler?.Invoke();
         }
     }
+
+    class TestClientRpcComponent : SimulationComponent
+    {
+        public bool BoolParam;
+        public float FloatParam;
+        public string StringParam;
+        public int IntParam;
+
+        public TestClientRpcComponent()
+        {
+        }
+
+        [ClientRpc]
+        public void DoTest(bool boolParam, float floatParam, string stringParam, int intParam)
+        {
+            BoolParam = boolParam;
+            FloatParam = floatParam;
+            StringParam = stringParam;
+            IntParam = intParam;
+        }
+    }
+
+    class TestServerRpcComponent : SimulationComponent
+    {
+        public bool BoolParam;
+        public float FloatParam;
+        public string StringParam;
+        public int IntParam;
+
+        public TestServerRpcComponent()
+        {
+        }
+
+        [ServerRpc]
+        public void DoTest(bool boolParam, float floatParam, string stringParam, int intParam)
+        {
+            BoolParam = boolParam;
+            FloatParam = floatParam;
+            StringParam = stringParam;
+            IntParam = intParam;
+        }
+    }
 }
