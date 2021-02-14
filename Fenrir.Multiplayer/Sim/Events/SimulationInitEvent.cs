@@ -6,11 +6,18 @@ namespace Fenrir.Multiplayer.Sim.Events
 {
     public class SimulationInitEvent : IEvent, IByteStreamSerializable
     {
+        private readonly Simulation _simulation;
+
         public SimulationTickSnapshot SimulationSnapshot;
+
+        public SimulationInitEvent(Simulation simulation)
+        {
+            _simulation = simulation;
+        }
 
         public void Deserialize(IByteStreamReader reader)
         {
-            SimulationSnapshot = new SimulationTickSnapshot();
+            SimulationSnapshot = new SimulationTickSnapshot(_simulation);
             SimulationSnapshot.Deserialize(reader);
         }
 

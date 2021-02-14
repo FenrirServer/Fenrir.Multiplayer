@@ -323,7 +323,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
 
             DateTime commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
             var spawnObjectCommand = new SpawnObjectSimulationCommand(123);
-            var tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            var tickSnapshot = new SimulationTickSnapshot(simulation) { TickTime = commandTime };
             tickSnapshot.Commands.Add(spawnObjectCommand);
 
             simulation.IngestTickSnapshot(tickSnapshot);
@@ -345,7 +345,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
 
             // Create object
             var spawnObjectCommand = new SpawnObjectSimulationCommand(123);
-            var tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            var tickSnapshot = new SimulationTickSnapshot(simulation) { TickTime = commandTime };
             tickSnapshot.Commands.Add(spawnObjectCommand);
 
             simulation.IngestTickSnapshot(tickSnapshot);
@@ -357,7 +357,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             // Destroy object
             commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
             var destroyObjectCommand = new DestroyObjectSimulationCommand(123);
-            tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            tickSnapshot = new SimulationTickSnapshot(simulation) { TickTime = commandTime };
             tickSnapshot.Commands.Add(destroyObjectCommand);
             simulation.IngestTickSnapshot(tickSnapshot);
             simulation.Tick();

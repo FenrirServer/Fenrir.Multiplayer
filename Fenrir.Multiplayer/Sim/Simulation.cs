@@ -481,7 +481,7 @@ namespace Fenrir.Multiplayer.Sim
             // Authority and using snapshot history, create new slice TODO use object pool
             if (IsAuthority)
             {
-                _currentTickSnapshot = new SimulationTickSnapshot() { TickTime = CurrentTickTime };
+                _currentTickSnapshot = new SimulationTickSnapshot(this) { TickTime = CurrentTickTime };
             }
             else // If not authority, dispatch incoming snapshots
             {

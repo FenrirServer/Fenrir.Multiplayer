@@ -94,6 +94,8 @@ namespace Fenrir.Multiplayer.Sim
             _client.AddEventHandler<SimulationInitEvent>(this);
             _client.AddEventHandler<SimulationTickSnapshotEvent>(this);
             _client.AddEventHandler<SimulationClockSyncAckEvent>(this);
+            _client.AddSerializableTypeFactory<SimulationInitEvent>(() => new SimulationInitEvent(Simulation));
+            _client.AddSerializableTypeFactory<SimulationTickSnapshotEvent>(() => new SimulationTickSnapshotEvent(Simulation));
 
             _client.Disconnected += OnDisconnected;
 

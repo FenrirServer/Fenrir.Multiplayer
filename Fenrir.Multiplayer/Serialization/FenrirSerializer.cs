@@ -54,6 +54,12 @@ namespace Fenrir.Multiplayer.Serialization
         /// <inheritdoc/>
         public void Serialize(object data, IByteStreamWriter byteStreamWriter)
         {
+            Serialize(data, data?.GetType(), byteStreamWriter);
+        }
+
+        /// <inheritdoc/>
+        public void Serialize(object data, Type dataType, IByteStreamWriter byteStreamWriter)
+        {
             // Increment current depth of serialization
             _currentDepth++;
             
@@ -64,7 +70,7 @@ namespace Fenrir.Multiplayer.Serialization
 
             try
             {
-                SerializeInternal(data, byteStreamWriter);
+                SerializeInternal(data, dataType, byteStreamWriter);
             }
             finally
             {
@@ -73,7 +79,7 @@ namespace Fenrir.Multiplayer.Serialization
             }
         }
 
-        private void SerializeInternal(object data, IByteStreamWriter byteStreamWriter)
+        private void SerializeInternal(object data, Type dataType, IByteStreamWriter byteStreamWriter)
         {
             // Check if data is a null object.
             if(data == null)
@@ -82,9 +88,6 @@ namespace Fenrir.Multiplayer.Serialization
                 return;
             }
 
-            // Get data type
-            Type dataType = data.GetType();
-
             // If data is a reference type, write a flag indicating that we have an object ahead
             if(!dataType.IsValueType)
             {
@@ -92,7 +95,7 @@ namespace Fenrir.Multiplayer.Serialization
             }
 
             // Try to serialize known type
-            if (TrySerializeKnownType(data, byteStreamWriter))
+            if (TrySerializeKnownType(data, dataType, byteStreamWriter))
             {
                 return;
             }
@@ -320,9 +323,14 @@ namespace Fenrir.Multiplayer.Serialization
         #endregion
 
         #region Primitive / Known Type Serialization
-        private bool TrySerializeKnownType(object data, IByteStreamWriter byteStreamWriter)
+        private bool TrySerializeKnownType(object data, Type dataType, IByteStreamWriter byteStreamWriter)
         {
-            Type dataType = data.GetType();
+            Type underlyingType = Nullable.GetUnderlyingType(dataType);
+            if(underlyingType != null)
+            {
+                byteStreamWriter.Write(true); // If we got there, data can't be null.
+                dataType = underlyingType;
+            }
 
             // Check primitive type
             if (dataType.IsPrimitive)
@@ -449,6 +457,19 @@ namespace Fenrir.Multiplayer.Serialization
         private bool TryDeserializeKnownType(Type dataType, IByteStreamReader byteStreamReader, out object data)
         {
             data = null;
+
+            // Check if data type is nullable
+            Type underlyingType = Nullable.GetUnderlyingType(dataType);
+            if(underlyingType != null)
+            {
+                bool hasValue = byteStreamReader.ReadBool();
+                if (!hasValue)
+                {
+                    return true; // Nullable with no data
+                }
+                
+                dataType = underlyingType;
+            }
 
             if (dataType.IsPrimitive)
             {

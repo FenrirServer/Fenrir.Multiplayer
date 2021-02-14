@@ -122,7 +122,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             // Spawn new object by ingesting spawn object command
             DateTime commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
             var spawnObjectCommand = new SpawnObjectSimulationCommand(123);
-            var tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            var tickSnapshot = new SimulationTickSnapshot(simulation) { TickTime = commandTime };
             tickSnapshot.Commands.Add(spawnObjectCommand);
             simulation.IngestTickSnapshot(tickSnapshot);
 
@@ -307,7 +307,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             // Create object
             DateTime commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
             var spawnObjectCommand = new SpawnObjectSimulationCommand(123);
-            var tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            var tickSnapshot = new SimulationTickSnapshot(simulation) { TickTime = commandTime };
             tickSnapshot.Commands.Add(spawnObjectCommand);
             simulation.IngestTickSnapshot(tickSnapshot);
             simulation.Tick();
@@ -317,7 +317,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             // Add component
             commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
             var addComponentCommand = new AddComponentSimulationCommand(123, simulation.GetComponentTypeHash<TestComponent>());
-            tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            tickSnapshot = new SimulationTickSnapshot(simulation) { TickTime = commandTime };
             tickSnapshot.Commands.Add(addComponentCommand);
             simulation.IngestTickSnapshot(tickSnapshot);
             simulation.Tick();
@@ -349,7 +349,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             // Create object
             DateTime commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
             var spawnObjectCommand = new SpawnObjectSimulationCommand( 123);
-            var tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            var tickSnapshot = new SimulationTickSnapshot(simulation) { TickTime = commandTime };
             tickSnapshot.Commands.Add(spawnObjectCommand);
             simulation.IngestTickSnapshot(tickSnapshot);
             simulation.Tick();
@@ -359,7 +359,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             // Add component
             commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
             var addComponentCommand = new AddComponentSimulationCommand(123, simulation.GetComponentTypeHash<TestComponent>());
-            tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            tickSnapshot = new SimulationTickSnapshot(simulation) { TickTime = commandTime };
             tickSnapshot.Commands.Add(addComponentCommand);
             simulation.IngestTickSnapshot(tickSnapshot);
             simulation.Tick();
@@ -379,7 +379,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Sim
             // Remove component
             commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
             var removeComponentCommand = new RemoveComponentSimulationCommand(123, simulation.GetComponentTypeHash<TestComponent>());
-            tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            tickSnapshot = new SimulationTickSnapshot(simulation) { TickTime = commandTime };
             tickSnapshot.Commands.Add(removeComponentCommand);
             simulation.IngestTickSnapshot(tickSnapshot);
             simulation.Tick();

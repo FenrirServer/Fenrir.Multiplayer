@@ -8,11 +8,21 @@ namespace Fenrir.Multiplayer.Serialization
     public interface IFenrirSerializer
     {
         /// <summary>
-        /// Serializes message into a given byte stream
+        /// Serializes data into a given byte stream
         /// </summary>
         /// <param name="data">Instance of a data type</param>
         /// <param name="byteStreamWriter">Byte stream writer to write values into</param>
         void Serialize(object data, IByteStreamWriter byteStreamWriter);
+
+        /// <summary>
+        /// Serializes data into a given byte stream with explicitly passed data type
+        /// Use this method if object can be nullable
+        /// </summary>
+        /// <param name="data">Instance of a data type</param>
+        /// <param name="dataType">Type of the data</param>
+        /// <param name="byteStreamWriter">Byte stream writer to write values into</param>
+        void Serialize(object data, Type dataType, IByteStreamWriter byteStreamWriter);
+
 
         /// <summary>
         /// Deserializes message from a given byte stream

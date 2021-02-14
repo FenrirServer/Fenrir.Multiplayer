@@ -78,6 +78,11 @@ namespace Fenrir.Multiplayer.Tests.Unit
             serializer.Serialize((DateTime)now, byteStreamWriter);
             serializer.Serialize((TimeSpan)TimeSpan.FromSeconds(12), byteStreamWriter);
 
+            serializer.Serialize((int?)-1000, typeof(int?), byteStreamWriter);
+            serializer.Serialize(new Nullable<int>(-1000), typeof(Nullable<int>), byteStreamWriter);
+            serializer.Serialize((float?)null, typeof(float?), byteStreamWriter);
+            serializer.Serialize(new Nullable<float>(), typeof(Nullable<float>), byteStreamWriter);
+
             serializer.Serialize(new int[] { 1,2,3 }, byteStreamWriter);
             serializer.Serialize(new string[] { "aaa", "bbb", "ccc" }, byteStreamWriter);
             serializer.Serialize(new List<int> { 1, 2, 3 }, byteStreamWriter);
@@ -106,6 +111,11 @@ namespace Fenrir.Multiplayer.Tests.Unit
             Assert.AreEqual("test", serializer.Deserialize(typeof(string), byteStreamReader));
             Assert.AreEqual(now, serializer.Deserialize(typeof(DateTime), byteStreamReader));
             Assert.AreEqual(TimeSpan.FromSeconds(12), serializer.Deserialize(typeof(TimeSpan), byteStreamReader));
+
+            Assert.AreEqual((int?)-1000, serializer.Deserialize(typeof(int?), byteStreamReader));
+            Assert.AreEqual((int?)-1000, serializer.Deserialize(typeof(Nullable<int>), byteStreamReader));
+            Assert.IsFalse(((float?)serializer.Deserialize(typeof(float?), byteStreamReader)).HasValue);
+            Assert.IsFalse(((float?)serializer.Deserialize(typeof(Nullable<float>), byteStreamReader)).HasValue);
 
             CollectionAssert.AreEqual(new int[] { 1, 2, 3 }, (int[])serializer.Deserialize(typeof(int[]), byteStreamReader));
             CollectionAssert.AreEqual(new string[] { "aaa", "bbb", "ccc" }, (string[])serializer.Deserialize(typeof(string[]), byteStreamReader));

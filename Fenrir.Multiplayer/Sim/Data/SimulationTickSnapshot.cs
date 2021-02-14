@@ -8,11 +8,18 @@ namespace Fenrir.Multiplayer.Sim.Data
 {
     public class SimulationTickSnapshot : IByteStreamSerializable
     {
+        private readonly Simulation _simulation;
+
         public DateTime TickTime;
 
         public List<ISimulationCommand> Commands = new List<ISimulationCommand>();
 
         // TODO List of component state changes
+
+        public SimulationTickSnapshot(Simulation simulation)
+        {
+            _simulation = simulation;
+        }
 
         public void Deserialize(IByteStreamReader reader)
         {
@@ -375,6 +382,9 @@ namespace Fenrir.Multiplayer.Sim.Data
                         writer.Write(subSubBlockCommand.ObjectId);
 
                         // TODO: Serialize RPC method values here.
+
+                        // Get value types from the 
+
 
                         commandIndex++;
                     }
