@@ -12,7 +12,7 @@ namespace Fenrir.Multiplayer.Network
         /// <summary>
         /// Serialization provider - used for serializing and deserializing messages
         /// </summary>
-        private readonly IFenrirSerializer _serializationProvider;
+        private readonly INetworkSerializer _serializationProvider;
 
         /// <summary>
         /// Type map - contians list of types and hashes
@@ -22,7 +22,7 @@ namespace Fenrir.Multiplayer.Network
         /// <summary>
         /// Logger
         /// </summary>
-        private readonly IFenrirLogger _logger;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// Default constructor
@@ -31,7 +31,7 @@ namespace Fenrir.Multiplayer.Network
         /// <param name="typeHashMap">Type Hash Map</param>
         /// <param name="logger">Logger</param>
         /// <param name="byteStreamWriterPool">Object pool of Byte Stream Writers</param>
-        public MessageWriter(IFenrirSerializer serializationProvider, ITypeHashMap typeHashMap, IFenrirLogger logger)
+        public MessageWriter(INetworkSerializer serializationProvider, ITypeHashMap typeHashMap, ILogger logger)
         {
             _serializationProvider = serializationProvider;
             _typeHashMap = typeHashMap;

@@ -8,7 +8,7 @@ namespace Fenrir.Multiplayer.Utility
     /// </summary>
     static class TaskExtensions
     {
-        public static void FireAndForget(this Task task, IFenrirLogger logger)
+        public static void FireAndForget(this Task task, ILogger logger)
         {
             task.ContinueWith(t =>
             {

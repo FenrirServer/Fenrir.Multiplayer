@@ -27,23 +27,23 @@ namespace Fenrir.Multiplayer.Serialization
         /// <summary>
         /// Instance of a serializer. Used to write unknown types
         /// </summary>
-        private IFenrirSerializer _serializer;
+        private INetworkSerializer _serializer;
 
         /// <summary>
         /// Creates Byte Stream Writer
         /// </summary>
-        /// <param name="serializer">Fenrir Serializer, used for serializing unknown types</param>
-        public ByteStreamWriter(IFenrirSerializer serializer)
+        /// <param name="serializer">Network Serializer, used for serializing unknown types</param>
+        public ByteStreamWriter(INetworkSerializer serializer)
             : this(new NetDataWriter(), serializer)
         {
         }
 
         /// <summary>
-        /// Creates new <see cref="ByteStreamWriter"/> with <seealso cref="IFenrirSerializer"/> and <seealso cref="NetDataWriter"/>
+        /// Creates new <see cref="ByteStreamWriter"/> with <seealso cref="INetworkSerializer"/> and <seealso cref="NetDataWriter"/>
         /// </summary>
         /// <param name="netDataWriter">Net Data Writer</param>
-        /// <param name="serializer">Fenrir Serializer, used for serializing unknown types</param>
-        public ByteStreamWriter(NetDataWriter netDataWriter, IFenrirSerializer serializer)
+        /// <param name="serializer">Network Serializer, used for serializing unknown types</param>
+        public ByteStreamWriter(NetDataWriter netDataWriter, INetworkSerializer serializer)
         {
             if (netDataWriter == null)
             {

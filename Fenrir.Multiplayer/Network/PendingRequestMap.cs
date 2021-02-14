@@ -24,13 +24,13 @@ namespace Fenrir.Multiplayer.Network
         /// <summary>
         /// Logger
         /// </summary>
-        private readonly IFenrirLogger _logger;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// Creates pending request map
         /// </summary>
         /// <param name="logger">Logger</param>
-        public PendingRequestMap(IFenrirLogger logger)
+        public PendingRequestMap(ILogger logger)
         {
             _logger = logger;
         }

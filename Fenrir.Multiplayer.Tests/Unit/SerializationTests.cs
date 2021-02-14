@@ -15,7 +15,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
         public void Serializer_SerializesWithByteStreamSerializable()
         {
             var test = new TestSerializable() { TestString = "test", TestInteger = 123 };
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
 
             var byteStreamWriter = new ByteStreamWriter(serializer);
             serializer.Serialize(test, byteStreamWriter);
@@ -36,7 +36,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
                 Test = new TestSerializable() { TestString = "test", TestInteger = 123 }
             };
 
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
 
             var byteStreamWriter = new ByteStreamWriter(serializer);
             serializer.Serialize(test, byteStreamWriter);
@@ -55,7 +55,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
         {
             DateTime now = DateTime.UtcNow;
 
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
 
             // Deserialize
             var byteStreamWriter = new ByteStreamWriter(serializer);
@@ -129,7 +129,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
         public void Serializer_SerializesWithCustomTypeSerializer()
         {
             var test = new TestDataContract() { TestString = "test", TestInteger = 123 };
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             serializer.SetTypeSerializer(new TestContractSerializer());
 
             var byteStreamWriter = new ByteStreamWriter(serializer);
@@ -146,7 +146,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
         public void Serializer_SerializesWithCustomTypeSerializer_ForGivenType()
         {
             var test = new TestDataContract() { TestString = "test", TestInteger = 123 };
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             serializer.AddTypeSerializer<TestDataContract>(new TestContractTypeSerializer());
 
             var byteStreamWriter = new ByteStreamWriter(serializer);
@@ -162,7 +162,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
         [TestMethod]
         public void Serializer_SerializesWithCustomTypeSerializer_ForGivenType_WithNested()
         {
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             serializer.AddTypeSerializer<LinkedListNode>(new LinkedListNodeSerializer());
 
             LinkedListNode node1 = new LinkedListNode() { Value = "node1" };
@@ -184,7 +184,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
         public void Serializer_Serialize_ThrowsSerializationException_WhenByteStreamSerializableThrows()
         {
             var test = new TestThrowingSerializable();
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
 
             var byteStreamWriter = new ByteStreamWriter(serializer);
             var e = Assert.ThrowsException<SerializationException>(() => serializer.Serialize(test, byteStreamWriter));
@@ -196,7 +196,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
         [TestMethod]
         public void Serializer_Deserialize_ThrowsSerializationException_WhenByteStreamSerializableThrows()
         {
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             var byteStreamWriter = new ByteStreamWriter(serializer);
             byteStreamWriter.Write(true); // To make sure there is some data
             var byteStreamReader = new ByteStreamReader(byteStreamWriter, serializer);
@@ -209,7 +209,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
         public void Serializer_Serialize_ThrowsSerializationException_WhenTypeSerializerThrows()
         {
             var test = new TestDataContract();
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             serializer.SetTypeSerializer(new ThrowingContractSerializer());
 
             var byteStreamWriter = new ByteStreamWriter(serializer);
@@ -221,7 +221,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
         [TestMethod]
         public void Serializer_Deserialize_ThrowsSerializationException_WhenTypeSerializerThrows()
         {
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             serializer.SetTypeSerializer(new ThrowingContractSerializer());
             var byteStreamWriter = new ByteStreamWriter(serializer);
             byteStreamWriter.Write(true); // To make sure there is some data
@@ -234,7 +234,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
         [TestMethod]
         public void Serializer_Deserialize_ThrowsSerializationException_WhenEndOfStreamReached()
         {
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             serializer.SetTypeSerializer(new ThrowingContractSerializer());
             var byteStreamReader = new ByteStreamReader(serializer);
             var e = Assert.ThrowsException<SerializationException>(() => serializer.Deserialize<TestDataContract>(byteStreamReader));
@@ -243,7 +243,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
         [TestMethod]
         public void Serializer_Serialize_ThrowsSerializationException_WhenCircularReferenceReachesMaxDepth()
         {
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             serializer.AddTypeSerializer<LinkedListNode>(new LinkedListNodeSerializer());
 
             LinkedListNode test1 = new LinkedListNode();
@@ -260,7 +260,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
         public void Serializer_SerializesWithByteStreamSerializable_UsingFactoryMethod()
         {
             var test = new TestSerializable() { TestString = "test", TestInteger = 123 };
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
 
             var byteStreamWriter = new ByteStreamWriter(serializer);
             serializer.Serialize(test, byteStreamWriter);

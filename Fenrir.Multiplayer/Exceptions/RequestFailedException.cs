@@ -5,7 +5,7 @@ namespace Fenrir.Multiplayer.Exceptions
     /// <summary>
     /// Indicates that server failed to handle client request
     /// </summary>
-    public class RequestFailedException : FenrirClientException
+    public class RequestFailedException : NetworkClientException
     {
         public RequestFailedException()
         {

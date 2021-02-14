@@ -25,7 +25,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Rooms
             bool didLeave = false;
             TestRoom room = null;
 
-            var serverMock = new Mock<IFenrirServer>();
+            var serverMock = new Mock<INetworkServer>();
 
             var serverPeerMock = new Mock<IServerPeer>();
             serverPeerMock.Setup(peer => peer.Id).Returns("test_peer");
@@ -72,7 +72,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Rooms
             bool didJoin = false;
             bool didLeave = false;
 
-            var serverMock = new Mock<IFenrirServer>();
+            var serverMock = new Mock<INetworkServer>();
 
             var serverPeerMock = new Mock<IServerPeer>();
             serverPeerMock.Setup(peer => peer.Id).Returns("test_peer");
@@ -116,7 +116,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Rooms
 
             public IEnumerable<IServerPeer> RoomPeers => Peers.Values;
 
-            public TestRoom(IFenrirLogger logger, 
+            public TestRoom(ILogger logger, 
                 string roomId, 
                 Action<IServerPeer, string> onPeerJoin = null,
                 Action<IServerPeer> onPeerLeave = null)
@@ -142,9 +142,9 @@ namespace Fenrir.Multiplayer.Tests.Unit.Rooms
             private Action<IServerPeer, string> _onPeerJoin;
             private Action<IServerPeer> _onPeerLeave;
 
-            private readonly IFenrirLogger _logger;
+            private readonly ILogger _logger;
 
-            public TestRoomFactory(IFenrirLogger logger, Action<IServerPeer, string> onPeerJoin = null, Action<IServerPeer> onPeerLeave = null)
+            public TestRoomFactory(ILogger logger, Action<IServerPeer, string> onPeerJoin = null, Action<IServerPeer> onPeerLeave = null)
             {
                 _logger = logger;
                 _onPeerJoin = onPeerJoin;

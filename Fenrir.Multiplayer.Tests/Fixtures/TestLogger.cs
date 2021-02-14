@@ -4,10 +4,10 @@ using System;
 
 namespace Fenrir.Multiplayer.Tests.Fixtures
 {
-    class TestLogger : IFenrirLogger, IDisposable
+    class TestLogger : Logging.ILogger, IDisposable
     {
         private ILoggerFactory _loggerFactory;
-        private ILogger _logger;
+        private Microsoft.Extensions.Logging.ILogger _logger;
 
         public TestLogger()
         {

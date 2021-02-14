@@ -40,12 +40,12 @@ namespace Fenrir.Multiplayer.Network
         /// <summary>
         /// Serializer. Used for serialization/deserialization of messages
         /// </summary>
-        IFenrirSerializer Serializer { get; set; }
+        INetworkSerializer Serializer { get; set; }
 
         /// <summary>
         /// Logger
         /// </summary>
-        IFenrirLogger Logger { get; set; }
+        ILogger Logger { get; set; }
 
         /// <summary>
         /// Starts protocol listener

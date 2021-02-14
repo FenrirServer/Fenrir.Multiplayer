@@ -88,10 +88,10 @@ namespace Fenrir.Multiplayer.LiteNet
         public bool IsRunning => _isRunning;
 
         /// <inheritdoc/>
-        public IFenrirSerializer Serializer { get; set; }
+        public INetworkSerializer Serializer { get; set; }
 
         /// <inheritdoc/>
-        public IFenrirLogger Logger { get; set; }
+        public ILogger Logger { get; set; }
 
         /// <summary>
         /// Stores IPv6 mode 
@@ -154,7 +154,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// </summary>
         public LiteNetProtocolListener()
         {
-            Serializer = new FenrirSerializer();
+            Serializer = new NetworkSerializer();
             Logger = new EventBasedLogger();
             _typeHashMap = new TypeHashMap();
             _requestHandlerMap = new RequestHandlerMap(Logger);

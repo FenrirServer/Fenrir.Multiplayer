@@ -90,12 +90,12 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Serializer. Used for serialization of messages
         /// </summary>
-        public IFenrirSerializer Serializer { get; set; }
+        public INetworkSerializer Serializer { get; set; }
 
         /// <summary>
         /// Logger
         /// </summary>
-        public IFenrirLogger Logger { get; set; }
+        public ILogger Logger { get; set; }
 
         ///<inheritdoc/>
         public IClientPeer Peer => _peer;
@@ -207,7 +207,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// Creates <see cref="LiteNetProtocolConnector"/>
         /// </summary>
         public LiteNetProtocolConnector()
-            : this(new FenrirSerializer(), new EventBasedLogger())
+            : this(new NetworkSerializer(), new EventBasedLogger())
         {
         }
 
@@ -215,7 +215,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// Creates <see cref="LiteNetProtocolConnector"/>
         /// </summary>
         /// <param name="serializer">Serializer, used for serialization/deserialization of messages</param>
-        public LiteNetProtocolConnector(IFenrirSerializer serializer)
+        public LiteNetProtocolConnector(INetworkSerializer serializer)
             : this(serializer, new EventBasedLogger())
         {
         }
@@ -225,7 +225,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// </summary>
         /// <param name="serializer">Serializer, used for serialization/deserialization of messages</param>
         /// <param name="logger">Logger</param>
-        public LiteNetProtocolConnector(IFenrirSerializer serializer, IFenrirLogger logger)
+        public LiteNetProtocolConnector(INetworkSerializer serializer, ILogger logger)
         {
             Serializer = serializer;
             Logger = logger;

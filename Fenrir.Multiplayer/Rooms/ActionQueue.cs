@@ -14,7 +14,7 @@ namespace Fenrir.Multiplayer.Rooms
         /// <summary>
         /// Logger
         /// </summary>
-        private readonly IFenrirLogger _logger;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// List of scheduled actions
@@ -68,7 +68,7 @@ namespace Fenrir.Multiplayer.Rooms
         /// Creates new Action Queue
         /// </summary>
         /// <param name="logger">Logger</param>
-        public ActionQueue(IFenrirLogger logger)
+        public ActionQueue(ILogger logger)
             : this()
         {
             _logger = logger;

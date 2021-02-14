@@ -4,7 +4,7 @@
     /// Event-based implementation for Logger.
     /// Invokes an event when logged
     /// </summary>
-    public class EventBasedLogger : IFenrirLogger
+    public class EventBasedLogger : ILogger
     {
         /// <summary>
         /// Log Handler - invoked when message is logged

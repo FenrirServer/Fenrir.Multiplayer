@@ -19,7 +19,7 @@ namespace Fenrir.Multiplayer.Network
         /// <summary>
         /// Logger
         /// </summary>
-        private readonly IFenrirLogger _logger;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// Bound handlers
@@ -30,7 +30,7 @@ namespace Fenrir.Multiplayer.Network
         /// Creates event handler map
         /// </summary>
         /// <param name="logger"></param>
-        public EventHandlerMap(IFenrirLogger logger)
+        public EventHandlerMap(ILogger logger)
         {
             _logger = logger;
         }

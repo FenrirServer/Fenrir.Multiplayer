@@ -58,12 +58,12 @@ namespace Fenrir.Multiplayer.Network
         /// <summary>
         /// Serializer used for message serialization / deserialization
         /// </summary>
-        IFenrirSerializer Serializer { get; set; }
+        INetworkSerializer Serializer { get; set; }
 
         /// <summary>
         /// Logger
         /// </summary>
-        IFenrirLogger Logger { get; set; }
+        ILogger Logger { get; set; }
 
         /// <summary>
         /// Time after which client is disconnected if no keep alive packets are received

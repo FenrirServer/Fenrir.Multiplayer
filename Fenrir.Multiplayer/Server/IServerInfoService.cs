@@ -7,7 +7,7 @@ namespace Fenrir.Multiplayer.Server
     /// Starts Http Server that returns information about server,
     /// available protocols, encryption keys etc
     /// </summary>
-    interface IServerInfoService : IFenrirService, IDisposable
+    interface IServerInfoService : IService, IDisposable
     {
         /// <summary>
         /// Port on which HTTP server listens.

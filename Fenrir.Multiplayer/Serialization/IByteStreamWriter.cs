@@ -24,13 +24,13 @@ namespace Fenrir.Multiplayer.Serialization
         int Length { get; }
 
         /// <summary>
-        /// Writes custom object of an unknown type, using <seealso cref="IFenrirSerializer"/>
+        /// Writes custom object of an unknown type, using <seealso cref="INetworkSerializer"/>
         /// </summary>
         /// <param name="data">Serializable object</param>
         void Write(object data);
 
         /// <summary>
-        /// Writes custom object of an unknown type, using <seealso cref="IFenrirSerializer"/>
+        /// Writes custom object of an unknown type, using <seealso cref="INetworkSerializer"/>
         /// Data type is provided explicitly.
         /// Use this method if type can be nullable
         /// </summary>

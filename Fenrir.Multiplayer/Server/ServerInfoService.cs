@@ -18,9 +18,9 @@ namespace Fenrir.Multiplayer.Server
     class ServerInfoService : IServerInfoService
     {
         /// <summary>
-        /// Fenrir Server Info Provider
+        /// Fenrir NetworkServer Info Provider
         /// </summary>
-        private readonly IFenrirServerInfoProvider _fenrirServerInfoProvider;
+        private readonly IServerInfoProvider _networkServerInfoProvider;
 
         /// <summary>
         /// Instance of the Http Server
@@ -36,24 +36,24 @@ namespace Fenrir.Multiplayer.Server
         /// <summary>
         /// Creates Server Info Service
         /// </summary>
-        /// <param name="fenrirServerInfoProvider">
-        /// Information provider for the Fenrir Server.
-        /// Usually, Fenrir Server instance 
+        /// <param name="networkServerInfoProvider">
+        /// Information provider for the Fenrir NetworkServer.
+        /// Normally, a Network Server instance 
         /// </param>
-        public ServerInfoService(IFenrirServerInfoProvider fenrirServerInfoProvider)
+        public ServerInfoService(IServerInfoProvider networkServerInfoProvider)
         {
-            _fenrirServerInfoProvider = fenrirServerInfoProvider;
+            _networkServerInfoProvider = networkServerInfoProvider;
         }
 
         /// <summary>
         /// Creates Server Info Service
         /// </summary>
-        /// <param name="fenrirServerInfoProvider">
+        /// <param name="networkServerInfoProvider">
         /// Information provider for the Fenrir Server.
-        /// Usually, Fenrir Server instance 
+        /// Normally, a Network Server instance 
         /// </param>
-        public ServerInfoService(IFenrirServerInfoProvider fenrirServerInfoProvider, ushort port)
-            : this(fenrirServerInfoProvider)
+        public ServerInfoService(IServerInfoProvider networkServerInfoProvider, ushort port)
+            : this(networkServerInfoProvider)
         {
             Port = port;
         }
@@ -89,7 +89,7 @@ namespace Fenrir.Multiplayer.Server
             var response = e.Response;
 
             // Check server status
-            if (_fenrirServerInfoProvider.Status != ServerStatus.Running)
+            if (_networkServerInfoProvider.Status != ServerStatus.Running)
             {
                 // Send response
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
@@ -99,9 +99,9 @@ namespace Fenrir.Multiplayer.Server
             // Get server info
             var serverInfo = new ServerInfo()
             {
-                ServerId = _fenrirServerInfoProvider.ServerId,
-                Hostname = _fenrirServerInfoProvider.Hostname,
-                Protocols = _fenrirServerInfoProvider.Listeners.Select(
+                ServerId = _networkServerInfoProvider.ServerId,
+                Hostname = _networkServerInfoProvider.Hostname,
+                Protocols = _networkServerInfoProvider.Listeners.Select(
                     listener => new ProtocolInfo(listener.ProtocolType, listener.GetConnectionData())
                 ).ToArray()
             };

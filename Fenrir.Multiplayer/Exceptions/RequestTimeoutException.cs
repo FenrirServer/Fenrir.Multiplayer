@@ -7,7 +7,7 @@ namespace Fenrir.Multiplayer.Exceptions
     /// <summary>
     /// Client request timed out
     /// </summary>
-    public class RequestTimeoutException : FenrirClientException
+    public class RequestTimeoutException : NetworkClientException
     {
         public RequestTimeoutException()
         {
