@@ -75,7 +75,7 @@ namespace Fenrir.Multiplayer.Simulation.Components
                 _outgoingTickSnapshots.AddLast(_currentTickSnapshot);
             }
 
-            _currentTickSnapshot = new SimulationTickSnapshot(Simulation) { TickTime = Simulation.CurrentTickTime };
+            _currentTickSnapshot = new SimulationTickSnapshot() { TickTime = Simulation.CurrentTickTime };
 
             CompressStateSnapshots();
         }
@@ -106,7 +106,7 @@ namespace Fenrir.Multiplayer.Simulation.Components
                 throw new InvalidOperationException("Can not send simulation init event, no server peer assigned (not an authority?)");
             }
 
-            SimulationInitEvent simulationInitEvent = new SimulationInitEvent(Simulation) { SimulationSnapshot = GetFullSimulationSnapshot() };
+            SimulationInitEvent simulationInitEvent = new SimulationInitEvent() { SimulationSnapshot = GetFullSimulationSnapshot() };
             ServerPeer.SendEvent(simulationInitEvent, deliveryMethod: MessageDeliveryMethod.ReliableUnordered);
 
             _fullSnapshotSent = true;
@@ -114,7 +114,7 @@ namespace Fenrir.Multiplayer.Simulation.Components
 
         private SimulationTickSnapshot GetFullSimulationSnapshot()
         {
-            SimulationTickSnapshot snapshot = new SimulationTickSnapshot(Simulation) { TickTime = Simulation.CurrentTickTime };
+            SimulationTickSnapshot snapshot = new SimulationTickSnapshot() { TickTime = Simulation.CurrentTickTime };
 
             // Generate commands 
 
@@ -151,7 +151,7 @@ namespace Fenrir.Multiplayer.Simulation.Components
 
             if(_currentTickSnapshot == null)
             {
-                _currentTickSnapshot = new SimulationTickSnapshot(Simulation) { TickTime = Simulation.CurrentTickTime }; // TODO: Use object pool
+                _currentTickSnapshot = new SimulationTickSnapshot() { TickTime = Simulation.CurrentTickTime }; // TODO: Use object pool
             }
             else if(Simulation.CurrentTickTime > _currentTickSnapshot.TickTime)
             {

@@ -249,22 +249,13 @@ namespace Fenrir.Multiplayer.Serialization
         #endregion
 
         #region Type Serializer
-        /// <summary>
-        /// Assigns type serializer for all unknown types
-        /// </summary>
-        /// <param name="typeSerializer">Type serializer</param>
+        /// <inheritdoc />
         public void SetTypeSerializer(ITypeSerializer typeSerializer)
         {
             _typeSerializer = typeSerializer;
         }
 
-        /// <summary>
-        /// Sets type serializer for a given type. 
-        /// If <see cref="Serialize(object, IByteStreamWriter)"/> or <see cref="Deserialize(Type, IByteStreamReader)"/> are invoked,
-        /// this serializer will be used if type matches.
-        /// </summary>
-        /// <typeparam name="T">Type</typeparam>
-        /// <param name="typeSerializer">Type serializer</param>
+        /// <inheritdoc />
         public void AddTypeSerializer<T>(ITypeSerializer<T> typeSerializer)
         {
             if(typeSerializer == null)
@@ -304,10 +295,7 @@ namespace Fenrir.Multiplayer.Serialization
             });
         }
 
-        /// <summary>
-        /// Removes type serializer for a given type
-        /// </summary>
-        /// <typeparam name="T">Type</typeparam>
+        /// <inheritdoc />
         public void RemoveTypeSerializer<T>()
         {
             if(_typeSerializers.ContainsKey(typeof(T)))
@@ -599,11 +587,14 @@ namespace Fenrir.Multiplayer.Serialization
         #endregion
 
         #region Type Factories
+
+        /// <inheritdoc />
         public void AddTypeFactory<T>(Func<T> factoryMethod) where T : IByteStreamSerializable
         {
             _byteStreamSerializableTypeFactories.Add(typeof(T), () => factoryMethod());
         }
 
+        /// <inheritdoc />
         public void RemoveTypeFactory<T>() where T : IByteStreamSerializable
         {
             _byteStreamSerializableTypeFactories.Remove(typeof(T));

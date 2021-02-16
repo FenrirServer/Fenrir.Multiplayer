@@ -269,7 +269,9 @@ namespace Fenrir.Multiplayer.Simulation
                 RpcParameterInfo parameterInfo = rpcMethodInfo.Parameters[numParam];
                 object parameter = parameters[0];
 
-                if(parameter.GetType() != parameterInfo.ParameterType)
+                Type parameterType = parameter.GetType();
+
+                if (!parameterInfo.ParameterType.IsAssignableFrom(parameterType))
                 {
                     return false; // Incorrect parameter type
                 }

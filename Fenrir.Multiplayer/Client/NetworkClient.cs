@@ -1,11 +1,11 @@
 ﻿using Fenrir.Multiplayer.Events;
 using Fenrir.Multiplayer.Exceptions;
+using Fenrir.Multiplayer.LiteNet;
 using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -15,8 +15,8 @@ namespace Fenrir.Multiplayer.Client
     /// <summary>
     /// Fenrir Networking Client
     /// </summary>
-    public class NetworkClient : INetworkClient, IDisposable
-    {        
+    public class NetworkClient : INetworkClient, IClientEventListener, IDisposable
+    {
         /// <summary>
         /// Invoked when client is disconnected
         /// </summary>
@@ -28,14 +28,35 @@ namespace Fenrir.Multiplayer.Client
         public event EventHandler<NetworkErrorEventArgs> NetworkError;
 
         /// <summary>
+        /// Logger
+        /// </summary>
+        private readonly ILogger _logger;
+
+        /// <summary>
+        /// Network serializer
+        /// </summary>
+        private readonly INetworkSerializer _serializer;
+
+        /// <summary>
         /// Http Client to query Server Info service
         /// </summary>
         private readonly HttpClient _httpClient = new HttpClient();
 
         /// <summary>
-        /// List of supported protocol connectors
+        /// Type Hash Map
         /// </summary>
-        private readonly List<IProtocolConnector> _supportedProtocolConnectors = new List<IProtocolConnector>();
+        private readonly ITypeHashMap _typeHashMap;
+
+        /// <summary>
+        /// Event handler map
+        /// </summary>
+        private readonly EventHandlerMap _eventHandlerMap;
+
+        /// <summary>
+        /// LiteNetProtocol connector
+        /// </summary>
+        private readonly LiteNetProtocolConnector _liteNetProtocolConnector;
+
 
         /// <summary>
         /// Current protocol connector. Null if no connection attempt was made
@@ -46,26 +67,102 @@ namespace Fenrir.Multiplayer.Client
         public string ClientId { get; set; }
 
         /// <inheritdoc/>
+        public ProtocolType EnabledProtocols { get; set; } = ProtocolType.All;
+
+        /// <inheritdoc/>
         public IClientPeer Peer => _protocolConnector?.Peer;
 
         /// <inheritdoc/>
         public ConnectionState State => _protocolConnector?.State ?? ConnectionState.Disconnected;
 
         /// <summary>
-        /// Used to install event handlers when new protocol is added
+        /// Time after which server request times out
         /// </summary>
-        private Dictionary<Type, Action<IProtocolConnector>> _eventHandlerInstallers = new Dictionary<Type, Action<IProtocolConnector>>();
+        public int RequestTimeoutMs
+        {
+            get => _liteNetProtocolConnector.RequestTimeoutMs;
+            set => _liteNetProtocolConnector.RequestTimeoutMs = value;
+        }
 
         /// <summary>
-        /// Used to install type factories when new protocol is added
+        /// Time after which client is disconnected if no keepalive packets are received from the server
         /// </summary>
-        private Dictionary<Type, Action<IProtocolConnector>> _typeFactoryIntallers = new Dictionary<Type, Action<IProtocolConnector>>();
+        public int DisconnectTimeoutMs
+        {
+            get => _liteNetProtocolConnector.DisconnectTimeoutMs;
+            set => _liteNetProtocolConnector.DisconnectTimeoutMs = value;
+        }
+
+        /// <summary>
+        /// Network update rate, times per second
+        /// </summary>
+        public int UpdateRateHz
+        {
+            get => (int)(1000f / _liteNetProtocolConnector.UpdateTimeMs);
+            set => _liteNetProtocolConnector.UpdateTimeMs = (int)(1000f / value);
+        }
+
+        /// <summary>
+        /// Interval between pings. Should be smaller than <seealso cref="DisconnectTimeoutMs"/>
+        /// </summary>
+        public int PingIntervalMs
+        {
+            get => _liteNetProtocolConnector.PingIntervalMs;
+            set => _liteNetProtocolConnector.PingIntervalMs = value;
+        }
+
+
+        /// <summary>
+        /// Simulation packet loss
+        /// </summary>
+        public bool SimulatePacketLoss
+        {
+            get => _liteNetProtocolConnector.SimulatePacketLoss;
+            set => _liteNetProtocolConnector.SimulatePacketLoss = value;
+        }
+
+        /// <summary>
+        /// Simulate latency
+        /// </summary>
+        public bool SimulateLatency
+        {
+            get => _liteNetProtocolConnector.SimulateLatency;
+            set => _liteNetProtocolConnector.SimulateLatency = value;
+        }
+
+        /// <summary>
+        /// Chance of dropping the packet, if <seealso cref="SimulatePacketLoss"/> is set to true.
+        /// </summary>
+        public float SimulatedPacketLossChance
+        {
+            get => _liteNetProtocolConnector.SimulationPacketLossChance / 100f;
+            set => _liteNetProtocolConnector.SimulationPacketLossChance = (int)(value * 100f);
+        }
+
+        /// <summary>
+        /// Minimum latency, if <seealso cref="SimulateLatency"/> is set to true
+        /// </summary>
+        public int SimulatedMinLatency
+        {
+            get => _liteNetProtocolConnector.SimulationMinLatency;
+            set => _liteNetProtocolConnector.SimulationMinLatency = value;
+        }
+
+        /// <summary>
+        /// Maximum latency, if <seealso cref="SimulateLatency"/> is set to true
+        /// </summary>
+        public int SimulatedMaxLatency
+        {
+            get => _liteNetProtocolConnector.SimulationMaxLatency;
+            set => _liteNetProtocolConnector.SimulationMaxLatency = value;
+        }
+
 
         /// <summary>
         /// Creates new Network Client
         /// </summary>
         public NetworkClient()
-            : this(new EventBasedLogger(), new HttpClient())
+            : this(new EventBasedLogger(), new NetworkSerializer(), new HttpClient())
         {
         }
 
@@ -75,7 +172,7 @@ namespace Fenrir.Multiplayer.Client
         /// </summary>
         /// <param name="logger">Logger</param>
         public NetworkClient(ILogger logger)
-            : this(logger, new HttpClient())
+            : this(logger, new NetworkSerializer(), new HttpClient())
         {
         }
 
@@ -83,10 +180,29 @@ namespace Fenrir.Multiplayer.Client
         /// Creates new Network Client
         /// </summary>
         /// <param name="logger">Logger</param>
+        /// <param name="serializer">Serializer</param>
+        public NetworkClient(ILogger logger, INetworkSerializer serializer)
+            : this(logger, serializer, new HttpClient())
+        {
+        }
+
+        /// <summary>
+        /// Creates new Network Client
+        /// </summary>
+        /// <param name="logger">Logger</param>
+        /// <param name="serializer">Serializer</param>
         /// <param name="httpClient">Http Client</param>
-        public NetworkClient(ILogger logger, HttpClient httpClient)
+        public NetworkClient(ILogger logger, INetworkSerializer serializer, HttpClient httpClient)
         {
             ClientId = Guid.NewGuid().ToString();
+
+            _logger = logger;
+            _serializer = serializer;
+            _httpClient = httpClient;
+
+            _typeHashMap = new TypeHashMap();
+            _eventHandlerMap = new EventHandlerMap(logger);
+            _liteNetProtocolConnector = new LiteNetProtocolConnector(this, _serializer, _typeHashMap, _logger);
         }
 
         /// <inheritdoc/>
@@ -129,34 +245,48 @@ namespace Fenrir.Multiplayer.Client
         public async Task<ConnectionResponse> Connect(ServerInfo serverInfo, object connectionRequestData = null)
         {
             // Find best protocol
-            ProtocolInfo selectedProtocolInfo = SelectProtocol(serverInfo);
-            if(selectedProtocolInfo == null)
+            _protocolConnector = SelectProtocolConnector(serverInfo);
+
+            if(_protocolConnector == null)
             {
                 throw new NetworkClientException(
-                    $"Failed to connect - no supported protocols found. Client supported protocols: " +
-                    string.Join(", ", _supportedProtocolConnectors.Select(protocolConnector => protocolConnector.ProtocolType.ToString())) +
+                    $"Failed to connect - no supported protocols found. Client enabled protocols: " +
+                    EnabledProtocols.ToString() + 
                     ", server supported protocols: " +
                     string.Join(", ", serverInfo.Protocols.Select(protocol => protocol.ProtocolType.ToString()))
                 );
             }
 
-            _protocolConnector = _supportedProtocolConnectors.Where(protocol => protocol.ProtocolType == selectedProtocolInfo.ProtocolType).First();
             _protocolConnector.Disconnected += OnProtocolConnectorDisconnected;
             _protocolConnector.NetworkError += OnProtocolConnectorNetworkError;
 
             // Get protocol data
-            IProtocolConnectionData protocolData = (IProtocolConnectionData)selectedProtocolInfo.GetConnectionData(_protocolConnector.ConnectionDataType);
+            ProtocolInfo protocolInfo = serverInfo.Protocols.Where(protoInfo => protoInfo.ProtocolType == _protocolConnector.ProtocolType).FirstOrDefault();
+            IProtocolConnectionData protocolData = (IProtocolConnectionData)protocolInfo.GetConnectionData(_protocolConnector.ConnectionDataType);
 
             // Connect using selected protocol
             var connectionRequest = new ClientConnectionRequest(serverInfo.Hostname, ClientId, connectionRequestData, protocolData);
             return await _protocolConnector.Connect(connectionRequest);
         }
 
-        private ProtocolInfo SelectProtocol(ServerInfo serverInfo)
+        /// <summary>
+        /// Selects a preferred protocol connector from the list of ones available on a specific server
+        /// </summary>
+        /// <param name="serverInfo">Server info</param>
+        /// <returns>Selected protocol connector</returns>
+        private IProtocolConnector SelectProtocolConnector(ServerInfo serverInfo)
         {
-            return serverInfo.Protocols
-                .Where(protocolInfo => _supportedProtocolConnectors.Any(listItem => protocolInfo.ProtocolType == listItem.ProtocolType))
-                .FirstOrDefault();
+            // Prefer UDP
+            var liteNetProtocolInfo = serverInfo.Protocols.Where(protocolInfo => protocolInfo.ProtocolType == ProtocolType.LiteNet).FirstOrDefault();
+            if(liteNetProtocolInfo != null && EnabledProtocols.HasFlag(ProtocolType.LiteNet))
+            {
+                return _liteNetProtocolConnector;
+            }
+
+            // If udp is not supported, use websocket
+            // TODO
+
+            return null;
         }
 
         /// <inheritdoc/>
@@ -176,17 +306,8 @@ namespace Fenrir.Multiplayer.Client
                 throw new ArgumentNullException(nameof(eventHandler));
             }
 
-            if (_eventHandlerInstallers.ContainsKey(typeof(TEvent)))
-            {
-                throw new NetworkServerException($"Event {typeof(TEvent)} handler {eventHandler.ToString()} is already installed");
-            }
-
-            foreach (var protocolConnector in _supportedProtocolConnectors)
-            {
-                protocolConnector.AddEventHandler<TEvent>(eventHandler);
-            }
-
-            _eventHandlerInstallers.Add(typeof(TEvent), connector => connector.AddEventHandler<TEvent>(eventHandler));
+            _typeHashMap.AddType<TEvent>();
+            _eventHandlerMap.AddEventHandler<TEvent>(eventHandler);
         }
 
         /// <inheritdoc/>
@@ -197,38 +318,7 @@ namespace Fenrir.Multiplayer.Client
                 throw new ArgumentNullException(nameof(eventHandler));
             }
 
-            if (!_eventHandlerInstallers.ContainsKey(typeof(TEvent)))
-            {
-                throw new NetworkServerException($"Event {typeof(TEvent)} handler {eventHandler.ToString()} is not yet installed");
-            }
-
-            foreach (var protocolConnector in _supportedProtocolConnectors)
-            {
-                protocolConnector.RemoveEventHandler<TEvent>(eventHandler);
-            }
-
-            _eventHandlerInstallers.Add(typeof(TEvent), connector => connector.RemoveEventHandler<TEvent>(eventHandler));
-        }
-
-        /// <inheritdoc/>
-        public void AddProtocol(IProtocolConnector protocolConnector)
-        {
-            if(protocolConnector == null)
-            {
-                throw new ArgumentNullException(nameof(protocolConnector));
-            }
-
-            _supportedProtocolConnectors.Add(protocolConnector);
-
-            foreach(var eventHandlerInstaller in _eventHandlerInstallers.Values)
-            {
-                eventHandlerInstaller.Invoke(protocolConnector);
-            }
-
-            foreach(var factoryInstaller in _typeFactoryIntallers.Values)
-            {
-                factoryInstaller.Invoke(protocolConnector);
-            }
+            _eventHandlerMap.RemoveEventHandler<TEvent>(eventHandler);
         }
 
         private void OnProtocolConnectorDisconnected(object sender, DisconnectedEventArgs e)
@@ -244,19 +334,35 @@ namespace Fenrir.Multiplayer.Client
         /// <inheritdoc/>
         public void AddSerializableTypeFactory<T>(Func<T> factoryMethod) where T : IByteStreamSerializable
         {
-            foreach (var protocolConnector in _supportedProtocolConnectors)
+            if(factoryMethod == null)
             {
-                protocolConnector.AddSerializableTypeFactory<T>(factoryMethod);
+                throw new ArgumentNullException(nameof(factoryMethod));
             }
 
-            _typeFactoryIntallers.Add(typeof(T), (protocolConnector) => protocolConnector.AddSerializableTypeFactory<T>(factoryMethod));
+            _serializer.AddTypeFactory<T>(factoryMethod);
         }
 
+        /// <inheritdoc/>
+        public void RemoveSerializableTypeFactory<T>() where T : IByteStreamSerializable
+        {
+            _serializer.RemoveTypeFactory<T>();
+        }
+
+
+        #region IDisposable Implementation
         public void Dispose()
         {
             // Dispose existing protocol connector
             _protocolConnector?.Dispose();
             _protocolConnector = null;
         }
+        #endregion
+
+        #region IClientEventListener Implementation
+        void IClientEventListener.OnReceiveEvent(MessageWrapper messageWrapper)
+        {
+            _eventHandlerMap.OnReceiveEvent(messageWrapper);
+        }
+        #endregion
     }
 }

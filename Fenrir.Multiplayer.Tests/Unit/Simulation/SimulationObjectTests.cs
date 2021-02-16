@@ -122,7 +122,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Simulation
             // Spawn new object by ingesting spawn object command
             DateTime commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
             var spawnObjectCommand = new SpawnObjectSimulationCommand(123);
-            var tickSnapshot = new SimulationTickSnapshot(simulation) { TickTime = commandTime };
+            var tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
             tickSnapshot.Commands.Add(spawnObjectCommand);
             simulation.IngestTickSnapshot(tickSnapshot);
 
@@ -176,7 +176,30 @@ namespace Fenrir.Multiplayer.Tests.Unit.Simulation
 
         #region SimulationObject.TryGetComponent
         [TestMethod]
-        public void SimulationObject_TryGetComponent_ReturnsTrue_ProvidesSimulationComponent_WhenHasAuthority()
+        public void SimulationObject_TryGetComponent_ReturnsTrue_ProvidesSimulationComponent()
+        {
+            var logger = new TestLogger();
+            var simulation = new NetworkSimulation(logger) { IsAuthority = true };
+            simulation.RegisterComponentType<TestComponent>();
+
+            SimulationObject simObject = null;
+            TestComponent testComponent = null;
+
+            simulation.EnqueueAction(() =>
+            {
+                simObject = simulation.SpawnObject();
+                testComponent = simObject.AddComponent<TestComponent>();
+            });
+            simulation.Tick();
+
+            // Get component
+            Assert.IsTrue(simObject.TryGetComponent(typeof(TestComponent), out SimulationComponent comp));
+            Assert.IsNotNull(comp);
+            Assert.IsInstanceOfType(comp, typeof(TestComponent));
+        }
+
+        [TestMethod]
+        public void SimulationObject_TryGetComponentGeneric_ReturnsTrue_ProvidesSimulationComponent()
         {
             var logger = new TestLogger();
             var simulation = new NetworkSimulation(logger) { IsAuthority = true };
@@ -196,6 +219,55 @@ namespace Fenrir.Multiplayer.Tests.Unit.Simulation
             Assert.IsTrue(simObject.TryGetComponent<TestComponent>(out TestComponent comp));
             Assert.IsNotNull(comp);
         }
+
+        #endregion
+
+        #region SimulationObject.GetComponent
+        [TestMethod]
+        public void SimulationObject_GetComponent_ReturnsSimulationComponent()
+        {
+            var logger = new TestLogger();
+            var simulation = new NetworkSimulation(logger) { IsAuthority = true };
+            simulation.RegisterComponentType<TestComponent>();
+
+            SimulationObject simObject = null;
+            TestComponent testComponent = null;
+
+            simulation.EnqueueAction(() =>
+            {
+                simObject = simulation.SpawnObject();
+                testComponent = simObject.AddComponent<TestComponent>();
+            });
+            simulation.Tick();
+
+            // Get component
+            SimulationComponent comp = simObject.GetComponent(typeof(TestComponent));
+            Assert.IsNotNull(comp);
+            Assert.IsInstanceOfType(comp, typeof(TestComponent));
+        }
+
+        [TestMethod]
+        public void SimulationObject_GetComponentGeneric_ReturnsSimulationComponent()
+        {
+            var logger = new TestLogger();
+            var simulation = new NetworkSimulation(logger) { IsAuthority = true };
+            simulation.RegisterComponentType<TestComponent>();
+
+            SimulationObject simObject = null;
+            TestComponent testComponent = null;
+
+            simulation.EnqueueAction(() =>
+            {
+                simObject = simulation.SpawnObject();
+                testComponent = simObject.AddComponent<TestComponent>();
+            });
+            simulation.Tick();
+
+            // Get component
+            TestComponent comp = simObject.GetComponent<TestComponent>();
+            Assert.IsNotNull(comp);
+        }
+
         #endregion
 
         #region SimulationObject.GetComponents
@@ -295,109 +367,6 @@ namespace Fenrir.Multiplayer.Tests.Unit.Simulation
         }
         #endregion
 
-        #region Simulation.IngestCommand
-        #region Simulation.IngestCommand(AddComponentSimulationCommand)
-        [TestMethod]
-        public void Simulation_IngestCommand_AddComponentSimulationCommand_AddsSimulationComponent()
-        {
-            var logger = new TestLogger();
-            var simulation = new NetworkSimulation(logger) { IsAuthority = false };
-            simulation.RegisterComponentType<TestComponent>();
-
-            // Create object
-            DateTime commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
-            var spawnObjectCommand = new SpawnObjectSimulationCommand(123);
-            var tickSnapshot = new SimulationTickSnapshot(simulation) { TickTime = commandTime };
-            tickSnapshot.Commands.Add(spawnObjectCommand);
-            simulation.IngestTickSnapshot(tickSnapshot);
-            simulation.Tick();
-
-            Assert.IsTrue(simulation.HasObject(spawnObjectCommand.ObjectId));
-
-            // Add component
-            commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
-            var addComponentCommand = new AddComponentSimulationCommand(123, simulation.GetComponentTypeHash<TestComponent>());
-            tickSnapshot = new SimulationTickSnapshot(simulation) { TickTime = commandTime };
-            tickSnapshot.Commands.Add(addComponentCommand);
-            simulation.IngestTickSnapshot(tickSnapshot);
-            simulation.Tick();
-
-            // Get component
-            TestComponent comp = null;
-            simulation.EnqueueAction(() => 
-            {
-                var simObject = simulation.GetObject(123);
-                Assert.IsNotNull(simObject);
-                comp = simObject.GetComponent<TestComponent>();
-            });
-            simulation.Tick();
-
-            Assert.IsNotNull(comp);
-        }
-
-        #endregion
-
-
-        #region Simulation.IngestCommand(RemoveComponentSimulationCommand)
-        [TestMethod]
-        public void Simulation_IngestCommand_RemoveComponentSimulationCommand_RemovesSimulationComponent()
-        {
-            var logger = new TestLogger();
-            var simulation = new NetworkSimulation(logger) { IsAuthority = false };
-            simulation.RegisterComponentType<TestComponent>();
-
-            // Create object
-            DateTime commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
-            var spawnObjectCommand = new SpawnObjectSimulationCommand( 123);
-            var tickSnapshot = new SimulationTickSnapshot(simulation) { TickTime = commandTime };
-            tickSnapshot.Commands.Add(spawnObjectCommand);
-            simulation.IngestTickSnapshot(tickSnapshot);
-            simulation.Tick();
-
-            Assert.IsTrue(simulation.HasObject(spawnObjectCommand.ObjectId));
-
-            // Add component
-            commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
-            var addComponentCommand = new AddComponentSimulationCommand(123, simulation.GetComponentTypeHash<TestComponent>());
-            tickSnapshot = new SimulationTickSnapshot(simulation) { TickTime = commandTime };
-            tickSnapshot.Commands.Add(addComponentCommand);
-            simulation.IngestTickSnapshot(tickSnapshot);
-            simulation.Tick();
-
-            // Get component
-            TestComponent comp = null;
-            simulation.EnqueueAction(() =>
-            {
-                var simObject = simulation.GetObject(123);
-                Assert.IsNotNull(simObject);
-                comp = simObject.GetComponent<TestComponent>();
-            });
-            simulation.Tick();
-
-            Assert.IsNotNull(comp);
-
-            // Remove component
-            commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
-            var removeComponentCommand = new RemoveComponentSimulationCommand(123, simulation.GetComponentTypeHash<TestComponent>());
-            tickSnapshot = new SimulationTickSnapshot(simulation) { TickTime = commandTime };
-            tickSnapshot.Commands.Add(removeComponentCommand);
-            simulation.IngestTickSnapshot(tickSnapshot);
-            simulation.Tick();
-
-            simulation.EnqueueAction(() =>
-            {
-                var simObject = simulation.GetObject(123);
-                Assert.IsNotNull(simObject);
-                comp = simObject.GetComponent<TestComponent>();
-            });
-            simulation.Tick();
-
-            Assert.IsNull(comp);
-        }
-
-        #endregion
-
-        #endregion
 
     }
 }

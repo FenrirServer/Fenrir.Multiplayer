@@ -4,15 +4,15 @@ using Fenrir.Multiplayer.Serialization;
 namespace Fenrir.Multiplayer.Network
 {
     /// <summary>
-    /// LiteNet Message Writer
-    /// Used to serialize outgoing messages
+    /// Network Message Writer
+    /// Wrapper around byte stream writer and Message Wrapper. Writes messages into a byte stream.
     /// </summary>
     class MessageWriter
     {
         /// <summary>
         /// Serialization provider - used for serializing and deserializing messages
         /// </summary>
-        private readonly INetworkSerializer _serializationProvider;
+        private readonly INetworkSerializer _serializer;
 
         /// <summary>
         /// Type map - contians list of types and hashes
@@ -27,13 +27,13 @@ namespace Fenrir.Multiplayer.Network
         /// <summary>
         /// Default constructor
         /// </summary>
-        /// <param name="serializationProvider">Serialization Provider</param>
+        /// <param name="serializer">Serializer</param>
         /// <param name="typeHashMap">Type Hash Map</param>
         /// <param name="logger">Logger</param>
         /// <param name="byteStreamWriterPool">Object pool of Byte Stream Writers</param>
-        public MessageWriter(INetworkSerializer serializationProvider, ITypeHashMap typeHashMap, ILogger logger)
+        public MessageWriter(INetworkSerializer serializer, ITypeHashMap typeHashMap, ILogger logger)
         {
-            _serializationProvider = serializationProvider;
+            _serializer = serializer;
             _typeHashMap = typeHashMap;
             _logger = logger;
         }
@@ -72,7 +72,7 @@ namespace Fenrir.Multiplayer.Network
             }
 
             // 5. byte[] Serialized message
-            _serializationProvider.Serialize(messageWrapper.MessageData, byteStreamWriter); // Serialize into remaining bytes
+            _serializer.Serialize(messageWrapper.MessageData, byteStreamWriter); // Serialize into remaining bytes
         }
     }
 }

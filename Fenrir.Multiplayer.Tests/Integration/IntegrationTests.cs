@@ -22,16 +22,19 @@ namespace Fenrir.Multiplayer.Tests
         [TestMethod, Timeout(TestTimeout)]
         public async Task ServerInfoService_ReturnsServerInfo()
         {
+            var protocolListenerMock = new Mock<IProtocolListener>();
+            protocolListenerMock.Setup(listener => listener.ProtocolType).Returns(ProtocolType.LiteNet);
+            protocolListenerMock.Setup(listener => listener.GetConnectionData())
+                .Returns(new LiteNetProtocolConnectionData() { Port = 27018, IPv6Mode = IPv6ProtocolMode.DualMode });
+
             var networkServerMock = new Mock<IServerInfoProvider>();
             networkServerMock.Setup(server => server.Status).Returns(ServerStatus.Running);
             networkServerMock.Setup(server => server.ServerId).Returns("test_id");
-            networkServerMock.Setup(server => server.Listeners).Returns(new IProtocolListener[] { 
-                new LiteNetProtocolListener(){ BindPort = 27015 }
-            });
+            networkServerMock.Setup(server => server.Listeners).Returns(new IProtocolListener[] { protocolListenerMock.Object });
 
             // Start service
             using var serverInfoService = new ServerInfoService(networkServerMock.Object);
-            await serverInfoService.Start();
+            serverInfoService.Start(8080);
 
             // Connect
             var httpClient = new HttpClient();
@@ -53,21 +56,19 @@ namespace Fenrir.Multiplayer.Tests
             var connectionData = serverInfo.Protocols[0].GetConnectionData(typeof(LiteNetProtocolConnectionData)) as LiteNetProtocolConnectionData;
 
             Assert.IsNotNull(connectionData, "connection data is null");
-            Assert.AreEqual(27015, connectionData.Port);
+            Assert.AreEqual(27018, connectionData.Port);
         }
 
         [TestMethod, Timeout(TestTimeout)]
         public async Task NetworkClient_ConnectsToNetworkServer_WithLiteNetProtocol()
         {
             using var logger = new TestLogger();
-            using var networkServer = new NetworkServer(logger);
-            networkServer.AddLiteNetProtocol(27018);
-            await networkServer.Start();
+            using var networkServer = new NetworkServer(logger) { BindPort = 27018 };
+            networkServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
             using var networkClient = new NetworkClient(logger);
-            networkClient.AddLiteNetProtocol();
             var serverInfo = new ServerInfo()
             {
                 Hostname = "127.0.0.1",
@@ -88,16 +89,13 @@ namespace Fenrir.Multiplayer.Tests
         public async Task NetworkClient_ConnectsToNetworkServer_WithServerInfoService()
         {
             using var logger = new TestLogger();
-            using var networkServer = new NetworkServer(logger);
-            networkServer.AddLiteNetProtocol(27018);
-            networkServer.AddInfoService(8080);
-            await networkServer.Start();
+            using var networkServer = new NetworkServer(logger) { BindPort = 27018 };
+            networkServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
             using var networkClient = new NetworkClient(logger);
-            networkClient.AddLiteNetProtocol();
-            await networkClient.Connect("http://127.0.0.1:8080");
+            await networkClient.Connect("http://127.0.0.1:27018");
 
             Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
         }
@@ -107,8 +105,6 @@ namespace Fenrir.Multiplayer.Tests
         {
             using var logger = new TestLogger();
             using var networkServer = new NetworkServer(logger);
-            networkServer.AddLiteNetProtocol();
-            networkServer.AddInfoService();
 
             TaskCompletionSource<object> connectionRequestTcs = new TaskCompletionSource<object>();
             networkServer.SetConnectionRequestHandler<CustomConnectionRequestData>(connectionRequest =>
@@ -117,13 +113,12 @@ namespace Fenrir.Multiplayer.Tests
                 connectionRequestTcs.SetResult(true);
                 return Task.FromResult(new ConnectionResponse(true));
             });
-            await networkServer.Start();
+            networkServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
             using var networkClient = new NetworkClient(logger);
-            networkClient.AddLiteNetProtocol();
-            var connectionResponse = await networkClient.Connect("http://127.0.0.1:8080", new CustomConnectionRequestData() { Token = "test" });
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016", new CustomConnectionRequestData() { Token = "test" });
 
             Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
@@ -136,22 +131,19 @@ namespace Fenrir.Multiplayer.Tests
         {
             using var logger = new TestLogger();
             using var networkServer = new NetworkServer(logger);
-            networkServer.AddLiteNetProtocol();
-            networkServer.AddInfoService();
 
             networkServer.SetConnectionRequestHandler<CustomConnectionRequestData>(connectionRequest =>
             {
                 Assert.AreEqual("test", connectionRequest.Data.Token);
                 return Task.FromResult(new ConnectionResponse(false, "test_reason"));
             });
-            await networkServer.Start();
+            networkServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
             using var networkClient = new NetworkClient(logger);
-            networkClient.AddLiteNetProtocol();
 
-            var connectionResponse = await networkClient.Connect("http://127.0.0.1:8080", new CustomConnectionRequestData() { Token = "test" });
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016", new CustomConnectionRequestData() { Token = "test" });
 
             Assert.AreEqual(ConnectionState.Disconnected, networkClient.State, "client is not disconnected");
             Assert.IsFalse(connectionResponse.Success, "connection was not rejected");
@@ -164,22 +156,19 @@ namespace Fenrir.Multiplayer.Tests
         {
             using var logger = new TestLogger();
             using var networkServer = new NetworkServer(logger);
-            networkServer.AddLiteNetProtocol();
-            networkServer.AddInfoService();
 
 
             networkServer.SetConnectionRequestHandler<CustomConnectionRequestData>(connectionRequest =>
             {
                 throw new InvalidOperationException("test_exception");
             });
-            await networkServer.Start();
+            networkServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
             using var networkClient = new NetworkClient(logger);
-            networkClient.AddLiteNetProtocol();
 
-            var connectionResponse = await networkClient.Connect("http://127.0.0.1:8080", new CustomConnectionRequestData() { Token = "test" });
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016", new CustomConnectionRequestData() { Token = "test" });
 
             Assert.AreEqual(ConnectionState.Disconnected, networkClient.State, "client is not disconnected");
             Assert.IsFalse(connectionResponse.Success, "connection was not rejected");
@@ -191,22 +180,19 @@ namespace Fenrir.Multiplayer.Tests
         {
             using var logger = new TestLogger();
             using var networkServer = new NetworkServer(logger);
-            networkServer.AddLiteNetProtocol();
-            networkServer.AddInfoService();
 
 
             networkServer.SetConnectionRequestHandler<RequestDataFailingToDeserialize>(connectionRequest =>
             {
                 return Task.FromResult(ConnectionResponse.Successful);
             });
-            await networkServer.Start();
+            networkServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
             using var networkClient = new NetworkClient(logger);
-            networkClient.AddLiteNetProtocol();
 
-            var connectionResponse = await networkClient.Connect("http://127.0.0.1:8080", new CustomConnectionRequestData() { Token = "test" });
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016", new CustomConnectionRequestData() { Token = "test" });
 
             Assert.AreEqual(ConnectionState.Disconnected, networkClient.State, "client is not disconnected");
             Assert.IsFalse(connectionResponse.Success, "connection was not rejected");
@@ -218,19 +204,16 @@ namespace Fenrir.Multiplayer.Tests
         {
             using var logger = new TestLogger();
             using var networkServer = new NetworkServer(logger);
-            networkServer.AddLiteNetProtocol();
-            networkServer.AddInfoService();
 
             TaskCompletionSource<TestRequest> requestTcs = new TaskCompletionSource<TestRequest>();
             networkServer.AddRequestHandler(new TcsRequestHandler<TestRequest>(requestTcs));
 
-            await networkServer.Start();
+            networkServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
             using var networkClient = new NetworkClient(logger);
-            networkClient.AddLiteNetProtocol();
-            var connectionResponse = await networkClient.Connect("http://127.0.0.1:8080");
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
 
             Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
@@ -247,8 +230,6 @@ namespace Fenrir.Multiplayer.Tests
         {
             using var logger = new TestLogger();
             using var networkServer = new NetworkServer(logger);
-            networkServer.AddLiteNetProtocol();
-            networkServer.AddInfoService();
 
             TaskCompletionSource<TestRequest> requestTcs = new TaskCompletionSource<TestRequest>();
             networkServer.AddRequestHandler(new TcsRequestHandler<TestRequest>(requestTcs));
@@ -260,13 +241,12 @@ namespace Fenrir.Multiplayer.Tests
                 return new TestRequest();
             });
 
-            await networkServer.Start();
+            networkServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
             using var networkClient = new NetworkClient(logger);
-            networkClient.AddLiteNetProtocol();
-            var connectionResponse = await networkClient.Connect("http://127.0.0.1:8080");
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
 
             Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
@@ -286,8 +266,6 @@ namespace Fenrir.Multiplayer.Tests
         {
             using var logger = new TestLogger();
             using var networkServer = new NetworkServer(logger);
-            networkServer.AddLiteNetProtocol();
-            networkServer.AddInfoService();
 
             networkServer.AddRequestHandler(new TestRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
             {
@@ -295,13 +273,12 @@ namespace Fenrir.Multiplayer.Tests
                 return new TestResponse() { Value = "response_test" };
             }));
 
-            await networkServer.Start();
+            networkServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
             using var networkClient = new NetworkClient(logger);
-            networkClient.AddLiteNetProtocol();
-            var connectionResponse = await networkClient.Connect("http://127.0.0.1:8080");
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
 
             Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
@@ -316,21 +293,18 @@ namespace Fenrir.Multiplayer.Tests
         {
             using var logger = new TestLogger();
             using var networkServer = new NetworkServer(logger);
-            networkServer.AddLiteNetProtocol();
-            networkServer.AddInfoService();
 
             networkServer.AddRequestHandler(new TestRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
             {
                 throw new InvalidOperationException("test");
             }));
 
-            await networkServer.Start();
+            networkServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
             using var networkClient = new NetworkClient(logger);
-            networkClient.AddLiteNetProtocol();
-            var connectionResponse = await networkClient.Connect("http://127.0.0.1:8080");
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
 
             Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
@@ -347,21 +321,18 @@ namespace Fenrir.Multiplayer.Tests
         {
             using var logger = new TestLogger();
             using var networkServer = new NetworkServer(logger);
-            networkServer.AddLiteNetProtocol();
-            networkServer.AddInfoService();
 
             networkServer.AddRequestHandler(new TestRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
             {
                 return null;
             }));
 
-            await networkServer.Start();
+            networkServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
             using var networkClient = new NetworkClient(logger);
-            networkClient.AddLiteNetProtocol();
-            var connectionResponse = await networkClient.Connect("http://127.0.0.1:8080");
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
 
             Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
@@ -378,8 +349,6 @@ namespace Fenrir.Multiplayer.Tests
         {
             using var logger = new TestLogger();
             using var networkServer = new NetworkServer(logger);
-            networkServer.AddLiteNetProtocol();
-            networkServer.AddInfoService();
 
             networkServer.AddRequestHandlerAsync(new TestAsyncRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
             {
@@ -387,13 +356,12 @@ namespace Fenrir.Multiplayer.Tests
                 return Task.FromResult(new TestResponse() { Value = "response_test" });
             }));
 
-            await networkServer.Start();
+            networkServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
             using var networkClient = new NetworkClient(logger);
-            networkClient.AddLiteNetProtocol();
-            var connectionResponse = await networkClient.Connect("http://127.0.0.1:8080");
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
 
             Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
@@ -408,21 +376,18 @@ namespace Fenrir.Multiplayer.Tests
         {
             using var logger = new TestLogger();
             using var networkServer = new NetworkServer(logger);
-            networkServer.AddLiteNetProtocol();
-            networkServer.AddInfoService();
 
             networkServer.AddRequestHandlerAsync(new TestAsyncRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
             {
                 return Task.FromException<TestResponse>(new InvalidOperationException("test"));
             }));
 
-            await networkServer.Start();
+            networkServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
             using var networkClient = new NetworkClient(logger);
-            networkClient.AddLiteNetProtocol();
-            var connectionResponse = await networkClient.Connect("http://127.0.0.1:8080");
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
 
             Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
@@ -439,21 +404,18 @@ namespace Fenrir.Multiplayer.Tests
         {
             using var logger = new TestLogger();
             using var networkServer = new NetworkServer(logger);
-            networkServer.AddLiteNetProtocol();
-            networkServer.AddInfoService();
 
             networkServer.AddRequestHandlerAsync(new TestAsyncRequestResponseHandler<TestRequestWithResponse, TestResponse>(request =>
             {
                 return Task.FromResult<TestResponse>(null);
             }));
 
-            await networkServer.Start();
+            networkServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
             using var networkClient = new NetworkClient(logger);
-            networkClient.AddLiteNetProtocol();
-            var connectionResponse = await networkClient.Connect("http://127.0.0.1:8080");
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
 
             Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");
@@ -470,8 +432,6 @@ namespace Fenrir.Multiplayer.Tests
         {
             using var logger = new TestLogger();
             using var networkServer = new NetworkServer(logger);
-            networkServer.AddLiteNetProtocol();
-            networkServer.AddInfoService();
 
             networkServer.AddRequestHandlerAsync(new TestAsyncRequestResponseHandler<TestRequestWithResponse, TestResponse>(async request =>
             {
@@ -479,13 +439,12 @@ namespace Fenrir.Multiplayer.Tests
                 return new TestResponse() { Value = "response_test" }; // Should not get here
             }));
 
-            await networkServer.Start();
+            networkServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
-            using var networkClient = new NetworkClient(logger);
-            networkClient.AddProtocol(new LiteNetProtocolConnector() { RequestTimeoutMs = 100 });
-            var connectionResponse = await networkClient.Connect("http://127.0.0.1:8080");
+            using var networkClient = new NetworkClient(logger) { RequestTimeoutMs = 100 };
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
 
             Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
             Assert.IsTrue(connectionResponse.Success, "connection rejected");

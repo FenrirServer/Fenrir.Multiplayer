@@ -31,20 +31,4 @@ namespace Fenrir.Multiplayer.Tests.Integration.Simulation
             await tickTcs.Task;
         }
     }
-
-    class TestComponent : SimulationComponent
-    {
-    }
-
-    class TestClientRpcComponent : SimulationComponent
-    {
-        public bool Invoked;
-
-
-        [ClientRpc]
-        public void DoSomething()
-        {
-            Invoked = true;
-        }
-    }
 }

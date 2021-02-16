@@ -3,6 +3,7 @@ using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Simulation.Command;
 using Fenrir.Multiplayer.Simulation.Data;
 using Fenrir.Multiplayer.Simulation.Exceptions;
+using Fenrir.Multiplayer.Simulation.Serialization;
 using Fenrir.Multiplayer.Utility;
 using System;
 using System.Collections;
@@ -60,6 +61,7 @@ namespace Fenrir.Multiplayer.Simulation
         /// Global component type hash
         /// </summary>
         private TypeHashMap _componentTypeHashMap = new TypeHashMap();
+
 
         /// <summary>
         /// Component helper map. 
@@ -141,6 +143,11 @@ namespace Fenrir.Multiplayer.Simulation
         /// </summary>
         public bool IsAuthority { get; set; }
 
+        /// <summary>
+        /// Tick serializer
+        /// </summary>
+        internal SimulationTickSnapshotSerializer TickSerializer { get; private set; } 
+
         #region Constructor
         public NetworkSimulation(ILogger logger)
         {
@@ -150,6 +157,8 @@ namespace Fenrir.Multiplayer.Simulation
             }
 
             _logger = logger;
+
+            TickSerializer = new SimulationTickSnapshotSerializer(this);
         }
         #endregion
 
@@ -369,7 +378,7 @@ namespace Fenrir.Multiplayer.Simulation
             // Try to get the object
             if (!TryGetObject(command.ObjectId, out SimulationObject simObject))
             {
-                throw new ArgumentException($"Failed to add component with hash {command.ComponentTypeHash}, component type is not registered with Simulation. Please call {nameof(NetworkSimulation.RegisterComponentType)}");
+                throw new ArgumentException($"Failed to remove component from object with id {command.ObjectId}, Object Id not found");
             }
 
             // Try to get component type
@@ -419,13 +428,13 @@ namespace Fenrir.Multiplayer.Simulation
             // Try to get the object
             if (!TryGetObject(command.ObjectId, out SimulationObject simObject))
             {
-                throw new ArgumentException($"Failed to add component with hash {command.ComponentTypeHash}, component type is not registered with Simulation. Please call {nameof(NetworkSimulation.RegisterComponentType)}");
+                throw new ArgumentException($"Failed to remove component from object with id {command.ObjectId}, Object Id not found");
             }
 
             // Try to get component type
             if (!_componentTypeHashMap.TryGetTypeByHash(command.ComponentTypeHash, out Type componentType))
             {
-                throw new ArgumentException($"Failed to add component with hash {command.ComponentTypeHash}, component type is not registered with Simulation. Please call {nameof(NetworkSimulation.RegisterComponentType)}");
+                throw new ArgumentException($"Failed to remove component with hash {command.ComponentTypeHash}, component type is not registered with Simulation. Please call {nameof(NetworkSimulation.RegisterComponentType)}");
             }
 
             // Remove component
@@ -444,14 +453,66 @@ namespace Fenrir.Multiplayer.Simulation
             // Get component type hash
             ulong componentTypeHash = GetComponentTypeHash(component.GetType());
 
+            // Pre-process parameters (replace object references with ids)
+            for (int numParam = 0; numParam < parameters.Length; numParam++)
+            {
+                object parameter = parameters[numParam];
+                Type parameterType = parameter.GetType();
+
+                // If type is a simulation object reference, replace with object id
+                if (typeof(SimulationObject) == parameterType)
+                {
+                    SimulationObject simulationObject = (SimulationObject)parameter;
+                    parameters[numParam] = simulationObject.Id;
+                    return;
+                }
+                // If type is a simulation component reference, replace with component reference
+                else if (typeof(SimulationComponent).IsAssignableFrom(parameterType))
+                {
+                    SimulationComponent simulationComponent = (SimulationComponent)parameter;
+                    parameters[numParam] = new ComponentReference(simulationComponent);
+                    return;
+                }
+
+            }
+
             // TODO: Use command object pool
-            var command = new ServerRpcSimulationCommand(component.Object.Id, componentTypeHash, methodHash);
+            var command = new ClientRpcSimulationCommand(component.Object.Id, componentTypeHash, methodHash);
 
             // Replicate to other simulations
             SendOutgoingCommand(command);
         }
-        #endregion
 
+        private void ExecuteClientRpcCommand(ClientRpcSimulationCommand command)
+        {
+            // Try to get the object
+            if (!TryGetObject(command.ObjectId, out SimulationObject simObject))
+            {
+                throw new ArgumentException($"Failed to execute RPC for object {command.ObjectId}, Object Id not found");
+            }
+
+            // Try to get component type
+            if (!_componentTypeHashMap.TryGetTypeByHash(command.ComponentTypeHash, out Type componentType))
+            {
+                throw new ArgumentException($"Failed to execute RPC for component with hash {command.ComponentTypeHash}, component type is not registered with Simulation. Please call {nameof(NetworkSimulation.RegisterComponentType)}");
+            }
+
+            // Try to get component
+            if(!simObject.TryGetComponent(componentType, out SimulationComponent component))
+            {
+                throw new ArgumentException($"Failed to execute RPC for component {componentType.Name}, object {simObject.Id} does not have component of a given type");
+            }
+
+            // Try to find component wrapper
+            if(!_componentTypeWrappers.TryGetValue(componentType, out ComponentTypeWrapper componentTypeWrapper))
+            {
+                // should never happen
+                throw new ArgumentException($"Failed to execute RPC for component with hash {command.ComponentTypeHash}, component type is not registered with Simulation. Please call {nameof(NetworkSimulation.RegisterComponentType)}");
+            }
+
+            componentTypeWrapper.TryInvokeClientRpc(component, command.MethodHash, command.Parameters);
+        }
+        #endregion
 
         #region Tick
         public virtual void Tick()
@@ -481,7 +542,7 @@ namespace Fenrir.Multiplayer.Simulation
             // Authority and using snapshot history, create new slice TODO use object pool
             if (IsAuthority)
             {
-                _currentTickSnapshot = new SimulationTickSnapshot(this) { TickTime = CurrentTickTime };
+                _currentTickSnapshot = new SimulationTickSnapshot() { TickTime = CurrentTickTime };
             }
             else // If not authority, dispatch incoming snapshots
             {
@@ -734,7 +795,11 @@ namespace Fenrir.Multiplayer.Simulation
                     ExecuteRemoveComponentCommand((RemoveComponentSimulationCommand)command);
                     break;
                 case CommandType.ServerRpc:
-                    break; // TODO
+                    //ExecuteServerRpcCommand((ServerRpcSimulationCommand)command);
+                    break;
+                case CommandType.ClientRpc:
+                    ExecuteClientRpcCommand((ClientRpcSimulationCommand)command);
+                    break;
             }
 
             CommandExecuted?.Invoke(command);

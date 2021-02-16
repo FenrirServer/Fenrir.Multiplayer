@@ -87,9 +87,14 @@ namespace Fenrir.Multiplayer.Simulation
         public TComponent GetComponent<TComponent>() 
             where TComponent : SimulationComponent
         {
-            if(_componentsByType.Contains(typeof(TComponent)))
+            return (TComponent)GetComponent(typeof(TComponent));
+        }
+
+        public SimulationComponent GetComponent(Type componentType)
+        {
+            if (_componentsByType.Contains(componentType))
             {
-                return (TComponent)_componentsByType[typeof(TComponent)];
+                return (SimulationComponent)_componentsByType[componentType];
             }
 
             return null;
@@ -98,9 +103,23 @@ namespace Fenrir.Multiplayer.Simulation
         public bool TryGetComponent<TComponent>(out TComponent component) 
             where TComponent : SimulationComponent
         {
-            component = GetComponent<TComponent>();
+            if(!TryGetComponent(typeof(TComponent), out SimulationComponent simComponent))
+            {
+                component = null;
+                return false;
+            }
+
+            component = (TComponent)simComponent;
+
+            return true;
+        }
+
+        public bool TryGetComponent(Type componentType, out SimulationComponent component)
+        {
+            component = GetComponent(componentType);
             return component != null;
         }
+
 
         public IEnumerable<SimulationComponent> GetComponents()
         {

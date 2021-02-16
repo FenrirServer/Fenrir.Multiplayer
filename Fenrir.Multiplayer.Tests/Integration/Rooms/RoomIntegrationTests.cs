@@ -18,10 +18,9 @@ namespace Fenrir.Multiplayer.Tests.Integration.Rooms
         public async Task TestJoinLeaveRoom()
         {
             using var logger = new TestLogger();
-            using var networkServer = new NetworkServer(logger);
-            networkServer.AddLiteNetProtocol(27018);
+            using var networkServer = new NetworkServer(logger) { BindPort = 27018 };
             networkServer.AddRooms<TestRoom>((peer, roomId, token) => new TestRoom(logger, "test_room_id"));
-            await networkServer.Start();
+            networkServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
@@ -29,7 +28,6 @@ namespace Fenrir.Multiplayer.Tests.Integration.Rooms
             var testEventHandler = new TestEventHandler(eventTcs);
 
             using var networkClient = new NetworkClient(logger);
-            networkClient.AddLiteNetProtocol();
             networkClient.AddEventHandler<TestEvent>(testEventHandler);
             var serverInfo = new ServerInfo()
             {

@@ -24,9 +24,7 @@ namespace Fenrir.Multiplayer.Simulation.Events
 
             for(int numTick=0; numTick<numTicks; numTick++)
             {
-                var tickSnapshot = new SimulationTickSnapshot(_simulation);
-                tickSnapshot.Deserialize(reader);
-
+                var tickSnapshot = reader.Read<SimulationTickSnapshot>();
                 TickSnapshots.AddLast(tickSnapshot);
             }
         }
@@ -46,7 +44,7 @@ namespace Fenrir.Multiplayer.Simulation.Events
             // Write each tick snapshot
             foreach(var tickSnapshot in TickSnapshots)
             {
-                tickSnapshot.Serialize(writer);
+                writer.Write(tickSnapshot);
             }
         }
     }

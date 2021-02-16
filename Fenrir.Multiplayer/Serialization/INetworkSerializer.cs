@@ -42,6 +42,27 @@ namespace Fenrir.Multiplayer.Serialization
         object Deserialize(Type type, IByteStreamReader byteStreamReader);
 
         /// <summary>
+        /// Assigns type serializer for all unknown types
+        /// </summary>
+        /// <param name="typeSerializer">Type serializer</param>
+        void SetTypeSerializer(ITypeSerializer typeSerializer);
+
+        /// <summary>
+        /// Sets type serializer for a given type. 
+        /// If <see cref="Serialize(object, IByteStreamWriter)"/> or <see cref="Deserialize(Type, IByteStreamReader)"/> are invoked,
+        /// this serializer will be used if type matches.
+        /// </summary>
+        /// <typeparam name="T">Type</typeparam>
+        /// <param name="typeSerializer">Type serializer</param>
+        void AddTypeSerializer<T>(ITypeSerializer<T> typeSerializer);
+
+        /// <summary>
+        /// Removes type serializer for a given type
+        /// </summary>
+        /// <typeparam name="T">Type</typeparam>
+        void RemoveTypeSerializer<T>();
+
+        /// <summary>
         /// Adds type factory for a given byte stream serializable type.
         /// If type factory is not set, <seealso cref="Activator.CreateInstance(Type)"/> is used to create a new instance.
         /// </summary>

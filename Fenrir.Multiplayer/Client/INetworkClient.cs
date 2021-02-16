@@ -28,6 +28,11 @@ namespace Fenrir.Multiplayer.Client
         string ClientId { get; set; }
 
         /// <summary>
+        /// Protocols enabled on this client
+        /// </summary>
+        ProtocolType EnabledProtocols { get; set; }
+
+        /// <summary>
         /// Client Peer object. null if client is not connected
         /// </summary>
         IClientPeer Peer { get; }
@@ -85,12 +90,6 @@ namespace Fenrir.Multiplayer.Client
         /// <param name="eventHandler">Event handler</param>
         void RemoveEventHandler<TEvent>(IEventHandler<TEvent> eventHandler)
             where TEvent : IEvent;
-
-        /// <summary>
-        /// Adds client protocol
-        /// </summary>
-        /// <param name="protocolConnector">Protocol connector to add</param>
-        void AddProtocol(IProtocolConnector protocolConnector);
 
         /// <summary>
         /// Adds a factory method for a serializable type. If factory is not set, new instances are created using <seealso cref="Activator.CreateInstance(Type)"/>
