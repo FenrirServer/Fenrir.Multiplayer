@@ -77,12 +77,22 @@ namespace Fenrir.Multiplayer.Utility
         }
 
         /// <summary>
+        /// Average round trip time between server and client
+        /// </summary>
+        public TimeSpan AvgRoundTripTime => _roundTrips.Count == 0 ? TimeSpan.Zero : TimeSpan.FromTicks(_roundTripSum / _roundTrips.Count);
+
+        /// <summary>
         /// Lower bound threshold for a round-trip outlier detection.
         /// This value is a multiplier for the standard deviation
         /// E.g. if standard deviation is +-15ms, and threshold is 2f,
         /// anything round-trip value with deviation from average +-30 will be considered an outlier
         /// </summary>
         public float RoundTripOutlierThreshold { get; set; } = 2f;
+
+        /// <summary>
+        /// Number of recorded round trips
+        /// </summary>
+        public int NumRoundTripsRecorded => _roundTrips.Count;
 
         /// <summary>
         /// Recorded round trip times, in DateTime ticks
@@ -119,7 +129,6 @@ namespace Fenrir.Multiplayer.Utility
         /// Total sum of all offsets we have received from clock sync
         /// </summary>
         private long _clockOffsetSumTicks = 0;
-
 
         /// <summary>
         /// Time when last data from the sample was recorded

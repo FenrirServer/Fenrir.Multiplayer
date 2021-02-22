@@ -22,9 +22,9 @@ namespace Fenrir.Multiplayer.Simulation.Serialization
             // TODO: Use ring buffer / object pool from Simulation
             SimulationTickSnapshot tickSnapshot = new SimulationTickSnapshot();
 
-            // Read time
-            long ticks = reader.ReadLong();
-            tickSnapshot.TickTime = new DateTime(ticks);
+            // Read tick number and time
+            tickSnapshot.TickNumber = reader.ReadUInt();
+            tickSnapshot.TickTime = new DateTime(reader.ReadLong());
 
             // Read number of commands
             byte numCommands = reader.ReadByte();
@@ -211,6 +211,7 @@ namespace Fenrir.Multiplayer.Simulation.Serialization
 
         public void Serialize(SimulationTickSnapshot tickSnapshot, IByteStreamWriter writer)
         {
+            writer.Write(tickSnapshot.TickNumber);
             writer.Write(tickSnapshot.TickTime.Ticks);
 
             // Write commands

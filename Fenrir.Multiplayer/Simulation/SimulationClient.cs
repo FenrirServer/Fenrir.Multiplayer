@@ -2,15 +2,12 @@
 using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Rooms;
-using Fenrir.Multiplayer.Simulation.Command;
 using Fenrir.Multiplayer.Simulation.Components;
 using Fenrir.Multiplayer.Simulation.Data;
 using Fenrir.Multiplayer.Simulation.Events;
 using Fenrir.Multiplayer.Simulation.Requests;
 using Fenrir.Multiplayer.Utility;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
@@ -20,6 +17,7 @@ namespace Fenrir.Multiplayer.Simulation
         : IEventHandler<SimulationInitEvent>
         , IEventHandler<SimulationTickSnapshotEvent>
         , IEventHandler<SimulationClockSyncAckEvent>
+        , IDisposable
     {
         /// <summary>
         /// Network client
@@ -37,24 +35,33 @@ namespace Fenrir.Multiplayer.Simulation
         public NetworkSimulation Simulation { get; private set; }
 
         /// <summary>
-        /// Simulation tick rate, how many ticks per second
+        /// Initial clock synchronization timeout
         /// </summary>
-        public int TickRate { get; set; } = 66;
+        public TimeSpan InitialClockSyncTimeout { get; set; } = TimeSpan.FromSeconds(5);
 
         /// <summary>
-        /// Number of initial clock synchronization request
+        /// Number of initial clock synchronization events, 
+        /// that have to be received in order to start a simulation
         /// </summary>
-        public int NumInitialClockSyncRequests { get; set; } = 5;
+        public int NumInitialClockSyncEvents { get; set; } = 5;
 
         /// <summary>
-        /// Delay between initial clock sync requests
+        /// Delay between initial clock sync requests.
+        /// This is a magically selected number, based on the assumption that avg player
+        /// will have a ping somewhere between 10ms and 100ms.
+        /// It will take 50ms to send all pings out, and we are very likely to start receiving some acks by then
         /// </summary>
-        public double InitialClockSyncDelayMs { get; set; } = 5;
+        public double InitialClockSyncDelayMs { get; set; } = 10;
 
         /// <summary>
-        /// Stopwatch used to tick simulation
+        /// Smooth clock correction step size
         /// </summary>
-        private readonly Stopwatch _simulationTickStopwatch = new Stopwatch();
+        public TimeSpan SmoothClockOffsetCorrectionStepSize { get; set; } = TimeSpan.FromMilliseconds(1);
+
+        /// <summary>
+        /// Threshold after which we should just snap the offset instead of applying smooth correction
+        /// </summary>
+        public TimeSpan SmoothClockOffsetThreshold { get; set; } = TimeSpan.FromMilliseconds(200);
 
         /// <summary>
         /// Clock synchronizer - keeps track of the clock
@@ -78,12 +85,45 @@ namespace Fenrir.Multiplayer.Simulation
         private bool _isRunningSimulation = false;
 
         /// <summary>
+        /// Last known server tick number
+        /// </summary>
+        private uint _lastKnownServerTickNumber;
+
+        /// <summary>
+        /// Last known server tick time
+        /// </summary>
+        private DateTime _lastKnownServerTickTime;
+
+        /// <summary>
+        /// Locking primitive for last known tick info
+        /// </summary>
+        private object _lastKnownTickSyncRoot = new object();
+
+        /// <summary>
+        /// Target simulation clock offset
+        /// </summary>
+        private TimeSpan _targetClockOffset;
+
+        /// <summary>
+        /// Delay of the client simulation
+        /// Currently calculated as a half RTT + a buffer (single tick)
+        /// TODO: Change buffer dynamically based on input LOSS
+        /// </summary>
+        private TimeSpan _simulationTimeOffset => new TimeSpan(_clockSynchronizer.AvgRoundTripTime.Ticks / 2) + Simulation.TimePerTick;
+
+        /// <summary>
+        /// Clock synchronization task completion source.
+        /// Completes when initial clock synchronization is done
+        /// </summary>
+        private TaskCompletionSource<bool> _clockSyncInitTcs = null;
+
+        /// <summary>
         /// Task completion source, completes when
         /// simulation synchronization is completed.
         /// This happens when client simulation processes 
         /// first server tick snapshot
         /// </summary>
-        private TaskCompletionSource<bool> _firstSnapshotTcs = null;
+        private TaskCompletionSource<bool> _firstSnapshotDispatchedTcs = null;
 
 
         public SimulationClient(INetworkClient client, ILogger logger)
@@ -106,7 +146,6 @@ namespace Fenrir.Multiplayer.Simulation
             RegisterBuiltInSimulationComponents();
         }
 
-
         private void RegisterBuiltInSimulationComponents()
         {
             Simulation.RegisterComponentType<PlayerComponent>();
@@ -125,7 +164,7 @@ namespace Fenrir.Multiplayer.Simulation
             }
 
             // Synchronize simulation clock
-            await SyncClockInit();
+            await SyncSimulationClock().TimeoutAfter(InitialClockSyncTimeout);
 
             // Join simulation room
             var joinRequest = new RoomJoinRequest(roomId, joinToken);
@@ -140,12 +179,11 @@ namespace Fenrir.Multiplayer.Simulation
             _roomId = roomId;
 
             // Successfully joined simulation. Let's wait until we receive Simulation init event before running the simulation
-            _firstSnapshotTcs = new TaskCompletionSource<bool>();
-            await _firstSnapshotTcs.Task; // Wait until simulation sync-up is completed
+            _firstSnapshotDispatchedTcs = new TaskCompletionSource<bool>();
+            await _firstSnapshotDispatchedTcs.Task; // Wait until simulation sync-up is completed. 
 
             return new SimulationJoinResult(joinResponse);
         }
-
 
         public async Task Leave()
         {
@@ -175,7 +213,8 @@ namespace Fenrir.Multiplayer.Simulation
         {
             _isRunningSimulation = false;
             _roomId = null;
-            _firstSnapshotTcs = null;
+            _firstSnapshotDispatchedTcs = null;
+            _clockSyncInitTcs = null;
         }
 
         private async void RunSimulation()
@@ -187,8 +226,11 @@ namespace Fenrir.Multiplayer.Simulation
                 // Check if we need to sync simulation clock
                 if (DateTime.UtcNow > _clockSynchronizer.NextSyncTime)
                 {
-                    SendSyncClockRequest().FireAndForget(_logger);
+                    SendSyncClockRequest();
                 }
+
+                // Correct clock
+                ApplySimulationClockSmoothCorrection();
 
                 // Tick simulation
                 await TickSimulation();
@@ -197,10 +239,16 @@ namespace Fenrir.Multiplayer.Simulation
 
         private async Task TickSimulation()
         {
-            _simulationTickStopwatch.Start();
+            // Calculate delay until next simulation tick
+            TimeSpan nextTickDelay = GetNextSimulationTickTime() - Simulation.ClockTime;
 
-            double delayBetweenTicksMs = 1000d / TickRate;
+            // If next tick is in the future, wait until and tick, otherwise tick immediately to catch-up
+            if(nextTickDelay > TimeSpan.Zero)
+            {
+                await Task.Delay(nextTickDelay);
+            }
 
+            // Tick
             try
             {
                 Simulation.Tick();
@@ -209,23 +257,23 @@ namespace Fenrir.Multiplayer.Simulation
             {
                 _logger.Error("Error during simulation tick: {0}", e.ToString());
             }
-
-            _simulationTickStopwatch.Stop();
-
-            double timeElapsedMs = (double)_simulationTickStopwatch.ElapsedTicks / TimeSpan.TicksPerMillisecond;
-
-            _simulationTickStopwatch.Reset();
-
-            if (timeElapsedMs > delayBetweenTicksMs)
-            {
-                _logger.Warning("Simulation tick took {0} milliseconds, which is longer than tick rate {1} milliseconds. Scheduling next tick immediately", timeElapsedMs, delayBetweenTicksMs);
-            }
-            else
-            {
-                await Task.Delay(TimeSpan.FromMilliseconds(delayBetweenTicksMs - timeElapsedMs));
-            }
         }
 
+        private DateTime GetNextSimulationTickTime()
+        {
+            uint numNextTick = Simulation.CurrentTickNumber + 1; // Number of the next expected tick
+
+            DateTime nextTickTime;
+
+            lock (_lastKnownTickSyncRoot)
+            {
+                uint deltaTicks = numNextTick - _lastKnownServerTickNumber; // Number of ticks between the last known server tick and the next tick
+                TimeSpan deltaTime = TimeSpan.FromMilliseconds(Simulation.TimePerTick.TotalMilliseconds * deltaTicks); // Time between last known server tick and the next tick
+                nextTickTime = _lastKnownServerTickTime + deltaTime; // Absolute server time of the next tick
+            }
+
+            return nextTickTime;
+        }
 
         private void IngestTickSnapshot(SimulationTickSnapshot tickSnapshot)
         {
@@ -235,43 +283,57 @@ namespace Fenrir.Multiplayer.Simulation
 
         private void OnTickSnapshotProcessed(SimulationTickSnapshot tickSnapshot)
         {
-            if (_isJoined && _firstSnapshotTcs != null)
+            if (_isJoined && _firstSnapshotDispatchedTcs != null)
             {
                 // First command ever, assume simulation has finished initialization
-                _firstSnapshotTcs?.SetResult(true);
-                _firstSnapshotTcs = null;
+                _firstSnapshotDispatchedTcs?.SetResult(true);
+                _firstSnapshotDispatchedTcs = null;
             }
 
             Simulation.TickSnapshotProcessed -= OnTickSnapshotProcessed;
         }
 
         #region Clock Sync
-        private async Task SyncClockInit()
+        private async Task SyncSimulationClock()
         {
-            await Task.WhenAll(SyncSimulationClockTasks());
+            _clockSyncInitTcs = new TaskCompletionSource<bool>();
 
-            // Set offset
-            Simulation.SetClockOffset(_clockSynchronizer.AvgOffset);
-        }
-
-        private IEnumerable<Task> SyncSimulationClockTasks()
-        {
-            for (int i = 0; i < NumInitialClockSyncRequests; i++)
+            // Keep sending those until initial synchronization is done
+            while (_clockSyncInitTcs != null)
             {
-                yield return SendSyncClockRequest(i * InitialClockSyncDelayMs);
+                SendSyncClockRequest();
+                await Task.WhenAny(_clockSyncInitTcs.Task, Task.Delay(TimeSpan.FromMilliseconds(InitialClockSyncDelayMs)));
             }
         }
 
-        private async Task SendSyncClockRequest(double delayMs = 0)
-        {
-            if (delayMs > 0)
-            {
-                await Task.Delay(TimeSpan.FromMilliseconds(delayMs));
-            }
 
+        private void SendSyncClockRequest()
+        {
             var simClockSyncRequest = new SimulationClockSyncRequest(DateTime.UtcNow);
-
             _client.Peer?.SendRequest<SimulationClockSyncRequest>(simClockSyncRequest, 0, MessageDeliveryMethod.Unreliable);
+        }
+
+        private void UpdateTargetSimulationClockOffset(bool immediate)
+        {
+            _targetClockOffset = _clockSynchronizer.AvgOffset + _simulationTimeOffset;
+
+            TimeSpan delta = _targetClockOffset - Simulation.ClockOffset;
+
+            if (immediate || Math.Abs(delta.TotalMilliseconds) > SmoothClockOffsetThreshold.TotalMilliseconds)
+            {
+                // Do not wait for smooth correction, apply right away
+                Simulation.ClockOffset = _targetClockOffset;
+            }
+        }
+
+        private void ApplySimulationClockSmoothCorrection()
+        {
+            if(Simulation.ClockOffset != _targetClockOffset)
+            {
+                TimeSpan delta = _targetClockOffset - Simulation.ClockOffset;                    
+                double stepMs = Math.Max(SmoothClockOffsetCorrectionStepSize.TotalMilliseconds, Math.Abs(delta.TotalMilliseconds));
+                Simulation.ClockOffset = TimeSpanExtensions.MoveTowards(Simulation.ClockOffset, _targetClockOffset, TimeSpan.FromMilliseconds(stepMs));
+            }
         }
         #endregion
 
@@ -283,6 +345,20 @@ namespace Fenrir.Multiplayer.Simulation
 
             // Record clock synchronization data
             _clockSynchronizer.RecordSyncResult(evt.TimeSentRequest, evt.TimeReceivedRequest, evt.TimeSentResponse, timeReceivedResponse);
+
+            // Check if this is an initial sync, before simulation has started
+            bool initialSync = _clockSyncInitTcs != null;
+            
+            // Update offset
+            UpdateTargetSimulationClockOffset(initialSync);
+
+            // Check if we need to complete initial clock synchronization
+            if (initialSync && _clockSynchronizer.NumRoundTripsRecorded >= NumInitialClockSyncEvents)
+            {
+                var tcs = _clockSyncInitTcs;
+                _clockSyncInitTcs = null;
+                tcs.SetResult(true);
+            }
         }
 
         void IEventHandler<SimulationInitEvent>.OnReceiveEvent(SimulationInitEvent evt)
@@ -292,8 +368,23 @@ namespace Fenrir.Multiplayer.Simulation
                 return;
             }
 
-            // Apply snapshot
-            IngestTickSnapshot(evt.SimulationSnapshot);
+            // Set tickrate, to make sure it's the same on both sides
+            Simulation.TickRate = evt.SimulationTickRate;
+
+            // Set last known server tick info
+            lock (_lastKnownTickSyncRoot)
+            {
+                _lastKnownServerTickNumber = evt.InitialSnapshot.TickNumber;
+                _lastKnownServerTickTime = evt.InitialSnapshot.TickTime;
+            }
+
+            // Calculate starting simulation tick number
+            uint deltaTicks = (uint)(_simulationTimeOffset.Ticks / Simulation.TimePerTick.Ticks);
+            Simulation.CurrentTickNumber = evt.InitialSnapshot.TickNumber + deltaTicks;
+            Simulation.CurrentTickTime = evt.InitialSnapshot.TickTime + _clockSynchronizer.AvgOffset + _simulationTimeOffset;
+
+            // Ingest initial snapshot
+            IngestTickSnapshot(evt.InitialSnapshot);
 
             // Start ticking
             RunSimulation();
@@ -305,11 +396,21 @@ namespace Fenrir.Multiplayer.Simulation
             foreach(SimulationTickSnapshot snapshot in evt.TickSnapshots)
             {
                 IngestTickSnapshot(snapshot);
+
+                _lastKnownServerTickNumber = snapshot.TickNumber;
+                _lastKnownServerTickTime = snapshot.TickTime;
             }
 
             // Acknowledge tick snapshot
-            SimulationTickSnapshotAckRequest ackRequest = new SimulationTickSnapshotAckRequest(evt.TickSnapshots.Last.Value.TickTime);
+            SimulationTickSnapshotAckRequest ackRequest = new SimulationTickSnapshotAckRequest(evt.TickSnapshots.Last.Value.TickNumber);
             _client.Peer.SendRequest(ackRequest, deliveryMethod: MessageDeliveryMethod.Unreliable);
+        }
+        #endregion
+
+        #region IDisposable Implementation
+        public void Dispose()
+        {
+            StopSimulation();
         }
         #endregion
     }

@@ -7,6 +7,7 @@ using Fenrir.Multiplayer.Simulation.Serialization;
 using Fenrir.Multiplayer.Utility;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Threading.Tasks;
@@ -49,7 +50,7 @@ namespace Fenrir.Multiplayer.Simulation
         /// <summary>
         /// Simulation clock
         /// </summary>
-        private readonly Clock _clock = new Clock();
+        private readonly Clock _clock;
 
         /// <summary>
         /// Simulation objects by ushort id
@@ -95,28 +96,19 @@ namespace Fenrir.Multiplayer.Simulation
         private Queue<SimulationTickSnapshot> _snapshotHistory = new Queue<SimulationTickSnapshot>();
 
         /// <summary>
-        /// Incoming tick snapshots (used by client sim)
+        /// Incoming tick snapshots
         /// </summary>
-        private Queue<SimulationTickSnapshot> _incomingSnapshotBuffer = new Queue<SimulationTickSnapshot>();
+        private ConcurrentQueue<SimulationTickSnapshot> _incomingSnapshotBuffer = new ConcurrentQueue<SimulationTickSnapshot>();
 
         /// <summary>
-        /// Tick time of the snapshot tick time. Same as _incomingSnapshotBuffer.Last().TickTime
+        /// Tick number of the last incoming authority snapshot. Same as _incomingSnapshotBuffer.Last().TickNumber
         /// </summary>
-        private DateTime _lastIncomingSnapshotTickTime;
+        public uint LastIngestedSnapshotTickNumber { get; private set; }
 
         /// <summary>
-        /// Time to keep outgoing commands in the log, in ms
-        /// This is basically the maximum rollback time
+        /// Ticm number of the last incoming authority snapshot that was processed
         /// </summary>
-        public int MaxRollbackTimeMs { get; set; } = 50;
-
-
-        /// <summary>
-        /// Incoming command delay, in milliseconds. AKA client interpolation time
-        /// Indicates for how long incoming commands are being buffered before processing.
-        /// For client, this allows to render the state that is slightly older than server state, allowing to normalize everyone's viewpoint.
-        /// </summary>
-        public int IncomingCommandDelayMs { get; set; } = 50;
+        public uint LastProcessedSnapshotTickNumber { get; private set; }
 
         /// <summary>
         /// Next object id, used to track incremented object ids
@@ -124,14 +116,21 @@ namespace Fenrir.Multiplayer.Simulation
         private ushort _nextObjectId = 0;
 
         /// <summary>
+        /// Rollback buffer size
+        /// How many ticks we can roll back to
+        /// </summary>
+        public int RollbackBufferSize { get; set; } = 16;
+
+        /// <summary>
+        /// Incoming snapshot interpolation buffer size
+        /// How much incoming snapshots we buffer before processing
+        /// </summary>
+        public int IncomingSnapshotBufferSize { get; set; } = 1;
+
+        /// <summary>
         /// Indicates if simulation is being rolled back
         /// </summary>
         public bool IsRolledBack { get; private set; }
-
-        /// <summary>
-        /// Indicates current time of the simulation
-        /// </summary>
-        public DateTime CurrentTickTime { get; private set; }
 
         /// <summary>
         /// True if simulation is not currently processing a tick
@@ -142,6 +141,40 @@ namespace Fenrir.Multiplayer.Simulation
         /// True if this simulation is authority
         /// </summary>
         public bool IsAuthority { get; set; }
+
+        /// <summary>
+        /// Current tick number
+        /// </summary>
+        public uint CurrentTickNumber { get; set; }
+
+        /// <summary>
+        /// Current tick time
+        /// </summary>
+        public DateTime CurrentTickTime { get; set; }
+
+        /// <summary>
+        /// Simulation tick rate
+        /// </summary>
+        public int TickRate { get; set; } = 60;
+
+        /// <summary>
+        /// Time per tick
+        /// </summary>
+        public TimeSpan TimePerTick => TimeSpan.FromMilliseconds(1000d / TickRate);
+
+        /// <summary>
+        /// Simulation clock time
+        /// </summary>
+        public DateTime ClockTime => _clock.UtcNow;
+
+        /// <summary>
+        /// Clock offset
+        /// </summary>
+        public TimeSpan ClockOffset
+        {
+            get => _clock.Offset;
+            set => _clock.Offset = value;
+        }
 
         /// <summary>
         /// Tick serializer
@@ -157,6 +190,7 @@ namespace Fenrir.Multiplayer.Simulation
             }
 
             _logger = logger;
+            _clock = new Clock();
 
             TickSerializer = new SimulationTickSnapshotSerializer(this);
         }
@@ -523,12 +557,16 @@ namespace Fenrir.Multiplayer.Simulation
                 return;
             }
 
-            // Set tick time
-            CurrentTickTime = _clock.UtcNow;
-
             InTick = true;
-            TickInternal();
-            InTick = false;
+
+            try
+            {
+                TickInternal();
+            }
+            finally
+            {
+                InTick = false;
+            }
         }
 
         private void TickInternal()
@@ -539,29 +577,25 @@ namespace Fenrir.Multiplayer.Simulation
                 throw new SimulationException("Can not tick simulation while simulation is being rolled back.");
             }
 
+            // Increment tick number
+            CurrentTickNumber++;
+            CurrentTickTime = _clock.UtcNow;
+
             // Authority and using snapshot history, create new slice TODO use object pool
             if (IsAuthority)
             {
-                _currentTickSnapshot = new SimulationTickSnapshot() { TickTime = CurrentTickTime };
+                _currentTickSnapshot = new SimulationTickSnapshot(CurrentTickNumber, CurrentTickTime);
             }
             else // If not authority, dispatch incoming snapshots
             {
-                lock (_incomingSnapshotBuffer)
+
+                // Dispatch snapshot
+                while(_incomingSnapshotBuffer.TryDequeue(out var snapshot))
                 {
-                    // Iterate over snapshots that are OLDER than sim time + delay
-                    while (_incomingSnapshotBuffer.Count > 0)
-                    {
-                        if (DateTime.UtcNow < _incomingSnapshotBuffer.Peek().TickTime + TimeSpan.FromMilliseconds(IncomingCommandDelayMs))
-                        {
-                            break; // Next snapshot and all snapshots after it are not ready yet to be dispatched
-                        }
+                    LastProcessedSnapshotTickNumber = snapshot.TickNumber;
 
-                        // Dispatch snapshot
-                        SimulationTickSnapshot snapshot = _incomingSnapshotBuffer.Dequeue();
-
-                        // Enqueue command for execution during this tick
-                        EnqueueAction(() => ProcessTickSnapshot(snapshot));
-                    }
+                    // Enqueue snapshot for processing later during this tick
+                    EnqueueAction(() => ProcessTickSnapshot(snapshot));
                 }
             }
 
@@ -632,27 +666,10 @@ namespace Fenrir.Multiplayer.Simulation
                 _snapshotHistory.Enqueue(_currentTickSnapshot);
                 _currentTickSnapshot = null;
 
-                // Trim the rollback snapshot log
-                TrimSnapshotHistory();
-            }
-        }
-
-        private void TrimSnapshotHistory()
-        {
-            // Remove snapshots from history older than rollback time
-            SimulationTickSnapshot snapshot;
-
-            while (_snapshotHistory.Count > 0)
-            {
-                snapshot = _snapshotHistory.Peek();
-                if (DateTime.UtcNow > snapshot.TickTime + TimeSpan.FromMilliseconds(MaxRollbackTimeMs))
+                // Clear old snapshots
+                while(_snapshotHistory.Count > RollbackBufferSize)
                 {
                     _snapshotHistory.Dequeue();
-                    // TODO: Release the snapshot. Instead of going straight to GC, return to object pool here.
-                }
-                else
-                {
-                    break; // No more old snapshots
                 }
             }
         }
@@ -754,16 +771,13 @@ namespace Fenrir.Multiplayer.Simulation
 
         public void IngestTickSnapshot(SimulationTickSnapshot snapshot)
         {
-            lock(_incomingSnapshotBuffer)
-            {
-                // Make sure we do not ingest the same snapshot twice,
-                // as server will attempt to send those until it receives an ack 
+            // Make sure we do not ingest the same snapshot twice,
+            // as server will attempt to send those until it receives an ack 
 
-                if (snapshot.TickTime > _lastIncomingSnapshotTickTime)
-                {
-                    _incomingSnapshotBuffer.Enqueue(snapshot);
-                    _lastIncomingSnapshotTickTime = snapshot.TickTime;
-                }
+            if (snapshot.TickNumber > LastIngestedSnapshotTickNumber)
+            {
+                _incomingSnapshotBuffer.Enqueue(snapshot);
+                LastIngestedSnapshotTickNumber = snapshot.TickNumber;
             }
         }
 
@@ -829,15 +843,6 @@ namespace Fenrir.Multiplayer.Simulation
 
         #endregion
 
-        #region Clock
-        /// <summary>
-        /// Sets simulation clock offset
-        /// </summary>
-        public void SetClockOffset(TimeSpan offset)
-        {
-            _clock.Offset = offset;
-        }
-        #endregion
 
         #region Utility Methods
         private void CheckInTick()

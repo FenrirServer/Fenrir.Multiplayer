@@ -40,7 +40,6 @@ namespace Fenrir.Multiplayer.Tests.Unit
             // Verify average time difference - 50ms
             Assert.AreEqual(TimeSpan.FromMilliseconds(-50), clockSynchronizer.AvgOffset);
 
-            // Verify next delay
 
             // Calculate expected coefficient of variation
             int sumRoundTrips = 90 + 100 + 110 + 80; // 380
@@ -139,6 +138,7 @@ namespace Fenrir.Multiplayer.Tests.Unit
             // Verify average time difference - 50ms. Outliers are ignored
             Assert.AreEqual(TimeSpan.FromMilliseconds(-50), clockSynchronizer.AvgOffset);
         }
+
 
         private double Lerp(double a, double b, double x)
         {

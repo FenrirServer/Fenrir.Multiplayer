@@ -13,7 +13,7 @@ namespace Fenrir.Multiplayer.Simulation
         /// <summary>
         /// Simulation tick rate, how many ticks per second
         /// </summary>
-        public int TickRate { get; set; } = 66;
+        public int TickRate { get; set; } = 60;
 
         /// <summary>
         /// Contains server simulation
@@ -126,7 +126,7 @@ namespace Fenrir.Multiplayer.Simulation
         {
         }
 
-        public void AcknowledgeTickSnapshot(IServerPeer peer, DateTime tickTime)
+        public void AcknowledgeTickSnapshot(IServerPeer peer, uint tickNumber)
         {
             if(!_playerObjects.TryGetValue(peer.Id, out PlayerComponent playerComponent))
             {
@@ -135,7 +135,7 @@ namespace Fenrir.Multiplayer.Simulation
             }
 
             // Schedule acknowledgement on the next tick
-            Simulation.EnqueueAction(() => playerComponent.AcknowledgeTickSnapshot(tickTime));
+            Simulation.EnqueueAction(() => playerComponent.AcknowledgeTickSnapshot(tickNumber));
         }
     }
 }

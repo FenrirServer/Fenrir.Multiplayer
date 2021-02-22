@@ -9,9 +9,9 @@ namespace Fenrir.Multiplayer.Simulation
 
         public NetworkSimulation Simulation => Object?.Simulation;
 
-        public DateTime TimeInitialized { get; private set; }
+        public uint InitializedTickNumber { get; private set; }
 
-        public DateTime TimeDestroyed { get; private set; }
+        public uint DestroyedTickNumber { get; private set; }
 
         protected ILogger Logger => Object?.Logger;
 
@@ -24,8 +24,8 @@ namespace Fenrir.Multiplayer.Simulation
         {
             Type componentType = GetType();
 
-            TimeInitialized = DateTime.UtcNow;
             Object = simulationObject;
+            InitializedTickNumber = simulationObject.Simulation.CurrentTickNumber;
             TypeHash = Object.Simulation.GetComponentTypeHash(componentType);
             TypeWrapper = Object.Simulation.GetComponentWrapper(componentType);
 
@@ -39,7 +39,7 @@ namespace Fenrir.Multiplayer.Simulation
 
         internal void Destroy()
         {
-            TimeDestroyed = DateTime.UtcNow;
+            DestroyedTickNumber = Simulation.CurrentTickNumber;
             Object = null;
             OnDestroyed();
         }

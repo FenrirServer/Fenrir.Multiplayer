@@ -211,7 +211,7 @@ namespace Fenrir.Multiplayer.Simulation
             while (componentEnumerator.MoveNext())
             {
                 SimulationComponent component = (SimulationComponent)componentEnumerator.Value;
-                if (component.TimeDestroyed > Simulation.CurrentTickTime + TimeSpan.FromMilliseconds(Simulation.MaxRollbackTimeMs))
+                if (component.DestroyedTickNumber > Simulation.CurrentTickNumber + Simulation.RollbackBufferSize)
                 {
                     // We can't rollback past this point anymore, so ready to remove this component (and let GC destroy it)
                     _removedComponentsByType.Remove(component.GetType());

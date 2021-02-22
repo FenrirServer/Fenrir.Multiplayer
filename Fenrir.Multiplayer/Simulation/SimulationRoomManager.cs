@@ -60,7 +60,7 @@ namespace Fenrir.Multiplayer.Simulation
 
             SimulationRoom room = (SimulationRoom)peer.PeerData;
 
-            room.AcknowledgeTickSnapshot(peer, request.TickTime);
+            room.AcknowledgeTickSnapshot(peer, request.TickNumber);
         }
 
         void IRequestHandler<SimulationClockSyncRequest>.HandleRequest(SimulationClockSyncRequest request, IServerPeer peer)

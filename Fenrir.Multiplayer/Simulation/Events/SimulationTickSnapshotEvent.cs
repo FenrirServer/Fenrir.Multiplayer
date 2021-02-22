@@ -8,13 +8,10 @@ namespace Fenrir.Multiplayer.Simulation.Events
 {
     class SimulationTickSnapshotEvent : IEvent, IByteStreamSerializable
     {
-        private readonly NetworkSimulation _simulation;
-
         public LinkedList<SimulationTickSnapshot> TickSnapshots = new LinkedList<SimulationTickSnapshot>();
 
-        public SimulationTickSnapshotEvent(NetworkSimulation simulation)
+        public SimulationTickSnapshotEvent()
         {
-            _simulation = simulation;
         }
 
         public void Deserialize(IByteStreamReader reader)

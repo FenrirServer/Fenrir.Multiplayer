@@ -110,9 +110,6 @@ namespace Fenrir.Multiplayer.Tests.Integration.Simulation
             // On the client, this object will be spawned N ticks later, since client is running everything behind
             Assert.AreEqual(1, clientSimulation.GetObjects().Count());
 
-            // Wait for client to dispatch incoming tick
-            await Task.Delay(clientSimulation.IncomingCommandDelayMs);
-
             // Wait until next client tick
             await clientSimulation.WaitForNextTick();
 
@@ -139,8 +136,7 @@ namespace Fenrir.Multiplayer.Tests.Integration.Simulation
             // Verify no component on the client yet
             Assert.IsNull(testClientObject.GetComponent<TestComponent>());
 
-            // Wait for client to dispatch incoming tick
-            await Task.Delay(clientSimulation.IncomingCommandDelayMs);
+            // Wait for the next client tick
             await clientSimulation.WaitForNextTick();
 
             // Verify client has this component
@@ -162,8 +158,6 @@ namespace Fenrir.Multiplayer.Tests.Integration.Simulation
             // Verify component still exists on the client
             Assert.IsNotNull(testClientObject.GetComponent<TestComponent>());
 
-            // Wait for client to dispatch incoming tick
-            await Task.Delay(clientSimulation.IncomingCommandDelayMs);
             await clientSimulation.WaitForNextTick();
 
             // Verify client no longer has this component
@@ -185,9 +179,6 @@ namespace Fenrir.Multiplayer.Tests.Integration.Simulation
 
             // Verify object still exists on the client.
             Assert.AreEqual(2, clientSimulation.GetObjects().Count());
-
-            // Wait for client to dispatch incoming tick
-            await Task.Delay(clientSimulation.IncomingCommandDelayMs);
 
             // Wait until next client tick
             await clientSimulation.WaitForNextTick();
@@ -253,9 +244,6 @@ namespace Fenrir.Multiplayer.Tests.Integration.Simulation
             // On the client, this object will be spawned N ticks later, since client is running everything behind
             Assert.AreEqual(1, clientSimulation.GetObjects().Count());
 
-            // Wait for client to dispatch incoming tick
-            await Task.Delay(clientSimulation.IncomingCommandDelayMs);
-
             // Wait until next client tick
             await clientSimulation.WaitForNextTick();
 
@@ -282,8 +270,6 @@ namespace Fenrir.Multiplayer.Tests.Integration.Simulation
             // Verify no component on the client yet
             Assert.IsNull(testClientObject.GetComponent<TestComponent>());
 
-            // Wait for client to dispatch incoming tick
-            await Task.Delay(clientSimulation.IncomingCommandDelayMs);
             await clientSimulation.WaitForNextTick();
 
             // Verify client has this component
@@ -305,8 +291,7 @@ namespace Fenrir.Multiplayer.Tests.Integration.Simulation
             // Verify component still exists on the client
             Assert.IsNotNull(testClientObject.GetComponent<TestComponent>());
 
-            // Wait for client to dispatch incoming tick
-            await Task.Delay(clientSimulation.IncomingCommandDelayMs);
+            // Wait for the next client tick
             await clientSimulation.WaitForNextTick();
 
             // Verify client no longer has this component

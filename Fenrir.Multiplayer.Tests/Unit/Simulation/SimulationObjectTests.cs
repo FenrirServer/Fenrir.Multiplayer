@@ -120,9 +120,8 @@ namespace Fenrir.Multiplayer.Tests.Unit.Simulation
             simulation.RegisterComponentType<TestComponent>();
 
             // Spawn new object by ingesting spawn object command
-            DateTime commandTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(simulation.IncomingCommandDelayMs); // So that we don't have to wait
             var spawnObjectCommand = new SpawnObjectSimulationCommand(123);
-            var tickSnapshot = new SimulationTickSnapshot() { TickTime = commandTime };
+            var tickSnapshot = new SimulationTickSnapshot(1, DateTime.UtcNow);
             tickSnapshot.Commands.Add(spawnObjectCommand);
             simulation.IngestTickSnapshot(tickSnapshot);
 

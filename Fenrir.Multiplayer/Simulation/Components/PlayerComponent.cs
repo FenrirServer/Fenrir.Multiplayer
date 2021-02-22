@@ -51,12 +51,12 @@ namespace Fenrir.Multiplayer.Simulation.Components
         /// <summary>
         /// Server-side method that removes any snapshots that this client has acknowledged
         /// </summary>
-        /// <param name="tickTime">Time of the tick of the last acknowledged snapshot</param>
-        public void AcknowledgeTickSnapshot(DateTime tickTime)
+        /// <param name="tickNumber">Removes snapshots with the tick number lower than provided</param>
+        public void AcknowledgeTickSnapshot(uint tickNumber)
         {
             while(_outgoingTickSnapshots.First != null)
             {
-                if (_outgoingTickSnapshots.First.Value.TickTime > tickTime)
+                if (_outgoingTickSnapshots.First.Value.TickNumber > tickNumber)
                 {
                     break; // Subsequent snapshots should be packed and sent unless client acks them
                 }
@@ -75,7 +75,7 @@ namespace Fenrir.Multiplayer.Simulation.Components
                 _outgoingTickSnapshots.AddLast(_currentTickSnapshot);
             }
 
-            _currentTickSnapshot = new SimulationTickSnapshot() { TickTime = Simulation.CurrentTickTime };
+            _currentTickSnapshot = new SimulationTickSnapshot(Simulation.CurrentTickNumber, Simulation.CurrentTickTime);
 
             CompressStateSnapshots();
         }
@@ -94,7 +94,7 @@ namespace Fenrir.Multiplayer.Simulation.Components
                 RecycleCurrentTickSnapshot();
 
                 // Send outgoing commands to this peer. Keep sending until we get an ACK from the client
-                SimulationTickSnapshotEvent tickSnapshotEvent = new SimulationTickSnapshotEvent(Simulation) { TickSnapshots = _outgoingTickSnapshots }; // TODO: Object pool
+                SimulationTickSnapshotEvent tickSnapshotEvent = new SimulationTickSnapshotEvent() { TickSnapshots = _outgoingTickSnapshots }; // TODO: Object pool
                 ServerPeer.SendEvent(tickSnapshotEvent, deliveryMethod: MessageDeliveryMethod.Unreliable);
             }
         }
@@ -106,7 +106,7 @@ namespace Fenrir.Multiplayer.Simulation.Components
                 throw new InvalidOperationException("Can not send simulation init event, no server peer assigned (not an authority?)");
             }
 
-            SimulationInitEvent simulationInitEvent = new SimulationInitEvent() { SimulationSnapshot = GetFullSimulationSnapshot() };
+            SimulationInitEvent simulationInitEvent = new SimulationInitEvent(Simulation.TickRate, Simulation.CurrentTickTime, GetFullSimulationSnapshot());
             ServerPeer.SendEvent(simulationInitEvent, deliveryMethod: MessageDeliveryMethod.ReliableUnordered);
 
             _fullSnapshotSent = true;
@@ -114,7 +114,7 @@ namespace Fenrir.Multiplayer.Simulation.Components
 
         private SimulationTickSnapshot GetFullSimulationSnapshot()
         {
-            SimulationTickSnapshot snapshot = new SimulationTickSnapshot() { TickTime = Simulation.CurrentTickTime };
+            SimulationTickSnapshot snapshot = new SimulationTickSnapshot(Simulation.CurrentTickNumber, Simulation.CurrentTickTime);
 
             // Generate commands 
 
@@ -151,9 +151,9 @@ namespace Fenrir.Multiplayer.Simulation.Components
 
             if(_currentTickSnapshot == null)
             {
-                _currentTickSnapshot = new SimulationTickSnapshot() { TickTime = Simulation.CurrentTickTime }; // TODO: Use object pool
+                _currentTickSnapshot = new SimulationTickSnapshot(Simulation.CurrentTickNumber, Simulation.CurrentTickTime); // TODO: Use object pool
             }
-            else if(Simulation.CurrentTickTime > _currentTickSnapshot.TickTime)
+            else if(Simulation.CurrentTickNumber > _currentTickSnapshot.TickNumber)
             {
                 // This should not normally happen, this means something went wrong and 
                 // simulation tick was advanced in between LateTicks ?
