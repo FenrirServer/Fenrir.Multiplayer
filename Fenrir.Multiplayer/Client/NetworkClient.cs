@@ -75,6 +75,9 @@ namespace Fenrir.Multiplayer.Client
         /// <inheritdoc/>
         public ConnectionState State => _protocolConnector?.State ?? ConnectionState.Disconnected;
 
+        /// <inheritdoc/>
+        public INetworkSerializer Serializer => _serializer;
+
         /// <summary>
         /// Time after which server request times out
         /// </summary>

@@ -44,6 +44,7 @@ namespace Fenrir.Multiplayer.Simulation
 
             Simulation = new NetworkSimulation(logger) { IsAuthority = true };
 
+            // Add components
             RegisterBuiltInSimulationComponents();
 
             // Do first simulation tick, calling this method schedule next tick and so on

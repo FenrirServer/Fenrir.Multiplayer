@@ -49,7 +49,8 @@ namespace Fenrir.Multiplayer.Tests.Unit.Simulation
 
             // Read
             ByteStreamReader reader = new ByteStreamReader(writer, serializer);
-            SimulationTickSnapshot tickSnapshot2 = simulation.TickSerializer.Deserialize(reader);
+            SimulationTickSnapshot tickSnapshot2 = new SimulationTickSnapshot();
+            simulation.TickSerializer.Deserialize(tickSnapshot2, reader);
 
             Assert.AreEqual(11, tickSnapshot2.Commands.Count);
 
@@ -106,7 +107,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Simulation
             // Read
             ByteStreamReader reader = new ByteStreamReader(writer, serializer);
             var tickSnapshot2 = new SimulationTickSnapshot();
-            tickSnapshot2 = simulation.TickSerializer.Deserialize(reader);
+            simulation.TickSerializer.Deserialize(tickSnapshot2, reader);
 
             Assert.AreEqual(2, tickSnapshot2.Commands.Count);
 
@@ -173,26 +174,30 @@ namespace Fenrir.Multiplayer.Tests.Unit.Simulation
             ByteStreamReader reader = new ByteStreamReader(writer, serializer);
 
             // 1
-            tickSnapshot = simulation.TickSerializer.Deserialize(reader);
+            tickSnapshot = new SimulationTickSnapshot();
+            simulation.TickSerializer.Deserialize(tickSnapshot, reader);
             Assert.AreEqual((uint)1, tickSnapshot.TickNumber);
             Assert.AreEqual(now + tickTime, tickSnapshot.TickTime);
             Assert.AreEqual(0, tickSnapshot.Commands.Count);
 
             // 2
-            tickSnapshot = simulation.TickSerializer.Deserialize(reader);
+            tickSnapshot = new SimulationTickSnapshot();
+            simulation.TickSerializer.Deserialize(tickSnapshot, reader);
             Assert.AreEqual((uint)2, tickSnapshot.TickNumber);
             Assert.AreEqual(now + tickTime * 2, tickSnapshot.TickTime);
             Assert.AreEqual(0, tickSnapshot.Commands.Count);
 
             // 3
-            tickSnapshot = simulation.TickSerializer.Deserialize(reader);
+            tickSnapshot = new SimulationTickSnapshot();
+            simulation.TickSerializer.Deserialize(tickSnapshot, reader);
             Assert.AreEqual((uint)3, tickSnapshot.TickNumber);
             Assert.AreEqual(now + tickTime * 3, tickSnapshot.TickTime);
             Assert.AreEqual(1, tickSnapshot.Commands.Count);
             Assert.IsTrue(tickSnapshot.Commands[0].Type == CommandType.SpawnObject && ((SpawnObjectSimulationCommand)tickSnapshot.Commands[0]).ObjectId == 1);
 
             // 4
-            tickSnapshot = simulation.TickSerializer.Deserialize(reader);
+            tickSnapshot = new SimulationTickSnapshot();
+            simulation.TickSerializer.Deserialize(tickSnapshot, reader);
             Assert.AreEqual((uint)4, tickSnapshot.TickNumber);
             Assert.AreEqual(now + tickTime * 4, tickSnapshot.TickTime);
             Assert.AreEqual(0, tickSnapshot.Commands.Count);

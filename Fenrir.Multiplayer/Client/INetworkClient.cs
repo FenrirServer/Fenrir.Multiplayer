@@ -43,6 +43,11 @@ namespace Fenrir.Multiplayer.Client
         ConnectionState State { get; }
 
         /// <summary>
+        /// Network Serializer
+        /// </summary>
+        INetworkSerializer Serializer { get; }
+
+        /// <summary>
         /// Connects using Server Info URI
         /// Server Info URI will be queried to obtain server data
         /// </summary>

@@ -61,7 +61,7 @@ namespace Fenrir.Multiplayer.Serialization
         }
 
         ///<inheritdoc/>
-        void IRecyclable.Recycle() => NetDataWriter?.Reset();
+        public void Recycle() => NetDataWriter?.Reset();
 
         ///<inheritdoc/>
         public void Write(object obj) 

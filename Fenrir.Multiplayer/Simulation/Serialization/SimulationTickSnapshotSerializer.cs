@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Fenrir.Multiplayer.Simulation.Serialization
 {
-    class SimulationTickSnapshotSerializer : ITypeSerializer<SimulationTickSnapshot>
+    class SimulationTickSnapshotSerializer
     {
         private readonly NetworkSimulation _simulation;
 
@@ -17,11 +17,8 @@ namespace Fenrir.Multiplayer.Simulation.Serialization
             _simulation = simulation;
         }
 
-        public SimulationTickSnapshot Deserialize(IByteStreamReader reader)
+        public void Deserialize(SimulationTickSnapshot tickSnapshot, IByteStreamReader reader)
         {
-            // TODO: Use ring buffer / object pool from Simulation
-            SimulationTickSnapshot tickSnapshot = new SimulationTickSnapshot();
-
             // Read tick number and time
             tickSnapshot.TickNumber = reader.ReadUInt();
             tickSnapshot.TickTime = new DateTime(reader.ReadLong());
@@ -204,8 +201,6 @@ namespace Fenrir.Multiplayer.Simulation.Serialization
                         break;
                 }
             }
-
-            return tickSnapshot;
         }
 
 

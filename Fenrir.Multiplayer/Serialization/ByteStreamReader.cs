@@ -106,7 +106,7 @@ namespace Fenrir.Multiplayer.Serialization
 
 
         /// <inheritdoc/>
-        void IRecyclable.Recycle() => NetDataReader?.Clear();
+        public void Recycle() => NetDataReader?.Clear();
 
         /// <inheritdoc/>
         public bool ReadBool() => NetDataReader.GetBool();

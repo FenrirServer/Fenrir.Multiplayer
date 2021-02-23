@@ -1,5 +1,6 @@
 ﻿using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
+using Fenrir.Multiplayer.Serialization;
 using Fenrir.Multiplayer.Simulation.Command;
 using Fenrir.Multiplayer.Simulation.Data;
 using Fenrir.Multiplayer.Simulation.Exceptions;
@@ -46,6 +47,11 @@ namespace Fenrir.Multiplayer.Simulation
         /// Logger
         /// </summary>
         private readonly ILogger _logger;
+
+        /// <summary>
+        /// Network serializer
+        /// </summary>
+        private readonly INetworkSerializer _serializer;
 
         /// <summary>
         /// Simulation clock
@@ -177,12 +183,22 @@ namespace Fenrir.Multiplayer.Simulation
         }
 
         /// <summary>
+        /// Serializer
+        /// </summary>
+        internal INetworkSerializer Serializer => _serializer;
+
+        /// <summary>
         /// Tick serializer
         /// </summary>
-        internal SimulationTickSnapshotSerializer TickSerializer { get; private set; } 
+        internal SimulationTickSnapshotSerializer TickSerializer { get; private set; }
 
         #region Constructor
         public NetworkSimulation(ILogger logger)
+            : this(logger, new NetworkSerializer())
+        {
+        }
+
+        public NetworkSimulation(ILogger logger, INetworkSerializer serializer)
         {
             if (logger == null)
             {

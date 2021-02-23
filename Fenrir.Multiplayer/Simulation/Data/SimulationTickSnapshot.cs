@@ -1,4 +1,5 @@
-﻿using Fenrir.Multiplayer.Simulation.Command;
+﻿using Fenrir.Multiplayer.Serialization;
+using Fenrir.Multiplayer.Simulation.Command;
 using System;
 using System.Collections.Generic;
 

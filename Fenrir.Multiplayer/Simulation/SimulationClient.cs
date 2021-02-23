@@ -131,15 +131,16 @@ namespace Fenrir.Multiplayer.Simulation
             _client = client;
             _logger = logger;
 
+            // Add network event handlers
             _client.AddEventHandler<SimulationInitEvent>(this);
             _client.AddEventHandler<SimulationTickSnapshotEvent>(this);
             _client.AddEventHandler<SimulationClockSyncAckEvent>(this);
 
+            // Add event listeners
             _client.Disconnected += OnDisconnected;
 
             Simulation = new NetworkSimulation(logger) { IsAuthority = false };
             Simulation.TickSnapshotProcessed += OnTickSnapshotProcessed;
-
 
             _clockSynchronizer = new ClockSynchronizer();
 
