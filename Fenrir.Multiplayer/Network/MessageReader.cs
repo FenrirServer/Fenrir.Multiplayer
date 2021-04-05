@@ -57,15 +57,24 @@ namespace Fenrir.Multiplayer.Network
             // TODO: Encryption
 
             // Message format: 
-            // 1. [8 bytes long message type hash]
-            // 2. [1 byte flags]
+            // 1. [1 byte flags]
+            // 2. [4 bytes ushort raw message code] OR [8 bytes long message type hash]
             // 3. [1 byte channel number]
             // 4. [2 bytes short requestId] - optional, if flags has HasRequestId
             // 5. [N bytes serialized message]
 
             messageWrapper = default;
 
-            // 1. ulong Message type hash
+            // 1. byte Flags
+            if (!byteStreamReader.TryReadByte(out byte flagBytes))
+            {
+                _logger.Warning("Malformed message: no flags section");
+                return false;
+            }
+
+            MessageFlags messageFlags = (MessageFlags)flagBytes; // Flags enum
+
+            // 2. ulong Message type hash
             if (!byteStreamReader.TryReadULong(out ulong messageTypeHash))
             {
                 _logger.Warning("Malformed message: no message type hash [long]");
@@ -78,16 +87,6 @@ namespace Fenrir.Multiplayer.Network
                 _logger.Warning("Malformed message: no message type with hash {0} in type hash map", messageTypeHash);
                 return false;
             }
-
-            // 2. byte Flags
-            if(!byteStreamReader.TryReadByte(out byte flagBytes))
-            {
-                _logger.Warning("Malformed message: no flags section");
-                return false;
-            }
-
-            MessageFlags messageFlags = (MessageFlags)flagBytes; // Flags enum
-
             // 3. byte Channel Id
             if (!byteStreamReader.TryReadByte(out byte channel))
             {
@@ -97,7 +96,7 @@ namespace Fenrir.Multiplayer.Network
 
             // 4. short request id
             short requestId = 0;
-            if (messageFlags.HasFlag(MessageFlags.HasRequestId))
+            if (messageFlags.HasFlag(MessageFlags.HasUniqueId))
             {
                 if (!byteStreamReader.TryReadShort(out requestId))
                 {
@@ -123,10 +122,28 @@ namespace Fenrir.Multiplayer.Network
                 _byteStreamReaderPool.Return(byteStreamReader);
             }
 
-            // Check data type
-            MessageType messageType;
-            if(messageData is IEvent)
+            // Validate message type
+
+            if (messageFlags.HasFlag(MessageFlags.IsResponse))
             {
+                if (!(messageData is IResponse))
+                {
+                    _logger.Warning("Malformed message: message flags {0} is set however {1} is not of a type {2}, type is {3} instead",
+                        MessageFlags.IsEvent, nameof(messageData), typeof(IResponse).Name, messageData.GetType().Name);
+                    return false;
+                }
+            }
+            else if (messageFlags.HasFlag(MessageFlags.IsEvent))
+            {
+                if(!(messageData is IEvent))
+                {
+                    _logger.Warning("Malformed message: message flags {0} is set however {1} is not an {2}, is {3} instead", 
+                        MessageFlags.IsEvent, nameof(messageData), typeof(IEvent).Name, messageData.GetType().Name);
+                    return false;
+                }
+
+                if(messageFlags.HasFlag(MessageFlags.IsRequest))
+
                 messageType = MessageType.Event;
             }
             else if(messageData is IRequest)

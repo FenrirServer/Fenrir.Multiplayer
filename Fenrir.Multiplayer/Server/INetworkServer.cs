@@ -28,7 +28,7 @@ namespace Fenrir.Multiplayer.Server
         event EventHandler<ServerPeerDisconnectedEventArgs> PeerDisconnected;
 
         /// <summary>
-        /// Sets custom connection request handler on all installed protocols
+        /// Sets custom connection request handler
         /// </summary>
         /// <typeparam name="TConnectionRequestData">Type of connection request</typeparam>
         /// <param name="handler">Connection request handler</param>
@@ -36,7 +36,7 @@ namespace Fenrir.Multiplayer.Server
             where TConnectionRequestData : class, new();
 
         /// <summary>
-        /// Adds request handler of a given request type, to all installed protocols
+        /// Adds request handler of a given request type
         /// </summary>
         /// <typeparam name="TRequest">Type of request</typeparam>
         /// <param name="requestHandler">Request handler</param>
@@ -44,7 +44,14 @@ namespace Fenrir.Multiplayer.Server
             where TRequest : IRequest;
 
         /// <summary>
-        /// Adds request handler for a given request and response type, to all installed protocols
+        /// Removes request handler for a given request type
+        /// </summary>
+        /// <typeparam name="TRequest">Type of request</typeparam>
+        void RemoveRequestHandler<TRequest>()
+            where TRequest : IRequest;
+
+        /// <summary>
+        /// Adds request handler for a given request and response type
         /// </summary>
         /// <typeparam name="TRequest">Type of request</typeparam>
         /// <typeparam name="TResponse">Type of response</typeparam>
@@ -54,7 +61,16 @@ namespace Fenrir.Multiplayer.Server
             where TResponse : IResponse;
 
         /// <summary>
-        /// Adds asynchronous request handler for a given request and response type, to all installed protocols
+        /// Removes request handler for a given request and response types
+        /// </summary>
+        /// <typeparam name="TRequest">Type of request</typeparam>
+        /// <typeparam name="TResponse">Type of response</typeparam>
+        void RemoveRequestHandler<TRequest, TResponse>()
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse;
+
+        /// <summary>
+        /// Adds asynchronous request handler for a given request and response type
         /// </summary>
         /// <typeparam name="TRequest">Type of request</typeparam>
         /// <typeparam name="TResponse">Type of response</typeparam>
@@ -62,6 +78,22 @@ namespace Fenrir.Multiplayer.Server
         void AddRequestHandlerAsync<TRequest, TResponse>(IRequestHandlerAsync<TRequest, TResponse> requestHandler)
             where TRequest : IRequest<TResponse>
             where TResponse : IResponse;
+
+        /// <summary>
+        /// Removes asynchronous request handler for a given request and response types
+        /// </summary>
+        /// <typeparam name="TRequest">Type of request</typeparam>
+        /// <typeparam name="TResponse">Type of response</typeparam>
+        void RemoveRequestHandlerAsync<TRequest, TResponse>()
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse;
+
+        /// <summary>
+        /// Adds asynchronous raw message handler for a given message code
+        /// </summary>
+        /// <param name="messageCode"></param>
+        /// <param name="messageHandler"></param>
+        void AddRawMessageHandler(ushort messageCode, IRawMessageHandlerAsync messageHandler);
 
         /// <summary>
         /// Adds a factory method for a serializable type. If factory is not set, new instances are created using <seealso cref="Activator.CreateInstance(Type)"/>

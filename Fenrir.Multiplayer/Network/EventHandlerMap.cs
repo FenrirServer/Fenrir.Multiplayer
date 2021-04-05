@@ -86,7 +86,7 @@ namespace Fenrir.Multiplayer.Network
 
             lock (_syncRoot)
             {
-                if (_eventHandlers.ContainsKey(typeof(TEvent)))
+                if (!_eventHandlers.ContainsKey(typeof(TEvent)))
                 {
                     throw new EventHandlerException($"Failed to remove event handler {eventHandler.GetType()}, handler for event type {typeof(TEvent).Name} is not registered");
                 }

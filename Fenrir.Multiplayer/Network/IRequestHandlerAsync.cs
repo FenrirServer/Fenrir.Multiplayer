@@ -20,5 +20,4 @@ namespace Fenrir.Multiplayer.Network
         /// <returns>Task that must complete with a response for a given request</returns>
         Task<TResponse> HandleRequestAsync(TRequest request, IServerPeer peer);
     }
-
 }

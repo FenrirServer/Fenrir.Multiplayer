@@ -357,7 +357,6 @@ namespace Fenrir.Multiplayer.LiteNet
             MessageWrapper messageWrapper;
             bool didReadMessage;
             int totalBytes = netPacketReader.AvailableBytes;
-
             ByteStreamReader byteStreamReader = _byteStreamReaderPool.Get();
             byteStreamReader.SetNetDataReader(netPacketReader);
 

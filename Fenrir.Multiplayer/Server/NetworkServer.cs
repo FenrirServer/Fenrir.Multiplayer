@@ -46,6 +46,11 @@ namespace Fenrir.Multiplayer.Server
         private readonly RequestHandlerMap _requestHandlerMap;
 
         /// <summary>
+        /// Raw message handler map
+        /// </summary>
+        private readonly MessageHandlerMap _rawMessageHandlerMap;
+
+        /// <summary>
         /// Logger
         /// </summary>
         public ILogger Logger { get; private set; }
@@ -157,6 +162,7 @@ namespace Fenrir.Multiplayer.Server
 
             _typeHashMap = new TypeHashMap();
             _requestHandlerMap = new RequestHandlerMap(Logger);
+            _rawMessageHandlerMap = new MessageHandlerMap(Logger);
 
             // Setup protocols
             _liteNetListener = new LiteNetProtocolListener(this, Serializer, _typeHashMap, Logger);
@@ -345,6 +351,12 @@ namespace Fenrir.Multiplayer.Server
         }
 
         /// <inheritdoc/>
+        public void AddRawMessageHandler(ushort messageCode, IRawMessageHandlerAsync messageHandler)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc/>
         public void AddSerializableTypeFactory<T>(Func<T> factoryMethod) where T : IByteStreamSerializable
         {
             if(factoryMethod == null)
@@ -390,6 +402,11 @@ namespace Fenrir.Multiplayer.Server
         void IServerEventListener.OnReceiveRequest(IServerPeer serverPeer, MessageWrapper messageWrapper)
         {
             _requestHandlerMap.OnReceiveRequest(serverPeer, messageWrapper);
+        }
+
+        void OnReceiveRawMessage(IServerPeer serverPeer, ushort messageCode, IByteStreamReader byteStreamReader)
+        {
+            _rawMessageHandlerMap.OnReceiveRawMessage(messageCode, byteStreamReader, serverPeer);
         }
 
         void IServerEventListener.OnPeerConnected(IServerPeer serverPeer)

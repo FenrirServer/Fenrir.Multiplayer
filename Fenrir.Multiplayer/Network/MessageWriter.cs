@@ -48,25 +48,24 @@ namespace Fenrir.Multiplayer.Network
             // TODO: Encryption
 
             // Message format: 
-            // 1. [8 bytes long message type hash]
-            // 2. [1 byte flags]
+            // 1. [1 byte flags]
+            // 2. [4 bytes ushort raw message code] OR [8 bytes long message type hash]
             // 3. [1 byte channel number]
             // 4. [2 bytes short requestId] - optional, if flags has HasRequestId
             // 5. [N bytes serialized message]
 
+            // 1. byte Message flags
+            byteStreamWriter.Write((byte)messageWrapper.Flags);
 
-            // 1. ulong Message type hash
+            // 2. ulong Message type hash
             ulong messageTypeHash = _typeHashMap.GetTypeHash(messageWrapper.MessageData.GetType());
             byteStreamWriter.Write(messageTypeHash); // Type hash
-
-            // 2. byte Message flags
-            byteStreamWriter.Write((byte)messageWrapper.Flags);
 
             // 3. byte Channel number
             byteStreamWriter.Write(messageWrapper.Channel);
 
             // 4. short Request id
-            if (messageWrapper.Flags.HasFlag(MessageFlags.HasRequestId))
+            if (messageWrapper.Flags.HasFlag(MessageFlags.HasUniqueId))
             {
                 byteStreamWriter.Write(messageWrapper.RequestId);
             }

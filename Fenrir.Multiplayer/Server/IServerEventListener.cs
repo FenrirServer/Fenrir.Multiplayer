@@ -12,6 +12,8 @@ namespace Fenrir.Multiplayer.Server
         
         void OnReceiveRequest(IServerPeer serverPeer, MessageWrapper messageWrapper);
 
+        void OnReceiveRawMessage(IServerPeer serverPeer, ushort messageCode, IByteStreamReader byteStreamReader);
+
         void OnPeerConnected(IServerPeer serverPeer);
 
         void OnPeerDisconnected(IServerPeer serverPeer);
