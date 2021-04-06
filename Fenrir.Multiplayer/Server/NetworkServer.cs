@@ -404,7 +404,7 @@ namespace Fenrir.Multiplayer.Server
             _requestHandlerMap.OnReceiveRequest(serverPeer, messageWrapper);
         }
 
-        void OnReceiveRawMessage(IServerPeer serverPeer, ushort messageCode, IByteStreamReader byteStreamReader)
+        void IServerEventListener.OnReceiveRawMessage(IServerPeer serverPeer, ushort messageCode, IByteStreamReader byteStreamReader)
         {
             _rawMessageHandlerMap.OnReceiveRawMessage(messageCode, byteStreamReader, serverPeer);
         }
@@ -418,6 +418,7 @@ namespace Fenrir.Multiplayer.Server
         {
             PeerDisconnected?.Invoke(this, new ServerPeerDisconnectedEventArgs(serverPeer));
         }
+
         #endregion
     }
 }

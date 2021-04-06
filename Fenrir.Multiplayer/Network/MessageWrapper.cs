@@ -83,7 +83,7 @@ namespace Fenrir.Multiplayer.Network
         /// <returns>New MessageWrapper that wraps given event</returns>
         public static MessageWrapper WrapEvent(IEvent data, byte channel, MessageFlags flags, MessageDeliveryMethod deliveryMethod)
         {
-            return new MessageWrapper(MessageType.Event, data, 0, channel, flags, deliveryMethod);
+            return new MessageWrapper(flags, data, 0, channel, deliveryMethod);
         }
 
         /// <summary>
@@ -97,7 +97,7 @@ namespace Fenrir.Multiplayer.Network
         /// <returns>New MessageWrapper that wraps given request</returns>
         public static MessageWrapper WrapRequest(IRequest data, short requestId, byte channel, MessageFlags flags, MessageDeliveryMethod deliveryMethod)
         {
-            return new MessageWrapper(MessageType.Request, data, requestId, channel, flags, deliveryMethod);
+            return new MessageWrapper(flags, data, requestId, channel, deliveryMethod);
         }
 
         /// <summary>
@@ -111,7 +111,7 @@ namespace Fenrir.Multiplayer.Network
         /// <returns>New MessageWrapper that wraps given response</returns>
         public static MessageWrapper WrapResponse(IResponse data, short requestId, byte channel, MessageFlags flags, MessageDeliveryMethod deliveryMethod)
         {
-            return new MessageWrapper(MessageType.Response, data, requestId, channel, flags, deliveryMethod);
+            return new MessageWrapper(flags, data, requestId, channel, deliveryMethod);
         }
         #endregion
     }
