@@ -22,7 +22,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageWriter_WriteMessage_WritesEvent()
         {
             var typeHashMap = new TypeHashMap();
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             var messageWriter = new MessageWriter(serializer, typeHashMap, new EventBasedLogger());
 
             var byteStreamWriter = new ByteStreamWriter(serializer);
@@ -53,7 +53,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageWriter_WriteMessage_WritesRequest()
         {
             var typeHashMap = new TypeHashMap();
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             var messageWriter = new MessageWriter(serializer, typeHashMap, new EventBasedLogger());
 
             var byteStreamWriter = new ByteStreamWriter(serializer);
@@ -88,7 +88,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageWriter_WriteMessage_WritesResponse()
         {
             var typeHashMap = new TypeHashMap();
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             var messageWriter = new MessageWriter(serializer, typeHashMap, new EventBasedLogger());
 
             var byteStreamWriter = new ByteStreamWriter(serializer);

@@ -26,7 +26,7 @@ namespace Fenrir.Multiplayer.Rooms
         /// <summary>
         /// Room Logger
         /// </summary>
-        protected IFenrirLogger Logger { get; private set; }
+        protected ILogger Logger { get; private set; }
 
         /// <summary>
         /// True if room action queue is running
@@ -48,7 +48,7 @@ namespace Fenrir.Multiplayer.Rooms
         /// </summary>
         /// <param name="logger">Logger</param>
         /// <param name="roomId">Unique id</param>
-        public ServerRoom(IFenrirLogger logger, string roomId)
+        public ServerRoom(ILogger logger, string roomId)
         {
             Logger = logger;
             _actionQueue = new ActionQueue(logger);
@@ -76,7 +76,7 @@ namespace Fenrir.Multiplayer.Rooms
         /// </summary>
         /// <param name="action">Callback</param>
         /// <param name="delayMs">Delay after which callback will be invoked</param>
-        protected void Schedule(Action action, int delayMs)
+        protected void Schedule(Action action, double delayMs)
         {
             _actionQueue.Schedule(action, delayMs);
         }

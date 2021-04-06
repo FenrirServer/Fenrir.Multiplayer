@@ -13,7 +13,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReadsEvent()
         {
             var typeHashMap = new TypeHashMap();
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // Write test data
@@ -40,7 +40,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReadsEvent_WhenEmptyData()
         {
             var typeHashMap = new TypeHashMap();
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // Write test data
@@ -66,7 +66,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReadsRequest()
         {
             var typeHashMap = new TypeHashMap();
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // Write test data
@@ -95,7 +95,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReadsResponse()
         {
             var typeHashMap = new TypeHashMap();
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // Write test data
@@ -125,7 +125,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReturnsFalse_IfMissingMessageTypeHash()
         {
             var typeHashMap = new TypeHashMap();
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // empty data
@@ -138,7 +138,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReturnsFalse_IfInvalidMessageTypeHash()
         {
             var typeHashMap = new TypeHashMap();
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // Write test data
@@ -154,7 +154,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReturnsFalse_IfMissingFlags()
         {
             var typeHashMap = new TypeHashMap();
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // Write test data
@@ -171,7 +171,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReturnsFalse_IfMissingChannelNumber()
         {
             var typeHashMap = new TypeHashMap();
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // Write test data
@@ -189,7 +189,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
         public void MessageReader_TryReadMessage_ReturnsFalse_IfMissingRequestId()
         {
             var typeHashMap = new TypeHashMap();
-            var serializer = new FenrirSerializer();
+            var serializer = new NetworkSerializer();
             var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
 
             // Write test data

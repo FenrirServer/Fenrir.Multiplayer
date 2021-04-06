@@ -2,6 +2,8 @@
 using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Rooms;
+using Fenrir.Multiplayer.Serialization;
+using Fenrir.Multiplayer.Server;
 using Fenrir.Multiplayer.Tests.Fixtures;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -22,6 +24,8 @@ namespace Fenrir.Multiplayer.Tests.Unit.Rooms
             bool didJoin = false;
             bool didLeave = false;
             TestRoom room = null;
+
+            var serverMock = new Mock<INetworkServer>();
 
             var serverPeerMock = new Mock<IServerPeer>();
             serverPeerMock.Setup(peer => peer.Id).Returns("test_peer");
@@ -44,7 +48,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Rooms
                 return room;
             };
 
-            var roomManager = new ServerRoomManager<TestRoom>(roomFactoryMethod, logger);
+            var roomManager = new ServerRoomManager<TestRoom>(roomFactoryMethod, logger, serverMock.Object);
 
             var joinRequestHandler = (IRequestHandler<RoomJoinRequest, RoomJoinResponse>)roomManager;
             var leaveRequestHandler = (IRequestHandler<RoomLeaveRequest, RoomLeaveResponse>)roomManager;
@@ -68,6 +72,8 @@ namespace Fenrir.Multiplayer.Tests.Unit.Rooms
             bool didJoin = false;
             bool didLeave = false;
 
+            var serverMock = new Mock<INetworkServer>();
+
             var serverPeerMock = new Mock<IServerPeer>();
             serverPeerMock.Setup(peer => peer.Id).Returns("test_peer");
 
@@ -86,7 +92,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Rooms
 
             var roomFactory = new TestRoomFactory(logger, onJoin, onLeave);
 
-            var roomManager = new ServerRoomManager<TestRoom>(roomFactory, logger);
+            var roomManager = new ServerRoomManager<TestRoom>(roomFactory, logger, serverMock.Object);
 
             var joinRequestHandler = (IRequestHandler<RoomJoinRequest, RoomJoinResponse>)roomManager;
             var leaveRequestHandler = (IRequestHandler<RoomLeaveRequest, RoomLeaveResponse>)roomManager;
@@ -110,7 +116,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Rooms
 
             public IEnumerable<IServerPeer> RoomPeers => Peers.Values;
 
-            public TestRoom(IFenrirLogger logger, 
+            public TestRoom(ILogger logger, 
                 string roomId, 
                 Action<IServerPeer, string> onPeerJoin = null,
                 Action<IServerPeer> onPeerLeave = null)
@@ -136,9 +142,9 @@ namespace Fenrir.Multiplayer.Tests.Unit.Rooms
             private Action<IServerPeer, string> _onPeerJoin;
             private Action<IServerPeer> _onPeerLeave;
 
-            private readonly IFenrirLogger _logger;
+            private readonly ILogger _logger;
 
-            public TestRoomFactory(IFenrirLogger logger, Action<IServerPeer, string> onPeerJoin = null, Action<IServerPeer> onPeerLeave = null)
+            public TestRoomFactory(ILogger logger, Action<IServerPeer, string> onPeerJoin = null, Action<IServerPeer> onPeerLeave = null)
             {
                 _logger = logger;
                 _onPeerJoin = onPeerJoin;

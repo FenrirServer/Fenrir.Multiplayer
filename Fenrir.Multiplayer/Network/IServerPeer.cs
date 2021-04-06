@@ -11,6 +11,11 @@
         int Latency { get; }
 
         /// <summary>
+        /// Custom peer data that can be assigned to each peer
+        /// </summary>
+        object PeerData { get; set; }
+
+        /// <summary>
         /// Notifies client of the event.
         /// All events are encrypted by default.
         /// </summary>

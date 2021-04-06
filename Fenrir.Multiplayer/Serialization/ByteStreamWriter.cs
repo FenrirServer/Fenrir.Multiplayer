@@ -27,23 +27,23 @@ namespace Fenrir.Multiplayer.Serialization
         /// <summary>
         /// Instance of a serializer. Used to write unknown types
         /// </summary>
-        private IFenrirSerializer _serializer;
+        private INetworkSerializer _serializer;
 
         /// <summary>
         /// Creates Byte Stream Writer
         /// </summary>
-        /// <param name="serializer">Fenrir Serializer, used for serializing unknown types</param>
-        public ByteStreamWriter(IFenrirSerializer serializer)
+        /// <param name="serializer">Network Serializer, used for serializing unknown types</param>
+        public ByteStreamWriter(INetworkSerializer serializer)
             : this(new NetDataWriter(), serializer)
         {
         }
 
         /// <summary>
-        /// Creates new <see cref="ByteStreamWriter"/> with <seealso cref="IFenrirSerializer"/> and <seealso cref="NetDataWriter"/>
+        /// Creates new <see cref="ByteStreamWriter"/> with <seealso cref="INetworkSerializer"/> and <seealso cref="NetDataWriter"/>
         /// </summary>
         /// <param name="netDataWriter">Net Data Writer</param>
-        /// <param name="serializer">Fenrir Serializer, used for serializing unknown types</param>
-        public ByteStreamWriter(NetDataWriter netDataWriter, IFenrirSerializer serializer)
+        /// <param name="serializer">Network Serializer, used for serializing unknown types</param>
+        public ByteStreamWriter(NetDataWriter netDataWriter, INetworkSerializer serializer)
         {
             if (netDataWriter == null)
             {
@@ -61,7 +61,7 @@ namespace Fenrir.Multiplayer.Serialization
         }
 
         ///<inheritdoc/>
-        void IRecyclable.Recycle() => NetDataWriter?.Reset();
+        public void Recycle() => NetDataWriter?.Reset();
 
         ///<inheritdoc/>
         public void Write(object obj) 
@@ -73,6 +73,18 @@ namespace Fenrir.Multiplayer.Serialization
     
             _serializer.Serialize(obj, this);
         }
+
+        ///<inheritdoc/>
+        public void Write(object obj, Type dataType)
+        {
+            if (_serializer == null)
+            {
+                throw new NullReferenceException($"Failed to write {obj.GetType().Name}, {nameof(ByteStreamReader)}.{nameof(_serializer)} is not set");
+            }
+
+            _serializer.Serialize(obj, dataType, this);
+        }
+
 
         ///<inheritdoc/>
         public void Write(byte[] data, int offset, int length) => NetDataWriter.Put(data, offset, length);

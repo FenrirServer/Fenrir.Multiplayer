@@ -29,13 +29,13 @@ namespace Fenrir.Multiplayer.Serialization
         /// <summary>
         /// Instance of a serializer. Used to read unknown types
         /// </summary>
-        private IFenrirSerializer _serializer;
+        private INetworkSerializer _serializer;
 
         /// <summary>
         /// Creates ByteStreamReader
         /// </summary>
         /// <param name="serializer">Fenrir Serializer, used for deserializing unknown types</param>
-        public ByteStreamReader(IFenrirSerializer serializer)
+        public ByteStreamReader(INetworkSerializer serializer)
             : this(new NetDataReader(), serializer)
         {
         }
@@ -45,27 +45,27 @@ namespace Fenrir.Multiplayer.Serialization
         /// </summary>
         /// <param name="byteStreamWriter">Byte stream writer</param>
         /// <param name="serializer">Fenrir Serializer, used for deserializing unknown types</param>
-        public ByteStreamReader(ByteStreamWriter byteStreamWriter, IFenrirSerializer serializer = null)
+        public ByteStreamReader(ByteStreamWriter byteStreamWriter, INetworkSerializer serializer = null)
             : this(new NetDataReader(byteStreamWriter.NetDataWriter), serializer)
         {
         }
 
         /// <summary>
-        /// Creates <see cref="ByteStreamReader"/> with <seealso cref="IFenrirSerializer"/> and byte stream array
+        /// Creates <see cref="ByteStreamReader"/> with <seealso cref="INetworkSerializer"/> and byte stream array
         /// </summary>
         /// <param name="bytes">Bytes</param>
         /// <param name="serializer">Fenrir Serializer, used for deserializing unknown types</param>
-        public ByteStreamReader(byte[] bytes, IFenrirSerializer serializer = null)
+        public ByteStreamReader(byte[] bytes, INetworkSerializer serializer = null)
             : this(new NetDataReader(bytes), serializer)
         {
         }
 
         /// <summary>
-        /// Creates <see cref="ByteStreamReader"/> with <seealso cref="IFenrirSerializer"/> and <seealso cref="NetDataReader"/>
+        /// Creates <see cref="ByteStreamReader"/> with <seealso cref="INetworkSerializer"/> and <seealso cref="NetDataReader"/>
         /// </summary>
         /// <param name="netDataReader">Net data reader</param>
         /// <param name="serializer">Fenrir Serializer, used for deserializing unknown types</param>
-        public ByteStreamReader(NetDataReader netDataReader, IFenrirSerializer serializer = null)
+        public ByteStreamReader(NetDataReader netDataReader, INetworkSerializer serializer = null)
         {
             if(netDataReader == null)
             {
@@ -94,7 +94,19 @@ namespace Fenrir.Multiplayer.Serialization
         }
 
         /// <inheritdoc/>
-        void IRecyclable.Recycle() => NetDataReader?.Clear();
+        public object Read(Type dataType)
+        {
+            if (_serializer == null)
+            {
+                throw new NullReferenceException($"Failed to read {dataType.Name}, {nameof(ByteStreamReader)}.{nameof(_serializer)} is not set");
+            }
+
+            return _serializer.Deserialize(dataType, this);
+        }
+
+
+        /// <inheritdoc/>
+        public void Recycle() => NetDataReader?.Clear();
 
         /// <inheritdoc/>
         public bool ReadBool() => NetDataReader.GetBool();

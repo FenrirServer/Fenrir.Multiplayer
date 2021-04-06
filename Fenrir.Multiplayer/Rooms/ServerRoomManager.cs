@@ -1,7 +1,9 @@
 ﻿using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
+using Fenrir.Multiplayer.Server;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Fenrir.Multiplayer.Rooms
 {
@@ -29,7 +31,12 @@ namespace Fenrir.Multiplayer.Rooms
         /// <summary>
         /// Logger
         /// </summary>
-        private readonly IFenrirLogger _logger;
+        protected ILogger Logger { get; private set; }
+        
+        /// <summary>
+        /// Network server
+        /// </summary>
+        public INetworkServer Server { get; private set; }
 
         /// <summary>
         /// Room creation callback
@@ -45,9 +52,23 @@ namespace Fenrir.Multiplayer.Rooms
         /// Creates room manager
         /// </summary>
         /// <param name="logger">Logger</param>
-        private ServerRoomManager(IFenrirLogger logger)
+        /// <param name="server">Server</param>
+        private ServerRoomManager(ILogger logger, INetworkServer server)
         {
-            _logger = logger;
+            Logger = logger;
+            Server = server;
+
+            RegisterRequestHandlers(server);
+        }
+
+        /// <summary>
+        /// Registers request handlers with the server
+        /// </summary>
+        /// <param name="server">Network Server</param>
+        private void RegisterRequestHandlers(INetworkServer server)
+        {
+            server.AddRequestHandler<RoomJoinRequest, RoomJoinResponse>(this);
+            server.AddRequestHandler<RoomLeaveRequest, RoomLeaveResponse>(this);
         }
 
         /// <summary>
@@ -56,8 +77,9 @@ namespace Fenrir.Multiplayer.Rooms
         /// </summary>
         /// <param name="roomFactory">Room factory that creates a room of a type <seealso cref="TRoom"/></param>
         /// <param name="logger">Logger</param>
-        public ServerRoomManager(IServerRoomFactory<TRoom> roomFactory, IFenrirLogger logger)
-            : this(logger)
+        /// <param name="server">Server</param>
+        public ServerRoomManager(IServerRoomFactory<TRoom> roomFactory, ILogger logger, INetworkServer server)
+            : this(logger, server)
         {
             if(roomFactory == null)
             {
@@ -68,23 +90,14 @@ namespace Fenrir.Multiplayer.Rooms
         }
 
         /// <summary>
-        /// Creates server room manager with a given room factory.
-        /// Implement IServerRoomFactory interface for custom room creation
-        /// </summary>
-        /// <param name="roomFactory">Room factory that creates a room of a type <seealso cref="TRoom"/></param>
-        public ServerRoomManager(IServerRoomFactory<TRoom> roomFactory)
-            : this(roomFactory, new EventBasedLogger())
-        {
-        }
-
-        /// <summary>
         /// Creates server room manager with a given room factory method.
         /// Pass in a callback that creates new room, e.g. new ServerRoomManager(() => new MyRoom(logger, ...))
         /// </summary>
         /// <param name="roomFactoryMethod">Factory method that creates new room of type <seealso cref="TRoom"/></param>
         /// <param name="logger">Logger</param>
-        public ServerRoomManager(CreateRoomHandler roomFactoryMethod, IFenrirLogger logger)
-            : this(logger)
+        /// <param name="server">Server</param>
+        public ServerRoomManager(CreateRoomHandler roomFactoryMethod, ILogger logger, INetworkServer server)
+            : this(logger, server)
         {
             if (roomFactoryMethod == null)
             {
@@ -95,13 +108,15 @@ namespace Fenrir.Multiplayer.Rooms
         }
 
         /// <summary>
-        /// Creates server room manager with a given room factory method.
-        /// Pass in a callback that creates new room, e.g. new ServerRoomManager(() => new MyRoom(logger, ...))
+        /// Returns all rooms
         /// </summary>
-        /// <param name="roomFactoryMethod">Factory method that creates new room of type <seealso cref="TRoom"/></param>
-        public ServerRoomManager(CreateRoomHandler roomFactoryMethod)
-            : this(roomFactoryMethod, new EventBasedLogger())
+        /// <returns></returns>
+        internal TRoom[] GetRooms()
         {
+            lock(_rooms)
+            {
+                return _rooms.Values.ToArray();
+            }
         }
 
         private bool TryGetOrCreateRoom(IServerPeer peer, string roomId, string token, out TRoom room)
@@ -135,22 +150,27 @@ namespace Fenrir.Multiplayer.Rooms
 
             try
             {
-                room = _roomFactoryMethod(peer, roomId, token);
+                room = CreateRoom(peer, roomId, token);
             }
             catch(Exception e)
             {
-                _logger.Error("Uncaught exception during room creation with id {0}: {1}", roomId, e.ToString());
+                Logger.Error("Uncaught exception during room creation with id {0}: {1}", roomId, e.ToString());
                 return false;
             }
 
             if(room == null)
             {
-                _logger.Error("Failed to create a room with id {0}, room factory returned null", roomId);
+                Logger.Error("Failed to create a room with id {0}, room factory returned null", roomId);
                 return false;
             }
 
             room.Terminated += OnRoomTerminated;
             return true;
+        }
+
+        private TRoom CreateRoom(IServerPeer peer, string roomId, string token)
+        {
+            return _roomFactoryMethod(peer, roomId, token);
         }
 
         private void OnRoomTerminated(object sender, EventArgs e)
@@ -162,7 +182,7 @@ namespace Fenrir.Multiplayer.Rooms
             }
             catch(InvalidCastException ex)
             {
-                _logger.Error("Failed to terminate room, failed to cast {0} to {1}: {2}", sender.GetType().Name, typeof(TRoom).Name, ex.ToString());
+                Logger.Error("Failed to terminate room, failed to cast {0} to {1}: {2}", sender.GetType().Name, typeof(TRoom).Name, ex.ToString());
                 return;
             }
 
@@ -186,6 +206,7 @@ namespace Fenrir.Multiplayer.Rooms
 
             // Join first user
             room.AddPeer(peer, request.Token);
+            peer.PeerData = room;
 
             return RoomJoinResponse.JoinSuccess;
         }
@@ -194,7 +215,7 @@ namespace Fenrir.Multiplayer.Rooms
         {
             if(request.RoomId == null)
             {
-                _logger.Warning("Failed to remove peer {0} from the room, {1} is null", peer.EndPoint, nameof(request.RoomId));
+                Logger.Warning("Failed to remove peer {0} from the room, {1} is null", peer.EndPoint, nameof(request.RoomId));
                 return RoomLeaveResponse.LeaveFailed;
             }
 
@@ -208,7 +229,9 @@ namespace Fenrir.Multiplayer.Rooms
                 }
             }
 
+            peer.PeerData = null;
             room.RemovePeer(peer);
+
             return RoomLeaveResponse.LeaveSuccess;
         }
         #endregion

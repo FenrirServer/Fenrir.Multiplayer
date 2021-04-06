@@ -1,19 +1,36 @@
-﻿using Fenrir.Multiplayer.Network;
+﻿using Fenrir.Multiplayer.Events;
+using Fenrir.Multiplayer.Network;
+using Fenrir.Multiplayer.Serialization;
 using System;
 using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.Client
 {
     /// <summary>
-    /// Fenrir Client
-    /// Connects to a FenrirServer using given protocols
+    /// Fenrir Network Client
+    /// Connects to a NetworkServer using given protocols
     /// </summary>
-    public interface IFenrirClient
+    public interface INetworkClient
     {
+        /// <summary>
+        /// Invoked when client is disconnected
+        /// </summary>
+        event EventHandler<DisconnectedEventArgs> Disconnected;
+
+        /// <summary>
+        /// Invoked when network error occurs
+        /// </summary>
+        event EventHandler<NetworkErrorEventArgs> NetworkError;
+
         /// <summary>
         /// Unique id of the client
         /// </summary>
         string ClientId { get; set; }
+
+        /// <summary>
+        /// Protocols enabled on this client
+        /// </summary>
+        ProtocolType EnabledProtocols { get; set; }
 
         /// <summary>
         /// Client Peer object. null if client is not connected
@@ -24,6 +41,11 @@ namespace Fenrir.Multiplayer.Client
         /// State of the connection
         /// </summary>
         ConnectionState State { get; }
+
+        /// <summary>
+        /// Network Serializer
+        /// </summary>
+        INetworkSerializer Serializer { get; }
 
         /// <summary>
         /// Connects using Server Info URI
@@ -75,9 +97,10 @@ namespace Fenrir.Multiplayer.Client
             where TEvent : IEvent;
 
         /// <summary>
-        /// Adds client protocol
+        /// Adds a factory method for a serializable type. If factory is not set, new instances are created using <seealso cref="Activator.CreateInstance(Type)"/>
         /// </summary>
-        /// <param name="protocolConnector">Protocol connector to add</param>
-        void AddProtocol(IProtocolConnector protocolConnector);
+        /// <typeparam name="T">Type</typeparam>
+        /// <param name="factoryMethod">Factory method</param>
+        void AddSerializableTypeFactory<T>(Func<T> factoryMethod) where T : IByteStreamSerializable;
     }
 }

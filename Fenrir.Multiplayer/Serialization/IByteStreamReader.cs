@@ -36,6 +36,13 @@ namespace Fenrir.Multiplayer.Serialization
         T Read<T>() where T : new();
 
         /// <summary>
+        /// Reads data of a custom data type.
+        /// </summary>
+        /// <param name="dataType">Type of data</param>
+        /// <returns>Instance of type T</returns>
+        object Read(Type dataType);
+
+        /// <summary>
         /// Reads boolean
         /// </summary>
         /// <returns>Value</returns>

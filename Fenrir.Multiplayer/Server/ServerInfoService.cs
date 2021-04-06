@@ -18,9 +18,9 @@ namespace Fenrir.Multiplayer.Server
     class ServerInfoService : IServerInfoService
     {
         /// <summary>
-        /// Fenrir Server Info Provider
+        /// Fenrir NetworkServer Info Provider
         /// </summary>
-        private readonly IFenrirServerInfoProvider _fenrirServerInfoProvider;
+        private readonly IServerInfoProvider _networkServerInfoProvider;
 
         /// <summary>
         /// Instance of the Http Server
@@ -28,7 +28,7 @@ namespace Fenrir.Multiplayer.Server
         private HttpServer _httpServer;
 
         /// <inheritdoc/>
-        public ushort Port { get; set; } = 8080;
+        public ushort Port { get; private set; }
 
         /// <inheritdoc/>
         public bool IsRunning => _httpServer?.IsListening ?? false;
@@ -36,52 +36,41 @@ namespace Fenrir.Multiplayer.Server
         /// <summary>
         /// Creates Server Info Service
         /// </summary>
-        /// <param name="fenrirServerInfoProvider">
-        /// Information provider for the Fenrir Server.
-        /// Usually, Fenrir Server instance 
+        /// <param name="networkServerInfoProvider">
+        /// Information provider for the Fenrir NetworkServer.
+        /// Normally, a Network Server instance 
         /// </param>
-        public ServerInfoService(IFenrirServerInfoProvider fenrirServerInfoProvider)
+        public ServerInfoService(IServerInfoProvider networkServerInfoProvider)
         {
-            _fenrirServerInfoProvider = fenrirServerInfoProvider;
+            _networkServerInfoProvider = networkServerInfoProvider;
         }
 
         /// <summary>
-        /// Creates Server Info Service
+        /// Starts info service
         /// </summary>
-        /// <param name="fenrirServerInfoProvider">
-        /// Information provider for the Fenrir Server.
-        /// Usually, Fenrir Server instance 
-        /// </param>
-        public ServerInfoService(IFenrirServerInfoProvider fenrirServerInfoProvider, ushort port)
-            : this(fenrirServerInfoProvider)
+        /// <param name="bindPort">Port on which info http service is bound</param>
+        public void Start(ushort bindPort)
         {
-            Port = port;
-        }
+            Port = bindPort;
 
-
-        /// <inheritdoc/>
-        public Task Start()
-        {
             if (!IsRunning)
             {
                 _httpServer = new HttpServer(Port);
                 _httpServer.OnGet += OnHttpServerGet;
                 _httpServer.Start();
             }
-
-            return Task.CompletedTask;
         }
 
-        /// <inheritdoc/>
-        public Task Stop()
+        /// <summary>
+        /// Stops info service
+        /// </summary>
+        public void Stop()
         {
             if (IsRunning)
             {
                 _httpServer.Stop();
                 _httpServer = null;
             }
-
-            return Task.CompletedTask;
         }
 
         private void OnHttpServerGet(object sender, HttpRequestEventArgs e)
@@ -89,7 +78,7 @@ namespace Fenrir.Multiplayer.Server
             var response = e.Response;
 
             // Check server status
-            if (_fenrirServerInfoProvider.Status != ServerStatus.Running)
+            if (_networkServerInfoProvider.Status != ServerStatus.Running)
             {
                 // Send response
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
@@ -99,9 +88,9 @@ namespace Fenrir.Multiplayer.Server
             // Get server info
             var serverInfo = new ServerInfo()
             {
-                ServerId = _fenrirServerInfoProvider.ServerId,
-                Hostname = _fenrirServerInfoProvider.Hostname,
-                Protocols = _fenrirServerInfoProvider.Listeners.Select(
+                ServerId = _networkServerInfoProvider.ServerId,
+                Hostname = _networkServerInfoProvider.Hostname,
+                Protocols = _networkServerInfoProvider.Listeners.Select(
                     listener => new ProtocolInfo(listener.ProtocolType, listener.GetConnectionData())
                 ).ToArray()
             };
@@ -120,7 +109,7 @@ namespace Fenrir.Multiplayer.Server
 
         public void Dispose()
         {
-            Stop().Wait();
+            Stop();
         }
     }
 }

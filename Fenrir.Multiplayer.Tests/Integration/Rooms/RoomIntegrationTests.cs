@@ -18,19 +18,17 @@ namespace Fenrir.Multiplayer.Tests.Integration.Rooms
         public async Task TestJoinLeaveRoom()
         {
             using var logger = new TestLogger();
-            using var fenrirServer = new FenrirServer(logger);
-            fenrirServer.AddLiteNetProtocol(27018);
-            fenrirServer.AddRooms<TestRoom>((peer, roomId, token) => new TestRoom(logger, "test_room_id"));
-            await fenrirServer.Start();
+            using var networkServer = new NetworkServer(logger) { BindPort = 27018 };
+            networkServer.AddRooms<TestRoom>((peer, roomId, token) => new TestRoom(logger, "test_room_id"));
+            networkServer.Start();
 
-            Assert.AreEqual(ServerStatus.Running, fenrirServer.Status, "server is not running");
+            Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
             var eventTcs = new TaskCompletionSource<TestEvent>();
             var testEventHandler = new TestEventHandler(eventTcs);
 
-            using var fenrirClient = new FenrirClient(logger);
-            fenrirClient.AddLiteNetProtocol();
-            fenrirClient.AddEventHandler<TestEvent>(testEventHandler);
+            using var networkClient = new NetworkClient(logger);
+            networkClient.AddEventHandler<TestEvent>(testEventHandler);
             var serverInfo = new ServerInfo()
             {
                 Hostname = "127.0.0.1",
@@ -42,18 +40,18 @@ namespace Fenrir.Multiplayer.Tests.Integration.Rooms
             };
 
             // Connect to server
-            await fenrirClient.Connect(serverInfo);
-            Assert.AreEqual(ConnectionState.Connected, fenrirClient.State, "client is not connected");
+            await networkClient.Connect(serverInfo);
+            Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
 
             // Join room
-            var joinResult = await fenrirClient.JoinRoom("test_room_id");
+            var joinResult = await networkClient.JoinRoom("test_room_id");
             Assert.IsTrue(joinResult.Success);
 
             // Receive room event
             await eventTcs.Task;
 
             // Leave room
-            var leaveResult = await fenrirClient.LeaveRoom("test_room_id");
+            var leaveResult = await networkClient.LeaveRoom("test_room_id");
             Assert.IsTrue(leaveResult.Success);
 
         }
@@ -61,7 +59,7 @@ namespace Fenrir.Multiplayer.Tests.Integration.Rooms
         #region Fixtures
         class TestRoom : ServerRoom
         {
-            public TestRoom(IFenrirLogger logger, string roomId)
+            public TestRoom(ILogger logger, string roomId)
                 : base(logger, roomId)
             {
             }

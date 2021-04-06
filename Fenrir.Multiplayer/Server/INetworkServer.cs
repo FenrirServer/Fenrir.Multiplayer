@@ -10,41 +10,22 @@ namespace Fenrir.Multiplayer.Server
     /// <summary>
     /// Fenrir Server Host
     /// </summary>
-    public interface IFenrirServer : IFenrirServerInfoProvider, IDisposable
+    public interface INetworkServer : IServerInfoProvider, IDisposable
     {
         /// <summary>
         /// Invoked when server status changes
         /// </summary>
         event EventHandler<ServerStatusChangedEventArgs> StatusChanged;
-        
-        /// <summary>
-        /// Invoked protocol is added
-        /// </summary>
-        event EventHandler<ServerProtocolAddedEventArgs> ProtocolAdded;
 
         /// <summary>
-        /// Starts the server
+        /// Invoked when new peer connects to a server
         /// </summary>
-        /// <returns>Task that completes when server has started</returns>
-        Task Start();
+        event EventHandler<ServerPeerConnectedEventArgs> PeerConnected;
 
         /// <summary>
-        /// Stops the server
+        /// Invoked when peer disconnects from the server
         /// </summary>
-        /// <returns>Task that completes when server has stopped</returns>
-        Task Stop();
-
-        /// <summary>
-        /// Adds server protocol
-        /// </summary>
-        /// <param name="protocolListener">Protocol listener to add</param>
-        void AddProtocol(IProtocolListener protocolListener);
-
-        /// <summary>
-        /// Adds Service
-        /// </summary>
-        /// <param name="service">Fenrir Service to add</param>
-        void AddService(IFenrirService service);
+        event EventHandler<ServerPeerDisconnectedEventArgs> PeerDisconnected;
 
         /// <summary>
         /// Sets custom connection request handler on all installed protocols
@@ -72,7 +53,6 @@ namespace Fenrir.Multiplayer.Server
             where TRequest : IRequest<TResponse>
             where TResponse : IResponse;
 
-
         /// <summary>
         /// Adds asynchronous request handler for a given request and response type, to all installed protocols
         /// </summary>
@@ -82,5 +62,18 @@ namespace Fenrir.Multiplayer.Server
         void AddRequestHandlerAsync<TRequest, TResponse>(IRequestHandlerAsync<TRequest, TResponse> requestHandler)
             where TRequest : IRequest<TResponse>
             where TResponse : IResponse;
+
+        /// <summary>
+        /// Adds a factory method for a serializable type. If factory is not set, new instances are created using <seealso cref="Activator.CreateInstance(Type)"/>
+        /// </summary>
+        /// <typeparam name="T">Type</typeparam>
+        /// <param name="factoryMethod">Factory method</param>
+        void AddSerializableTypeFactory<T>(Func<T> factoryMethod) where T : IByteStreamSerializable;
+
+        /// <summary>
+        /// Removes factory method for a serializable type.
+        /// </summary>
+        /// <typeparam name="T">Type</typeparam>
+        void RemoveSerializableTypeFactory<T>() where T : IByteStreamSerializable;
     }
 }

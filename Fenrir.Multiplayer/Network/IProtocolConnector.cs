@@ -56,30 +56,20 @@ namespace Fenrir.Multiplayer.Network
         Type ConnectionDataType { get; }
 
         /// <summary>
-        /// Serializer used for message serialization / deserialization
-        /// </summary>
-        IFenrirSerializer Serializer { get; set; }
-
-        /// <summary>
-        /// Logger
-        /// </summary>
-        IFenrirLogger Logger { get; set; }
-
-        /// <summary>
         /// Time after which client is disconnected if no keep alive packets are received
         /// </summary>
-        int DisconnectTimeout { get; set; }
+        int DisconnectTimeoutMs { get; set; }
 
         /// <summary>
         /// Delay between network ticks
         /// </summary>
-        int UpdateTime { get; set; }
+        int UpdateTimeMs { get; set; }
 
         /// <summary>
         /// Interval between KeepAlive packets.
-        /// Must be smaller than <seealso cref="DisconnectTimeout"/>
+        /// Must be smaller than <seealso cref="DisconnectTimeoutMs"/>
         /// </summary>
-        int PingInterval { get; set; }
+        int PingIntervalMs { get; set; }
 
         /// <summary>
         /// If set to true, packet loss is simulated and random packets will be dropped
@@ -117,22 +107,5 @@ namespace Fenrir.Multiplayer.Network
         /// Disconnects
         /// </summary>
         void Disconnect();
-
-        /// <summary>
-        /// Adds event handler to the client
-        /// Event handler will be invoked when event of type TEvent is received from the server
-        /// </summary>
-        /// <typeparam name="TEvent">Type of the event</typeparam>
-        /// <param name="eventHandler">Event handler</param>
-        void AddEventHandler<TEvent>(IEventHandler<TEvent> eventHandler)
-            where TEvent : IEvent;
-
-        /// <summary>
-        /// Removed event handler from the client
-        /// </summary>
-        /// <typeparam name="TEvent">Type of the event</typeparam>
-        /// <param name="eventHandler">Event handler</param>
-        void RemoveEventHandler<TEvent>(IEventHandler<TEvent> eventHandler)
-            where TEvent : IEvent;
     }
 }

@@ -18,6 +18,7 @@ namespace Fenrir.Multiplayer.Events
         /// Additional information about socket error
         /// </summary>
         public SocketError SocketError { get; set; }
+
         /// <summary>
         /// Default constructor
         /// </summary>

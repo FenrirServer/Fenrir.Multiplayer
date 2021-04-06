@@ -4,7 +4,7 @@
     /// Logger interface - provides ways for Fenrir libraries
     /// to log messages.
     /// </summary>
-    public interface IFenrirLogger
+    public interface ILogger
     {
         /// <summary>
         /// Writes Trace Log

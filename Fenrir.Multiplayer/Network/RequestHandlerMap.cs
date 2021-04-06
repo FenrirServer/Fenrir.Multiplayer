@@ -19,7 +19,7 @@ namespace Fenrir.Multiplayer.Network
         /// <summary>
         /// Logger
         /// </summary>
-        private readonly IFenrirLogger _logger;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// Request handlers bound to a request type
@@ -30,7 +30,7 @@ namespace Fenrir.Multiplayer.Network
         /// Creates RequestHandlerMap
         /// </summary>
         /// <param name="logger">Logger</param>
-        public RequestHandlerMap(IFenrirLogger logger)
+        public RequestHandlerMap(ILogger logger)
         {
             _logger = logger;
         }
@@ -182,20 +182,14 @@ namespace Fenrir.Multiplayer.Network
         /// Removes request handler
         /// </summary>
         /// <typeparam name="TRequest">Type of request</typeparam>
-        /// <param name="requestHandler">Reqeuest handler</param>
-        public void RemoveRequestHandler<TRequest>(IRequestHandler<TRequest> requestHandler)
+        public void RemoveRequestHandler<TRequest>()
             where TRequest : IRequest
         {
-            if (requestHandler == null)
-            {
-                throw new ArgumentNullException(nameof(requestHandler));
-            }
-
             lock (_syncRoot)
             {
                 if (!_requestHandlers.ContainsKey(typeof(TRequest)))
                 {
-                    throw new RequestHandlerException($"Failed to remove request handler {requestHandler.GetType()}, handler for request type {typeof(TRequest).Name} is not registered");
+                    throw new RequestHandlerException($"Failed to remove request handler for request type {typeof(TRequest).Name}, handler for the given type is not registered");
                 }
 
                 _requestHandlers.Remove(typeof(TRequest));
@@ -207,21 +201,15 @@ namespace Fenrir.Multiplayer.Network
         /// </summary>
         /// <typeparam name="TRequest">Type of request</typeparam>
         /// <typeparam name="TResponse">Type of response</typeparam>
-        /// <param name="requestHandler">Request handler</param>
-        public void RemoveRequestHandler<TRequest, TResponse>(IRequestHandler<TRequest, TResponse> requestHandler)
+        public void RemoveRequestHandler<TRequest, TResponse>()
             where TRequest : IRequest<TResponse>
             where TResponse : IResponse
         {
-            if (requestHandler == null)
-            {
-                throw new ArgumentNullException(nameof(requestHandler));
-            }
-
             lock (_syncRoot)
             {
                 if (!_requestHandlers.ContainsKey(typeof(TRequest)))
                 {
-                    throw new RequestHandlerException($"Failed to remove request handler {requestHandler.GetType()}, handler for request type {typeof(TRequest).Name} is not registered");
+                    throw new RequestHandlerException($"Failed to remove request handler for request type {typeof(TRequest).Name} and response type {typeof(TResponse).Name}, handler for the given type is not registered");
                 }
 
                 _requestHandlers.Remove(typeof(TRequest));
@@ -233,21 +221,15 @@ namespace Fenrir.Multiplayer.Network
         /// </summary>
         /// <typeparam name="TRequest">Type of request</typeparam>
         /// <typeparam name="TResponse">Type of response</typeparam>
-        /// <param name="requestHandler">Request handler</param>
-        public void RemoveRequestHandlerAsync<TRequest, TResponse>(IRequestHandlerAsync<TRequest, TResponse> requestHandler)
+        public void RemoveRequestHandlerAsync<TRequest, TResponse>()
             where TRequest : IRequest<TResponse>
             where TResponse : IResponse
         {
-            if (requestHandler == null)
-            {
-                throw new ArgumentNullException(nameof(requestHandler));
-            }
-
             lock (_syncRoot)
             {
                 if (!_requestHandlers.ContainsKey(typeof(TRequest)))
                 {
-                    throw new RequestHandlerException($"Failed to remove request handler {requestHandler.GetType()}, handler for request type {typeof(TRequest).Name} is not registered");
+                    throw new RequestHandlerException($"Failed to remove request handler for request type {typeof(TRequest).Name} and response type {typeof(TResponse).Name}, handler for the given type is not registered");
                 }
 
                 _requestHandlers.Remove(typeof(TRequest));

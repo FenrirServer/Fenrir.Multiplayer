@@ -30,7 +30,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Type hash map
         /// </summary>
-        private readonly TypeHashMap _typeHashMap;
+        private readonly ITypeHashMap _typeHashMap;
 
         /// <summary>
         /// Request timeout
@@ -45,7 +45,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <param name="messageWriter">Message Writer</param>
         /// <param name="pendingRequestMap">Pending Request Map</param>
         /// <param name="byteStreamWriterPool">Byte Stream Writer Object Pool</param>
-        public LiteNetClientPeer(string peerId, NetPeer netPeer, MessageWriter messageWriter, PendingRequestMap pendingRequestMap, TypeHashMap typeHashMap, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool, int requestTimeoutMs)
+        public LiteNetClientPeer(string peerId, NetPeer netPeer, MessageWriter messageWriter, PendingRequestMap pendingRequestMap, ITypeHashMap typeHashMap, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool, int requestTimeoutMs)
             : base(peerId, netPeer, messageWriter, byteStreamWriterPool)
         {
             _pendingRequestMap = pendingRequestMap;

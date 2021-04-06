@@ -4,9 +4,9 @@ using System.Collections.Generic;
 namespace Fenrir.Multiplayer.Server
 {
     /// <summary>
-    /// Provides information about Fenrir Server
+    /// Provides information about Network Server
     /// </summary>
-    public interface IFenrirServerInfoProvider
+    public interface IServerInfoProvider
     {
         /// <summary>
         /// Public server hostname. 
