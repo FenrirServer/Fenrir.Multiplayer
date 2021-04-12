@@ -5,7 +5,7 @@ using System.Net.Sockets;
 namespace Fenrir.Multiplayer.Events
 {
     /// <summary>
-    /// Event args invoked when network error occurs
+    /// Event arguments object that contains detailed information about client network error 
     /// </summary>
     public class NetworkErrorEventArgs : EventArgs
     {

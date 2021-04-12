@@ -5,7 +5,7 @@ using System.Net.Sockets;
 namespace Fenrir.Multiplayer.Events
 {
     /// <summary>
-    /// Event args invoked when client is disconnected
+    /// Event arguments object that contains detailed information about client disconect event
     /// </summary>
     public class DisconnectedEventArgs : EventArgs
     {

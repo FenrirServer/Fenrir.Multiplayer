@@ -13,27 +13,30 @@ using System.Threading.Tasks;
 namespace Fenrir.Multiplayer.Client
 {
     /// <summary>
-    /// Fenrir Networking Client
+    /// Fenrir Networking Client.
+    /// Connects to the Fenrir <seealso cref="Server.NetworkServer"/>
     /// </summary>
     public class NetworkClient : INetworkClient, IClientEventListener, IDisposable
     {
         /// <summary>
-        /// Invoked when client is disconnected
+        /// Invoked when client is disconnected.
+        /// Provides detailed information about disconnect in arguments object
         /// </summary>
         public event EventHandler<DisconnectedEventArgs> Disconnected;
 
         /// <summary>
-        /// Invoked when network error occurs
+        /// Invoked when network error occurs. 
+        /// Provides detailed information about network error in arguments object
         /// </summary>
         public event EventHandler<NetworkErrorEventArgs> NetworkError;
 
         /// <summary>
-        /// Logger
+        /// Fenrir Logger, used to log events
         /// </summary>
         private readonly ILogger _logger;
 
         /// <summary>
-        /// Network serializer
+        /// Network serializer, used for serialization/deserialization of network messages
         /// </summary>
         private readonly INetworkSerializer _serializer;
 

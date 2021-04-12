@@ -3,7 +3,8 @@
 namespace Fenrir.Multiplayer.Client
 {
     /// <summary>
-    /// Client to server connection request
+    /// Client to server connection request.
+    /// Contains data that's passed to the <seealso cref="IProtocolConnector"/>
     /// </summary>
     public class ClientConnectionRequest
     {
