@@ -1,5 +1,6 @@
 ﻿using Fenrir.Multiplayer.Network;
 using System;
+using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.Rooms
 {
@@ -26,12 +27,14 @@ namespace Fenrir.Multiplayer.Rooms
         /// </summary>
         /// <param name="peer">Peer</param>
         /// <param name="token">Join Token</param>
-        void AddPeer(IServerPeer peer, string token);
+        /// <returns>Task that completes when user join </returns>
+        Task<RoomJoinResponse> AddPeerAsync(IServerPeer peer, string token);
 
         /// <summary>
         /// Removes peer from the room
         /// </summary>
         /// <param name="peer">Peer</param>
-        void RemovePeer(IServerPeer peer);
+        /// <returns>Task that completes when leave operation finishes</returns>
+        Task<RoomLeaveResponse> RemovePeerAsync(IServerPeer peer);
     }
 }

@@ -4,6 +4,7 @@ using Fenrir.Multiplayer.Server;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.Rooms
 {
@@ -14,8 +15,8 @@ namespace Fenrir.Multiplayer.Rooms
     /// </summary>
     /// <typeparam name="TRoom">Type of room</typeparam>
     public class ServerRoomManager<TRoom>
-        : IRequestHandler<RoomJoinRequest, RoomJoinResponse>
-        , IRequestHandler<RoomLeaveRequest, RoomLeaveResponse>
+        : IRequestHandlerAsync<RoomJoinRequest, RoomJoinResponse>
+        , IRequestHandlerAsync<RoomLeaveRequest, RoomLeaveResponse>
         where TRoom : IServerRoom
     {
 
@@ -67,8 +68,8 @@ namespace Fenrir.Multiplayer.Rooms
         /// <param name="server">Network Server</param>
         private void RegisterRequestHandlers(INetworkServer server)
         {
-            server.AddRequestHandler<RoomJoinRequest, RoomJoinResponse>(this);
-            server.AddRequestHandler<RoomLeaveRequest, RoomLeaveResponse>(this);
+            server.AddRequestHandlerAsync<RoomJoinRequest, RoomJoinResponse>(this);
+            server.AddRequestHandlerAsync<RoomLeaveRequest, RoomLeaveResponse>(this);
         }
 
         /// <summary>
@@ -197,26 +198,23 @@ namespace Fenrir.Multiplayer.Rooms
         }
 
         #region Request Handler Implementation
-        RoomJoinResponse IRequestHandler<RoomJoinRequest, RoomJoinResponse>.HandleRequest(RoomJoinRequest request, IServerPeer peer)
+        Task<RoomJoinResponse> IRequestHandlerAsync<RoomJoinRequest, RoomJoinResponse>.HandleRequestAsync(RoomJoinRequest request, IServerPeer peer)
         {
             if(!TryGetOrCreateRoom(peer, request.RoomId ?? Guid.NewGuid().ToString(), request.Token, out TRoom room))
             {
-                return RoomJoinResponse.JoinFailed;
+                return Task.FromResult(RoomJoinResponse.JoinFailed);
             }
 
-            // Join first user
-            room.AddPeer(peer, request.Token);
-            peer.PeerData = room;
-
-            return RoomJoinResponse.JoinSuccess;
+            // Add peer
+            return room.AddPeerAsync(peer, request.Token);
         }
 
-        RoomLeaveResponse IRequestHandler<RoomLeaveRequest, RoomLeaveResponse>.HandleRequest(RoomLeaveRequest request, IServerPeer peer)
+        Task<RoomLeaveResponse> IRequestHandlerAsync<RoomLeaveRequest, RoomLeaveResponse>.HandleRequestAsync(RoomLeaveRequest request, IServerPeer peer)
         {
             if(request.RoomId == null)
             {
                 Logger.Warning("Failed to remove peer {0} from the room, {1} is null", peer.EndPoint, nameof(request.RoomId));
-                return RoomLeaveResponse.LeaveFailed;
+                return Task.FromResult(RoomLeaveResponse.LeaveFailed);
             }
 
             TRoom room;
@@ -225,14 +223,12 @@ namespace Fenrir.Multiplayer.Rooms
             {
                 if(!_rooms.TryGetValue(request.RoomId, out room))
                 {
-                    return RoomLeaveResponse.LeaveFailed;
+                    return Task.FromResult(RoomLeaveResponse.LeaveFailed);
                 }
             }
 
-            peer.PeerData = null;
-            room.RemovePeer(peer);
-
-            return RoomLeaveResponse.LeaveSuccess;
+            // Remove peer
+            return room.RemovePeerAsync(peer);
         }
         #endregion
     }

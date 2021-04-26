@@ -2,6 +2,7 @@
 using Fenrir.Multiplayer.Network;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.Rooms
 {
@@ -95,6 +96,17 @@ namespace Fenrir.Multiplayer.Rooms
         }
 
         /// <summary>
+        /// Invoked when new peer attempts to join the room. 
+        /// Override this method to validate if peer is allowed to join the room
+        /// </summary>
+        /// <param name="peer">Peer that attempts to join the room</param>
+        /// <param name="token">Custom join token provided by the peer</param>
+        protected virtual RoomJoinResponse OnBeforePeerJoin(IServerPeer peer, string token)
+        {
+            return RoomJoinResponse.JoinSuccess;
+        }
+
+        /// <summary>
         /// Invoked when new peer joins the room
         /// </summary>
         /// <param name="peer">Peer</param>
@@ -143,8 +155,10 @@ namespace Fenrir.Multiplayer.Rooms
         }
 
         #region IServerRoom Implementation
-        void IServerRoom.AddPeer(IServerPeer peer, string joinToken)
+        Task<RoomJoinResponse> IServerRoom.AddPeerAsync(IServerPeer peer, string joinToken)
         {
+            TaskCompletionSource<RoomJoinResponse> tcs = new TaskCompletionSource<RoomJoinResponse>();
+
             Enqueue(() =>
             {
                 if (Peers.ContainsKey(peer.Id))
@@ -152,14 +166,37 @@ namespace Fenrir.Multiplayer.Rooms
                     return; // Already joined, do nothing
                 }
 
-                Peers.Add(peer.Id, peer);
-                OnPeerJoin(peer, joinToken);
+                RoomJoinResponse response = OnBeforePeerJoin(peer, joinToken);
+
+                if (!response.Success)
+                {
+                    // Failed to join
+                    tcs.SetResult(response);
+                }
+                else
+                {
+                    // Successfully joined, add peer
+                    Peers.Add(peer.Id, peer);
+                    OnPeerJoin(peer, joinToken);
+
+                    tcs.SetResult(response);
+                }
             });
+
+            return tcs.Task;
         }
 
-        void IServerRoom.RemovePeer(IServerPeer peer)
+        Task<RoomLeaveResponse> IServerRoom.RemovePeerAsync(IServerPeer peer)
         {
-            Enqueue(() => RemovePeer(peer));
+            TaskCompletionSource<RoomLeaveResponse> tcs = new TaskCompletionSource<RoomLeaveResponse>();
+
+            Enqueue(() =>
+            {
+                RemovePeer(peer);
+                tcs.SetResult(RoomLeaveResponse.LeaveSuccess);
+            });
+
+            return tcs.Task;
         }
 
 

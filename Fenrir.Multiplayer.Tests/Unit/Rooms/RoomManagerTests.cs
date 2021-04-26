@@ -19,7 +19,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.Rooms
     public class RoomManagerTests
     {
         [TestMethod]
-        public void TestRoomManager_CreatesRoomUsingRoomFactoryMethod()
+        public async Task TestRoomManager_CreatesRoomUsingRoomFactoryMethod()
         {
             bool didJoin = false;
             bool didLeave = false;
@@ -50,24 +50,24 @@ namespace Fenrir.Multiplayer.Tests.Unit.Rooms
 
             var roomManager = new ServerRoomManager<TestRoom>(roomFactoryMethod, logger, serverMock.Object);
 
-            var joinRequestHandler = (IRequestHandler<RoomJoinRequest, RoomJoinResponse>)roomManager;
-            var leaveRequestHandler = (IRequestHandler<RoomLeaveRequest, RoomLeaveResponse>)roomManager;
+            var joinRequestHandler = (IRequestHandlerAsync<RoomJoinRequest, RoomJoinResponse>)roomManager;
+            var leaveRequestHandler = (IRequestHandlerAsync<RoomLeaveRequest, RoomLeaveResponse>)roomManager;
 
             // Join the room
-            var joinResponse = joinRequestHandler.HandleRequest(new RoomJoinRequest("test_room", "test_token"), serverPeerMock.Object);
+            var joinResponse = await joinRequestHandler.HandleRequestAsync(new RoomJoinRequest("test_room", "test_token"), serverPeerMock.Object);
             Assert.IsTrue(joinResponse.Success);
             Assert.IsTrue(didJoin);
 
             Assert.AreEqual(1, room.RoomPeers.Count());
 
             // Leave the room
-            var leaveResponse = leaveRequestHandler.HandleRequest(new RoomLeaveRequest("test_room"), serverPeerMock.Object);
+            var leaveResponse = await leaveRequestHandler.HandleRequestAsync(new RoomLeaveRequest("test_room"), serverPeerMock.Object);
             Assert.IsTrue(leaveResponse.Success);
             Assert.IsTrue(didLeave);
         }
 
         [TestMethod]
-        public void TestRoomManager_CreatesRoomUsingRoomFactoryClass()
+        public async Task TestRoomManager_CreatesRoomUsingRoomFactoryClass()
         {
             bool didJoin = false;
             bool didLeave = false;
@@ -94,16 +94,16 @@ namespace Fenrir.Multiplayer.Tests.Unit.Rooms
 
             var roomManager = new ServerRoomManager<TestRoom>(roomFactory, logger, serverMock.Object);
 
-            var joinRequestHandler = (IRequestHandler<RoomJoinRequest, RoomJoinResponse>)roomManager;
-            var leaveRequestHandler = (IRequestHandler<RoomLeaveRequest, RoomLeaveResponse>)roomManager;
+            var joinRequestHandler = (IRequestHandlerAsync<RoomJoinRequest, RoomJoinResponse>)roomManager;
+            var leaveRequestHandler = (IRequestHandlerAsync<RoomLeaveRequest, RoomLeaveResponse>)roomManager;
 
             // Join the room
-            var joinResponse = joinRequestHandler.HandleRequest(new RoomJoinRequest("test_room", "test_token"), serverPeerMock.Object);
+            var joinResponse = await joinRequestHandler.HandleRequestAsync(new RoomJoinRequest("test_room", "test_token"), serverPeerMock.Object);
             Assert.IsTrue(joinResponse.Success);
             Assert.IsTrue(didJoin);
 
             // Leave the room
-            var leaveResponse = leaveRequestHandler.HandleRequest(new RoomLeaveRequest("test_room"), serverPeerMock.Object);
+            var leaveResponse = await leaveRequestHandler.HandleRequestAsync(new RoomLeaveRequest("test_room"), serverPeerMock.Object);
             Assert.IsTrue(leaveResponse.Success);
             Assert.IsTrue(didLeave);
         }
