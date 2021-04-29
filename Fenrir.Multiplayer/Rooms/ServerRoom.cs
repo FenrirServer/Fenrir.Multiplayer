@@ -58,44 +58,6 @@ namespace Fenrir.Multiplayer.Rooms
         }
 
         /// <summary>
-        /// Adds callback to the room action queue.
-        /// Callback will be invoked by the room event loop in a single-threaded manner.
-        /// All callbacks invoked on the room event loop are thread-safe and can access 
-        /// room resources.
-        /// </summary>
-        /// <param name="action">Callback</param>
-        protected void Enqueue(Action action)
-        {
-            _actionQueue.Enqueue(action);
-        }
-
-        /// <summary>
-        /// Schedules callback to be invoked on the room action queue, with a given delay.
-        /// Callback will be invoked by the room event loop in a single-threaded manner.
-        /// All callbacks invoked on the room event loop are thread-safe and can access 
-        /// room resources.
-        /// </summary>
-        /// <param name="action">Callback</param>
-        /// <param name="delayMs">Delay after which callback will be invoked</param>
-        protected void Schedule(Action action, double delayMs)
-        {
-            _actionQueue.Schedule(action, delayMs);
-        }
-
-        /// <summary>
-        /// Schedules callback to be invoked on the room action queue, with a given delay.
-        /// Callback will be invoked by the room event loop in a single-threaded manner.
-        /// All callbacks invoked on the room event loop are thread-safe and can access 
-        /// room resources.
-        /// </summary>
-        /// <param name="action">Callback</param>
-        /// <param name="delay">Delay after which callback will be invoked</param>
-        protected void Schedule(Action action, TimeSpan delay)
-        {
-            _actionQueue.Schedule(action, delay);
-        }
-
-        /// <summary>
         /// Invoked when new peer attempts to join the room. 
         /// Override this method to validate if peer is allowed to join the room
         /// </summary>
@@ -139,6 +101,11 @@ namespace Fenrir.Multiplayer.Rooms
             }
         }
 
+        /// <summary>
+        /// Broadcasts event to all joined peers
+        /// </summary>
+        /// <typeparam name="TEvent">Type of the event to broadcast</typeparam>
+        /// <param name="evt">Event to broadcast</param>
         protected void BroadcastEvent<TEvent>(TEvent evt)
             where TEvent : IEvent
         {
@@ -148,18 +115,106 @@ namespace Fenrir.Multiplayer.Rooms
             }
         }
 
+        /// <summary>
+        /// Terminates the room and shuts down room queue.
+        /// Invokes <seealso cref="Terminated"/> event
+        /// </summary>
         protected virtual void Terminate()
         {
             _actionQueue.Stop();
             Terminated?.Invoke(this, EventArgs.Empty);
         }
 
+        /// <summary>
+        /// Adds callback to the room action queue.
+        /// Callbacks will be invoked by the room event loop sequentially, in a single-threaded manner.
+        /// All callbacks invoked on the room event loop are thread-safe and can access 
+        /// room resources.
+        /// </summary>
+        /// <param name="action">Callback</param>
+        protected void Execute(Action action)
+        {
+            _actionQueue.Enqueue(action);
+        }
+
+        /// <summary>
+        /// Schedules callback to be invoked on the room action queue, with a given delay.
+        /// Callback will be invoked by the room event loop in a single-threaded manner.
+        /// All callbacks invoked on the room event loop are thread-safe and can access 
+        /// room resources.
+        /// </summary>
+        /// <param name="action">Callback</param>
+        /// <param name="delayMs">Delay after which callback will be invoked</param>
+        protected void Schedule(Action action, double delayMs)
+        {
+            _actionQueue.Schedule(action, delayMs);
+        }
+
+        /// <summary>
+        /// Schedules callback to be invoked on the room action queue, with a given delay.
+        /// Callback will be invoked by the room event loop in a single-threaded manner.
+        /// All callbacks invoked on the room event loop are thread-safe and can access 
+        /// room resources.
+        /// </summary>
+        /// <param name="action">Callback</param>
+        /// <param name="delay">Delay after which callback will be invoked</param>
+        protected void Schedule(Action action, TimeSpan delay)
+        {
+            _actionQueue.Schedule(action, delay);
+        }
+
+        /// <summary>
+        /// Adds callback to the room action queue.
+        /// Callbacks will be invoked by the room event loop sequentially, in a single-threaded manner.
+        /// All callbacks invoked on the room event loop are thread-safe and can access 
+        /// room resources.
+        /// </summary>
+        /// <param name="callback">Callback to execute</param>
+        /// <returns>Task that completes when callback is executed, or fails if callback throws an exception</returns>
+        public Task ExecuteAsync(Action callback)
+        {
+            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+
+            Execute(() =>
+            {
+                callback();
+                tcs.SetResult(true);
+            });
+
+            return tcs.Task;
+        }
+
+        /// <summary>
+        /// Adds callback to the room action queue.
+        /// Callbacks will be invoked by the room event loop sequentially, in a single-threaded manner.
+        /// All callbacks invoked on the room event loop are thread-safe and can access 
+        /// room resources.
+        /// </summary>
+        /// <typeparam name="T">Return value type</typeparam>
+        /// <param name="callback">Callback to execute</param>
+        /// <returns>Task that completes when callback is executed, or fails if callback throws an exception. 
+        /// Result of the task contains return value of the callback.</returns>
+        public Task<T> ExecuteAsync<T>(Func<T> callback)
+        {
+            TaskCompletionSource<T> tcs = new TaskCompletionSource<T>();
+
+            Execute(() =>
+            {
+                T result = callback();
+                tcs.SetResult(result);
+            });
+
+            return tcs.Task;
+        }
+
         #region IServerRoom Implementation
+
+        /// <inheritdoc />
         Task<RoomJoinResponse> IServerRoom.AddPeerAsync(IServerPeer peer, string joinToken)
         {
             TaskCompletionSource<RoomJoinResponse> tcs = new TaskCompletionSource<RoomJoinResponse>();
 
-            Enqueue(() =>
+            Execute(() =>
             {
                 if (Peers.ContainsKey(peer.Id))
                 {
@@ -186,11 +241,12 @@ namespace Fenrir.Multiplayer.Rooms
             return tcs.Task;
         }
 
+        /// <inheritdoc />
         Task<RoomLeaveResponse> IServerRoom.RemovePeerAsync(IServerPeer peer)
         {
             TaskCompletionSource<RoomLeaveResponse> tcs = new TaskCompletionSource<RoomLeaveResponse>();
 
-            Enqueue(() =>
+            Execute(() =>
             {
                 RemovePeer(peer);
                 tcs.SetResult(RoomLeaveResponse.LeaveSuccess);
@@ -198,8 +254,6 @@ namespace Fenrir.Multiplayer.Rooms
 
             return tcs.Task;
         }
-
-
         #endregion
 
         #region IDisposable Implementation
