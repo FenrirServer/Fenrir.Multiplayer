@@ -87,6 +87,11 @@ namespace Fenrir.Multiplayer.LiteNet
         private readonly NetDataWriter _netDataWriter;
 
         /// <summary>
+        /// Holds current connection request
+        /// </summary>
+        private ClientConnectionRequest _connectionRequest;
+
+        /// <summary>
         /// LiteNet NetManager
         /// </summary>
         private NetManager _netManager;
@@ -95,7 +100,6 @@ namespace Fenrir.Multiplayer.LiteNet
         /// LiteNet peer
         /// </summary>
         private LiteNetClientPeer _peer;
-
 
         ///<inheritdoc/>
         public IClientPeer Peer => _peer;
@@ -272,6 +276,9 @@ namespace Fenrir.Multiplayer.LiteNet
                 throw new InvalidCastException($"Failed to cast {nameof(connectionRequest.ProtocolConnectionData)} to {nameof(LiteNetProtocolConnectionData)}");
             }
 
+            // Set connection request
+            _connectionRequest = connectionRequest;
+
             // Create task completion source
             _connectionTcs = new TaskCompletionSource<ConnectionResponse>();
 
@@ -342,11 +349,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 throw new InvalidOperationException("Connection succeeeded during wrong state: " + State);
             }
 
-            // Unfortunately right now there is no way for us to know the actual id of the server, it has to be communicated
-            // We need to add Accept(NetDataWriter) in LiteNet similar to Reject to send over connection result to the client
-            string peerId = Guid.NewGuid().ToString(); 
-
-            _peer = new LiteNetClientPeer(peerId, peer, _messageWriter, _pendingRequestMap, _typeHashMap, _byteStreamWriterPool, RequestTimeoutMs);
+            _peer = new LiteNetClientPeer(_connectionRequest.ClientId, peer, _messageWriter, _pendingRequestMap, _typeHashMap, _byteStreamWriterPool, RequestTimeoutMs);
             _connectionTcs.SetResult(ConnectionResponse.Successful);
         }
 

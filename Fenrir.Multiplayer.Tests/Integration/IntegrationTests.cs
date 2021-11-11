@@ -101,6 +101,27 @@ namespace Fenrir.Multiplayer.Tests
         }
 
         [TestMethod, Timeout(TestTimeout)]
+        public async Task NetworkClient_ConnectsToNetworkServer_WithCustomClientId()
+        {
+            IServerPeer serverPeer = null;
+
+            using var logger = new TestLogger();
+            using var networkServer = new NetworkServer(logger) { BindPort = 27018 };
+            networkServer.PeerConnected += (sender, e) => serverPeer = e.Peer; 
+            
+            networkServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
+
+            using var networkClient = new NetworkClient(logger) { ClientId = "test_id" };
+            await networkClient.Connect("http://127.0.0.1:27018");
+
+            Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
+            Assert.AreEqual(networkClient.Peer.Id, "test_id", "invalid client peer id after connecting");
+            Assert.AreEqual(serverPeer.Id, "test_id", "invalid server peer id after connecting");
+        }
+
+        [TestMethod, Timeout(TestTimeout)]
         public async Task NetworkClient_ConnectsToNetworkServer_WithCustomConnectionRequestHandler()
         {
             using var logger = new TestLogger();
