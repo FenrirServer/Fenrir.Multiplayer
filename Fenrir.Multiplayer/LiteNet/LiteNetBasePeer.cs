@@ -1,6 +1,7 @@
 ﻿using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
 using LiteNetLib;
+using System;
 using System.Net;
 
 namespace Fenrir.Multiplayer.LiteNet
@@ -59,7 +60,7 @@ namespace Fenrir.Multiplayer.LiteNet
             WriteDebugInfo = true;
 #endif
         }
-
+        
         /// <summary>
         /// Sends wrapped message to this peer
         /// </summary>

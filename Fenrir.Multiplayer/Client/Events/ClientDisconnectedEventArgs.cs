@@ -2,12 +2,12 @@
 using System;
 using System.Net.Sockets;
 
-namespace Fenrir.Multiplayer.Events
+namespace Fenrir.Multiplayer.Client.Events
 {
     /// <summary>
     /// Event arguments object that contains detailed information about client disconect event
     /// </summary>
-    public class DisconnectedEventArgs : EventArgs
+    public class ClientDisconnectedEventArgs : EventArgs
     {
         /// <summary>
         /// Disconnect reason
@@ -24,8 +24,7 @@ namespace Fenrir.Multiplayer.Events
         /// </summary>
         /// <param name="reason">Disconnect reason</param>
         /// <param name="socketError">Socket error</param>
-        /// <param name="data">Disconnect data</param>
-        public DisconnectedEventArgs(DisconnectedReason reason, SocketError socketError)
+        public ClientDisconnectedEventArgs(DisconnectedReason reason, SocketError socketError)
         {
             Reason = reason;
             SocketError = socketError;

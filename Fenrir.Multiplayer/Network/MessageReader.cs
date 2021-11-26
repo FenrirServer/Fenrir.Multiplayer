@@ -111,11 +111,11 @@ namespace Fenrir.Multiplayer.Network
             {
                 if(debugInfo != null)
                 {
-                    _logger.Warning("Malformed message: no message type with hash {0} in type hash map. Message debug info: {1}", messageTypeHash, debugInfo);
+                    _logger.Warning("Unexpected message with type hash {0}. Message debug info: {1}", messageTypeHash, debugInfo);
                 }
                 else
                 {
-                    _logger.Warning("Malformed message: no message type with hash {0} in type hash map.", messageTypeHash);
+                    _logger.Warning("Unexpected message with type hash {0}", messageTypeHash);
                 }
                 return false;
             }

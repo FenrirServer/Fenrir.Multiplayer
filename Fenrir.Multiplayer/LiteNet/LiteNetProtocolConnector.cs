@@ -1,5 +1,5 @@
 ﻿using Fenrir.Multiplayer.Client;
-using Fenrir.Multiplayer.Events;
+using Fenrir.Multiplayer.Client.Events;
 using Fenrir.Multiplayer.Exceptions;
 using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
@@ -20,10 +20,10 @@ namespace Fenrir.Multiplayer.LiteNet
     class LiteNetProtocolConnector : IProtocolConnector, INetEventListener, IDisposable
     {
         ///<inheritdoc/>
-        public event EventHandler<DisconnectedEventArgs> Disconnected;
+        public event EventHandler<ClientDisconnectedEventArgs> Disconnected;
 
         ///<inheritdoc/>
-        public event EventHandler<NetworkErrorEventArgs> NetworkError;
+        public event EventHandler<ClientNetworkErrorEventArgs> NetworkError;
 
         /// <summary>
         /// Version of the protocol
@@ -388,7 +388,7 @@ namespace Fenrir.Multiplayer.LiteNet
             else // if(State == ConnectorState.Connected)
             {
                 _connectionTcs = null;
-                Disconnected?.Invoke(this, new DisconnectedEventArgs(reason, socketError));
+                Disconnected?.Invoke(this, new ClientDisconnectedEventArgs(reason, socketError));
             }
         }
 
@@ -396,7 +396,7 @@ namespace Fenrir.Multiplayer.LiteNet
         {
             _logger.Trace("Network error from {0}: {1}", endPoint, socketError);
 
-            NetworkError?.Invoke(this, new NetworkErrorEventArgs(endPoint, socketError));
+            NetworkError?.Invoke(this, new ClientNetworkErrorEventArgs(endPoint, socketError));
         }
 
         void INetEventListener.OnNetworkReceive(NetPeer netPeer, NetPacketReader netPacketReader, DeliveryMethod deliveryMethod)

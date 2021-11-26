@@ -2,12 +2,12 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace Fenrir.Multiplayer.Events
+namespace Fenrir.Multiplayer.Client.Events
 {
     /// <summary>
     /// Event arguments object that contains detailed information about client network error 
     /// </summary>
-    public class NetworkErrorEventArgs : EventArgs
+    public class ClientNetworkErrorEventArgs : EventArgs
     {
         /// <summary>
         /// Remote endpoint
@@ -24,7 +24,7 @@ namespace Fenrir.Multiplayer.Events
         /// </summary>
         /// <param name="endpoint">Remote endpoint</param>
         /// <param name="socketError">Socket error</param>
-        public NetworkErrorEventArgs(IPEndPoint endpoint, SocketError socketError)
+        public ClientNetworkErrorEventArgs(IPEndPoint endpoint, SocketError socketError)
         {
             Endpoint = endpoint;
             SocketError = socketError;

@@ -1,4 +1,4 @@
-﻿using Fenrir.Multiplayer.Events;
+﻿using Fenrir.Multiplayer.Client.Events;
 using Fenrir.Multiplayer.Exceptions;
 using Fenrir.Multiplayer.LiteNet;
 using Fenrir.Multiplayer.Logging;
@@ -22,13 +22,13 @@ namespace Fenrir.Multiplayer.Client
         /// Invoked when client is disconnected.
         /// Provides detailed information about disconnect in arguments object
         /// </summary>
-        public event EventHandler<DisconnectedEventArgs> Disconnected;
+        public event EventHandler<ClientDisconnectedEventArgs> Disconnected;
 
         /// <summary>
         /// Invoked when network error occurs. 
         /// Provides detailed information about network error in arguments object
         /// </summary>
-        public event EventHandler<NetworkErrorEventArgs> NetworkError;
+        public event EventHandler<ClientNetworkErrorEventArgs> NetworkError;
 
         /// <summary>
         /// Fenrir Logger, used to log events
@@ -327,12 +327,12 @@ namespace Fenrir.Multiplayer.Client
             _eventHandlerMap.RemoveEventHandler<TEvent>(eventHandler);
         }
 
-        private void OnProtocolConnectorDisconnected(object sender, DisconnectedEventArgs e)
+        private void OnProtocolConnectorDisconnected(object sender, ClientDisconnectedEventArgs e)
         {
             Disconnected?.Invoke(sender, e);
         }
 
-        private void OnProtocolConnectorNetworkError(object sender, NetworkErrorEventArgs e)
+        private void OnProtocolConnectorNetworkError(object sender, ClientNetworkErrorEventArgs e)
         {
             NetworkError?.Invoke(sender, e);
         }

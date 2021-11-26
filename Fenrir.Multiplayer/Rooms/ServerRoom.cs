@@ -1,5 +1,6 @@
 ﻿using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
+using Fenrir.Multiplayer.Server.Events;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -88,13 +89,19 @@ namespace Fenrir.Multiplayer.Rooms
         {
             if (!Peers.ContainsKey(peer.Id))
             {
-                throw new InvalidOperationException(string.Format("Failed to remove peer {0} from the room {1}, no such peer", peer.Id, Id));
+                return; // Peer is already removed
             }
 
+            // Remove from the list of peers
             Peers.Remove(peer.Id);
 
+            // Unsubscribe from disconnected event
+            peer.Disconnected -= OnPeerDisconnected;
+
+            // Invoke peer leave event
             OnPeerLeave(peer);
 
+            // If this was the last peer, terminate the room
             if(Peers.Count == 0)
             {
                 Terminate();
@@ -234,11 +241,20 @@ namespace Fenrir.Multiplayer.Rooms
                     Peers.Add(peer.Id, peer);
                     OnPeerJoin(peer, joinToken);
 
+                    // Subscribe to peer disconnect event
+                    peer.Disconnected += OnPeerDisconnected;
+
+                    // Set result
                     tcs.SetResult(response);
                 }
             });
 
             return tcs.Task;
+        }
+
+        private void OnPeerDisconnected(object sender, ServerPeerDisconnectedEventArgs e)
+        {
+            Execute(() => RemovePeer(e.Peer));
         }
 
         /// <inheritdoc />

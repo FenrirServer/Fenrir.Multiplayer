@@ -1,6 +1,8 @@
 ﻿using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
+using Fenrir.Multiplayer.Server.Events;
 using LiteNetLib;
+using System;
 
 namespace Fenrir.Multiplayer.LiteNet
 {
@@ -9,6 +11,9 @@ namespace Fenrir.Multiplayer.LiteNet
     /// </summary>
     class LiteNetServerPeer : LiteNetBasePeer, IServerPeer
     {
+        /// <inheritdoc/>
+        public event EventHandler<ServerPeerDisconnectedEventArgs> Disconnected;
+
         /// <summary>
         /// Stores current latency (roundtrip between server and client)
         /// </summary>
@@ -99,6 +104,14 @@ namespace Fenrir.Multiplayer.LiteNet
         public void Disconnect()
         {
             NetPeer.Disconnect();
+        }
+
+        /// <summary>
+        /// Invokes disconnected event
+        /// </summary>
+        public void NotifyDisconnected()
+        {
+            Disconnected?.Invoke(this, new ServerPeerDisconnectedEventArgs(this));
         }
     }
 }

@@ -8,8 +8,15 @@ namespace Fenrir.Multiplayer.Server.Events
     /// </summary>
     public class ServerPeerDisconnectedEventArgs : EventArgs
     {
+        /// <summary>
+        /// Peer that was disconnected
+        /// </summary>
         public IServerPeer Peer { get; private set; }
 
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="peer">Peer that was disconnected</param>
         public ServerPeerDisconnectedEventArgs(IServerPeer peer)
         {
             Peer = peer;

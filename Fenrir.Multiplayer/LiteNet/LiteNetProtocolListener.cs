@@ -424,6 +424,9 @@ namespace Fenrir.Multiplayer.LiteNet
             {
                 LiteNetServerPeer serverPeer = (LiteNetServerPeer)netPeer.Tag;
 
+                // Notify peer
+                serverPeer.NotifyDisconnected();
+
                 // Notify server
                 _serverEventListener.OnPeerDisconnected(serverPeer);
             }

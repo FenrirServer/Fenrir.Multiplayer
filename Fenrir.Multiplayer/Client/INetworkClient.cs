@@ -1,4 +1,4 @@
-﻿using Fenrir.Multiplayer.Events;
+﻿using Fenrir.Multiplayer.Client.Events;
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
 using System;
@@ -15,12 +15,12 @@ namespace Fenrir.Multiplayer.Client
         /// <summary>
         /// Invoked when client is disconnected
         /// </summary>
-        event EventHandler<DisconnectedEventArgs> Disconnected;
+        event EventHandler<ClientDisconnectedEventArgs> Disconnected;
 
         /// <summary>
         /// Invoked when network error occurs
         /// </summary>
-        event EventHandler<NetworkErrorEventArgs> NetworkError;
+        event EventHandler<ClientNetworkErrorEventArgs> NetworkError;
 
         /// <summary>
         /// Unique id of the client

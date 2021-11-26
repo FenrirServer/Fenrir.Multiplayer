@@ -1,10 +1,18 @@
-﻿namespace Fenrir.Multiplayer.Network
+﻿using Fenrir.Multiplayer.Server.Events;
+using System;
+
+namespace Fenrir.Multiplayer.Network
 {
     /// <summary>
     /// Remote connection on the server (usually client)
     /// </summary>
     public interface IServerPeer : IPeer
     {
+        /// <summary>
+        /// Invoked when peer is disconnected from the server
+        /// </summary>
+        event EventHandler<ServerPeerDisconnectedEventArgs> Disconnected;
+
         /// <summary>
         /// Round-trip time of the packet
         /// </summary>
@@ -23,7 +31,6 @@
         /// <param name="evt">Event object</param>
         /// <param name="channel">Channel number</param>
         /// <param name="deliveryMethod">Delivery method</param>
-        /// <param name="encrypted">True if message should be encrypted, otherwise false</param>
         void SendEvent<TEvent>(TEvent evt, byte channel = 0, MessageDeliveryMethod deliveryMethod = MessageDeliveryMethod.ReliableOrdered)
             where TEvent : IEvent;
 

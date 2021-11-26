@@ -16,5 +16,11 @@ namespace Fenrir.Multiplayer.Network
         /// Remote address used by this conection
         /// </summary>
         EndPoint EndPoint { get; }
+
+        /// <summary>
+        /// If set to true, outgoing messages will contain debug info.
+        /// Setting this to true affects performance and should be disabled in production builds.
+        /// </summary>
+        bool WriteDebugInfo { get; set; }
     }
 }
