@@ -57,36 +57,29 @@ namespace Fenrir.Multiplayer.Network
             // TODO: Encryption
 
             // Message format: 
-            // 1. [8 bytes long message type hash]
-            // 2. [1 byte flags]
+            // 1. [1 byte flags]
+            // 2. [8 bytes long message type hash]
             // 3. [1 byte channel number]
             // 4. [2 bytes short requestId] - optional, if flags has HasRequestId
             // 5. [N bytes serialized message]
 
             messageWrapper = default;
 
-            // 1. ulong Message type hash
+            // 1. byte Flags
+            if (!byteStreamReader.TryReadByte(out byte flagBytes))
+            {
+                _logger.Warning("Malformed message: no flags");
+                return false;
+            }
+
+            MessageFlags messageFlags = (MessageFlags)flagBytes; // Flags enum
+
+            // 2. ulong Message type hash
             if (!byteStreamReader.TryReadULong(out ulong messageTypeHash))
             {
                 _logger.Warning("Malformed message: no message type hash [long]");
                 return false;
             }
-
-            // Find message type
-            if(!_typeHashMap.TryGetTypeByHash(messageTypeHash, out Type dataType))
-            {
-                _logger.Warning("Malformed message: no message type with hash {0} in type hash map", messageTypeHash);
-                return false;
-            }
-
-            // 2. byte Flags
-            if(!byteStreamReader.TryReadByte(out byte flagBytes))
-            {
-                _logger.Warning("Malformed message: no flags section");
-                return false;
-            }
-
-            MessageFlags messageFlags = (MessageFlags)flagBytes; // Flags enum
 
             // 3. byte Channel Id
             if (!byteStreamReader.TryReadByte(out byte channel))
@@ -106,7 +99,28 @@ namespace Fenrir.Multiplayer.Network
                 }
             }
 
-            // 5. byte[] Serialized message data
+            // 5. string message Debug info
+            string debugInfo = null;
+            if(messageFlags.HasFlag(MessageFlags.IsDebug))
+            {
+                debugInfo = byteStreamReader.ReadString();
+            }
+
+            // Find message type
+            if (!_typeHashMap.TryGetTypeByHash(messageTypeHash, out Type dataType))
+            {
+                if(debugInfo != null)
+                {
+                    _logger.Warning("Malformed message: no message type with hash {0} in type hash map. Message debug info: {1}", messageTypeHash, debugInfo);
+                }
+                else
+                {
+                    _logger.Warning("Malformed message: no message type with hash {0} in type hash map.", messageTypeHash);
+                }
+                return false;
+            }
+
+            // 6. byte[] Serialized message data
             object messageData;
             try
             {
@@ -144,7 +158,7 @@ namespace Fenrir.Multiplayer.Network
             }
 
             // Create message wrapper
-            messageWrapper = new MessageWrapper(messageType, messageData, requestId, channel, messageFlags);
+            messageWrapper = new MessageWrapper(messageType, messageData, requestId, channel, messageFlags, debugInfo);
 
             return true;
         }

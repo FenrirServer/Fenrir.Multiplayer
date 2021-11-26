@@ -68,8 +68,9 @@ namespace Fenrir.Multiplayer.LiteNet
             where TRequest : IRequest
         {
             short requestId = 0; // Requests with no response, do not require a unique id
-            MessageFlags flags = encrypted ? MessageFlags.IsEncrypted : MessageFlags.None; // Other flags should not be set for request with no response...
-            
+            MessageFlags flags = encrypted ? MessageFlags.IsEncrypted : MessageFlags.None;
+            flags |= GetDebugFlag();
+
             MessageWrapper messageWrapper = MessageWrapper.WrapRequest(request, requestId, channel, flags, deliveryMethod);
             Send(messageWrapper);
         }
@@ -95,6 +96,7 @@ namespace Fenrir.Multiplayer.LiteNet
             {
                 flags |= MessageFlags.IsOrdered;
             }
+            flags |= GetDebugFlag();
 
             MessageWrapper messageWrapper = MessageWrapper.WrapRequest(request, requestId, channel, flags, deliveryMethod);
 
@@ -140,6 +142,16 @@ namespace Fenrir.Multiplayer.LiteNet
             {
                 return ++_requestId;
             }
+        }
+
+
+        /// <summary>
+        /// Returns debug flags if <see cref="WriteDebugInfo"/> is set to true
+        /// </summary>
+        /// <returns>Message Flags</returns>
+        private MessageFlags GetDebugFlag()
+        {
+            return WriteDebugInfo ? MessageFlags.IsDebug : MessageFlags.None;
         }
     }
 }

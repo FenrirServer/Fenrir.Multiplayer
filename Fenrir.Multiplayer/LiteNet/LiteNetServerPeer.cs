@@ -38,7 +38,7 @@ namespace Fenrir.Multiplayer.LiteNet
         public LiteNetServerPeer(string peerId, int protocolVersion, NetPeer netPeer, MessageWriter messageWriter, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool)
             : base(peerId, netPeer, messageWriter, byteStreamWriterPool)
         {
-            ProtocolVersion = protocolVersion; 
+            ProtocolVersion = protocolVersion;
         }
 
         /// <inheritdoc/>
@@ -56,7 +56,9 @@ namespace Fenrir.Multiplayer.LiteNet
         public void SendEvent<TEvent>(TEvent evt, bool encrypted, byte channel = 0, MessageDeliveryMethod deliveryMethod = MessageDeliveryMethod.ReliableOrdered) 
             where TEvent : IEvent
         {
-            MessageFlags flags = encrypted ? MessageFlags.IsEncrypted : MessageFlags.None; // other flags are ignored for events
+            MessageFlags flags = encrypted ? MessageFlags.IsEncrypted : MessageFlags.None;
+            flags |= GetDebugFlags();
+
             MessageWrapper messageWrapper = MessageWrapper.WrapEvent(evt, channel, flags, deliveryMethod);
             Send(messageWrapper);
         }
@@ -76,6 +78,8 @@ namespace Fenrir.Multiplayer.LiteNet
             {
                 flags |= MessageFlags.IsOrdered;
             }
+
+            flags |= GetDebugFlags();
 
             MessageWrapper messageWrapper = MessageWrapper.WrapResponse(response, requestId, channel, flags, deliveryMethod);
             Send(messageWrapper);

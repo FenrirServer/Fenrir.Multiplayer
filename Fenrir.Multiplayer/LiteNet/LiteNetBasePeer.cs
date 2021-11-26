@@ -30,8 +30,16 @@ namespace Fenrir.Multiplayer.LiteNet
         /// </summary>
         public string Id { get; private set; }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Remote Endpoint
+        /// </summary>
         public EndPoint EndPoint => NetPeer.EndPoint;
+
+        /// <summary>
+        /// If set to true, outgoing messages will contain debug info.
+        /// Setting this to true affects performance and should be disabled in production builds.
+        /// </summary>
+        public bool WriteDebugInfo { get; set; } = false;
 
         /// <summary>
         /// Default constructor
@@ -46,6 +54,10 @@ namespace Fenrir.Multiplayer.LiteNet
             NetPeer = netPeer;
             MessageWriter = messageWriter;
             ByteStreamWriterPool = byteStreamWriterPool;
+
+#if DEBUG
+            WriteDebugInfo = true;
+#endif
         }
 
         /// <summary>
@@ -65,6 +77,15 @@ namespace Fenrir.Multiplayer.LiteNet
             {
                 ByteStreamWriterPool.Return(byteStreamWriter);
             }
+        }
+
+        /// <summary>
+        /// Returns debug flags if <see cref="WriteDebugInfo"/> is set to true
+        /// </summary>
+        /// <returns>Message Flags</returns>
+        protected MessageFlags GetDebugFlags()
+        {
+            return WriteDebugInfo ? MessageFlags.IsDebug : MessageFlags.None;
         }
     }
 }

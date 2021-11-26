@@ -39,10 +39,17 @@
         /// </summary>
         public MessageDeliveryMethod DeliveryMethod;
 
+        /// <summary>
+        /// If <see cref="Flags"/> has <see cref="MessageFlags.IsDebug"/> set, contains useful message debug information. Otherwise, set to null. 
+        /// Setting <see cref="MessageFlags.IsDebug"/> affects netcode performance and should be disabled in production builds.
+        /// This value is only set on the incoming messages. Outgoing messages generate their debugging info using <seealso cref="GetDebugInfo"/>
+        /// </summary>
+        public string DebugInfo;
+
 
         #region Constructor
         /// <summary>
-        /// Creates new outgoing Message Wrapper
+        /// Creates new Message Wrapper
         /// </summary>
         /// <param name="messageType">Message Type. <seealso cref="MessageType"/></param>
         /// <param name="messageData">Message Data object. <seealso cref="MessageData"/></param>
@@ -50,7 +57,8 @@
         /// <param name="channel">Channel number. <see cref="Channel"/></param>
         /// <param name="flags">Message flags. <see cref="Flags"/></param>
         /// <param name="deliveryMethod">Delivery method. <seealso cref="DeliveryMethod"/></param>
-        public MessageWrapper(MessageType messageType, object messageData, short requestId, byte channel, MessageFlags flags, MessageDeliveryMethod deliveryMethod)
+        /// <param name="debugInfo">Message debug Info. Contains useful information about the message.</param>
+        public MessageWrapper(MessageType messageType, object messageData, short requestId, byte channel, MessageFlags flags, MessageDeliveryMethod deliveryMethod, string debugInfo)
         {
             MessageType = messageType;
             MessageData = messageData;
@@ -58,6 +66,7 @@
             Channel = channel;
             Flags = flags;
             DeliveryMethod = deliveryMethod;
+            DebugInfo = debugInfo;
         }
 
         /// <summary>
@@ -68,9 +77,9 @@
         /// <param name="requestId">Id of the request. <seealso cref="RequestId"/></param>
         /// <param name="channel">Channel number. <see cref="Channel"/></param>
         /// <param name="flags">Message flags. <see cref="Flags"/></param>
-        /// <param name="deliveryMethod">Delivery method. <seealso cref="DeliveryMethod"/></param>
-        public MessageWrapper(MessageType messageType, object messageData, short requestId, byte channel, MessageFlags flags)
-            : this(messageType, messageData, requestId, channel, flags, default)
+        /// <param name="debugInfo">Message debug Info. Contains useful information about the message.</param>
+        public MessageWrapper(MessageType messageType, object messageData, short requestId, byte channel, MessageFlags flags, string debugInfo)
+            : this(messageType, messageData, requestId, channel, flags, default, debugInfo)
         {
         }
         #endregion
@@ -83,10 +92,11 @@
         /// <param name="channel">Channel number. <seealso cref="Channel"/></param>
         /// <param name="flags">Message flags. <see cref="Flags"/></param>
         /// <param name="deliveryMethod">Delivery method. <seealso cref="DeliveryMethod"/></param>
+        /// <param name="debugInfo">Message debug Info. Contains useful information about the message.</param>
         /// <returns>New MessageWrapper that wraps given event</returns>
         public static MessageWrapper WrapEvent(IEvent data, byte channel, MessageFlags flags, MessageDeliveryMethod deliveryMethod)
         {
-            return new MessageWrapper(MessageType.Event, data, 0, channel, flags, deliveryMethod);
+            return new MessageWrapper(MessageType.Event, data, 0, channel, flags, deliveryMethod, null);
         }
 
         /// <summary>
@@ -100,7 +110,7 @@
         /// <returns>New MessageWrapper that wraps given request</returns>
         public static MessageWrapper WrapRequest(IRequest data, short requestId, byte channel, MessageFlags flags, MessageDeliveryMethod deliveryMethod)
         {
-            return new MessageWrapper(MessageType.Request, data, requestId, channel, flags, deliveryMethod);
+            return new MessageWrapper(MessageType.Request, data, requestId, channel, flags, deliveryMethod, null);
         }
 
         /// <summary>
@@ -114,8 +124,16 @@
         /// <returns>New MessageWrapper that wraps given response</returns>
         public static MessageWrapper WrapResponse(IResponse data, short requestId, byte channel, MessageFlags flags, MessageDeliveryMethod deliveryMethod)
         {
-            return new MessageWrapper(MessageType.Response, data, requestId, channel, flags, deliveryMethod);
+            return new MessageWrapper(MessageType.Response, data, requestId, channel, flags, deliveryMethod, null);
         }
+        #endregion
+
+        #region Debug Info
+        public string GetDebugInfo()
+        {
+            return $"MessageType={MessageType}, MessageDataType={MessageData.GetType()}, RequestId={RequestId} Channel={Channel}, Flags={Flags}, DeliveryMethod={DeliveryMethod}";
+        }
+
         #endregion
     }
 }
