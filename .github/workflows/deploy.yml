@@ -18,3 +18,31 @@ jobs:
         working-directory: UnityPackage/Assets
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+
+  deploy-nuget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: |
+            3.1.x
+            6.0.x
+        env:
+          NUGET_AUTH_TOKEN: ${{secrets.NUGET_TOKEN}}
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      - name: Test
+        run: dotnet test --no-build --verbosity normal -p:ParallelizeTestCollections=false
+
+      - name: Build solution and generate NuGet package
+        run: dotnet pack Fenrir.Multiplayer -c Release
+
+      - name: Push generated package to NuGet
+        run: dotnet nuget push ./Fenrir.Multiplayer/bin/Release/*.nupkg --skip-duplicate
