@@ -1,0 +1,16 @@
+{
+    "name": "org.fenrirserver.multiplayer",
+    "displayName": "Fenrir Multiplayer",
+    "description": "Library for building multiplayer games with using Fenrir Multiplayer Platform",
+    "license": "MIT",
+    "version": "1.0.0",
+    "author": {
+        "name": "Fenrir",
+        "email": "info@fenrirserver.com",
+        "url": "https://fenrirserver.com"
+    },
+    "unity": "2018.3",
+    "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "2.0.0"
+    }
+}

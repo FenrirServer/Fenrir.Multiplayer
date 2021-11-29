@@ -1,0 +1,18 @@
+{
+    "name": "Fenrir.Multiplayer",
+    "references": [
+        "GUID:a255fbcf2b47ecf478df5fe97939ecde"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "websocket-sharp.dll",
+        "Newtonsoft.Json.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
