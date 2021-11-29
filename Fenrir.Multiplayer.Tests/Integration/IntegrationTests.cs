@@ -17,7 +17,7 @@ namespace Fenrir.Multiplayer.Tests
     [TestClass]
     public class IntegrationTests
     {
-        private const int TestTimeout = 1000;
+        private const int TestTimeout = 5000;
 
         [TestMethod, Timeout(TestTimeout)]
         public async Task ServerInfoService_ReturnsServerInfo()
