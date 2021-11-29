@@ -39,7 +39,7 @@ jobs:
         run: dotnet build -c Release --no-restore
 
       - name: Test
-        run: dotnet test --no-build --verbosity normal -p:ParallelizeTestCollections=false
+        run: dotnet test -c Release --no-build --verbosity normal -p:ParallelizeTestCollections=false
 
       - name: Build solution and generate NuGet package
         run: dotnet pack Fenrir.Multiplayer -c Release
