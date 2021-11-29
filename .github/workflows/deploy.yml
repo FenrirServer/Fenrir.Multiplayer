@@ -14,7 +14,7 @@ jobs:
           node-version: 14
           registry-url: https://upm.fenrirserver.org/
 
-      - run: cd UnityPackage/Assets
       - run: npm publish
+        working-directory: UnityPackage/Assets
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
