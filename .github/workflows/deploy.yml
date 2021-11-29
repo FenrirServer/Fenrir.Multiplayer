@@ -29,9 +29,6 @@ jobs:
           dotnet-version: |
             3.1.x
             6.0.x
-        env:
-          NUGET_AUTH_TOKEN: ${{secrets.NUGET_TOKEN}}
-
       - name: Restore dependencies
         run: dotnet restore
 
@@ -45,4 +42,6 @@ jobs:
         run: dotnet pack Fenrir.Multiplayer -c Release
 
       - name: Push generated package to NuGet
-        run: dotnet nuget push ./Fenrir.Multiplayer/bin/Release/*.nupkg --skip-duplicate
+        run: dotnet nuget push ./Fenrir.Multiplayer/bin/Release/*.nupkg -k $NUGET_AUTH_TOKEN --skip-duplicate
+        env:
+          NUGET_AUTH_TOKEN: ${{secrets.NUGET_TOKEN}}
