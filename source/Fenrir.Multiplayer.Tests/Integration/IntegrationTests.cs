@@ -482,6 +482,36 @@ namespace Fenrir.Multiplayer.Tests
             });
         }
 
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task NetworkServer_SendEvent_SendsEvent()
+        {
+            using var logger = new TestLogger();
+            using var networkServer = new NetworkServer(logger);
+
+            networkServer.PeerConnected += (sender, e) =>
+            {
+                e.Peer.SendEvent(new TestEvent() { Value = "event_test" });
+            };
+            networkServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
+
+            TaskCompletionSource<TestEvent> tcs = new TaskCompletionSource<TestEvent>();
+
+            using var networkClient = new NetworkClient(logger);
+            var eventHandler = new TestEventHandler<TestEvent>(tcs);
+            networkClient.AddEventHandler<TestEvent>(eventHandler);
+
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
+
+            Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            var testEvent = await tcs.Task;
+
+            Assert.AreEqual(testEvent.Value, "event_test");
+        }
+
         #region Fixtures
         class CustomConnectionRequestData : IByteStreamSerializable
         {
@@ -604,6 +634,37 @@ namespace Fenrir.Multiplayer.Tests
             public async Task<TResponse> HandleRequestAsync(TRequest request, IServerPeer peer)
             {
                 return await _callback(request);
+            }
+        }
+
+        class TestEvent : IEvent, IByteStreamSerializable
+        {
+            public string Value;
+
+            public void Deserialize(IByteStreamReader reader)
+            {
+                Value = reader.ReadString();
+            }
+
+            public void Serialize(IByteStreamWriter writer)
+            {
+                writer.Write(Value);
+            }
+        }
+
+        class TestEventHandler<TEvent> : IEventHandler<TEvent>
+            where TEvent : IEvent
+        {
+            private TaskCompletionSource<TEvent> _tcs;
+
+            public TestEventHandler(TaskCompletionSource<TEvent> tcs)
+            {
+                _tcs = tcs;
+            }
+
+            public void OnReceiveEvent(TEvent evt)
+            {
+                _tcs?.SetResult(evt);
             }
         }
         #endregion

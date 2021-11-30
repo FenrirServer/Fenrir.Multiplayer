@@ -5,7 +5,8 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Description>Fenrir Multiplayer Library</Description>
-    <Version>1.0.9</Version>
+    <Version>1.0.10</Version>
+	<PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +15,10 @@
     <PackageReference Include="WebSocketSharp-netstandard" Version="1.0.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
+	
   <ItemGroup>
     <Compile Include="..\UnityPackage\Assets\Runtime\**\*.cs" />
   </ItemGroup>

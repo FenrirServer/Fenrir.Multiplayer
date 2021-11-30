@@ -15,12 +15,15 @@ jobs:
           registry-url: https://upm.fenrirserver.org/
 
       - run: npm publish
-        working-directory: UnityPackage/Assets
+        working-directory: source/UnityPackage/Assets
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
 
   deploy-nuget:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: source
     steps:
       - uses: actions/checkout@v2
       - name: Setup .NET

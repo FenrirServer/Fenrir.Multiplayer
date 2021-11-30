@@ -21,8 +21,9 @@ public static class ServerProjectUtility
 
     static string _serverSolutionFilePath = Path.Combine(_serverDirectoryPath, "ServerApplication.sln");
 
+    const string _unityPackageName = "org.fenrirserver.multiplayer";
     const string _editorAsmdefFileName = "Fenrir.Multiplayer.Editor";
-    const string _projectTemplateRelativePath = "Templates/ServerSolutionTemplate.zip";
+    const string _projectTemplateRelativePath = "Editor/Templates/ServerSolutionTemplate.zip";
 
     [MenuItem("Window/Fenrir/Open Server Project")]
     public static void OpenServerProject()
@@ -62,7 +63,7 @@ public static class ServerProjectUtility
     static void GenerateServerProject()
     {
         // Find path to the template archive
-        string projectTemplatePath = Path.Combine(Application.dataPath, "../", GetFenrirEditorRelativePath(), _projectTemplateRelativePath);
+        string projectTemplatePath = Path.Combine(GetFenrirUnityPackageRootPath(), _projectTemplateRelativePath);
 
         if(!File.Exists(projectTemplatePath))
         {
@@ -151,15 +152,29 @@ public static class ServerProjectUtility
         return sb.ToString();
     }
 
-    static string GetFenrirEditorRelativePath()
+    static string GetFenrirUnityPackageRootPath()
     {
+        // Attempt to resolve using package name (see: https://docs.unity3d.com/Manual/upm-assets.html)
+        string unityPackageRootPath = Path.GetFullPath("Packages/"+ _unityPackageName);
+        if (Directory.Exists(unityPackageRootPath))
+        {
+            return unityPackageRootPath;
+        }
+
+        // If that didn't work (e.g. development mode), attempt to resolve by finding the assembly definition file in the project
         var assetGuids = AssetDatabase.FindAssets($"{_editorAsmdefFileName} t:{nameof(AssemblyDefinitionAsset)}");
         if (assetGuids.Length == 0)
         {
-            throw new FileNotFoundException("Failed to find Fenrir editor script root: " + _editorAsmdefFileName);
+            return null;
+        }
+        string assemblyDefinitionAssetPath = Path.Combine(AssetDatabase.GUIDToAssetPath(assetGuids[0]), "../");
+        unityPackageRootPath = Path.GetFullPath(assemblyDefinitionAssetPath);
+        if (Directory.Exists(unityPackageRootPath))
+        {
+            return unityPackageRootPath;
         }
 
-        return Path.GetDirectoryName(AssetDatabase.GUIDToAssetPath(assetGuids[0]));
+        return null; // Failed to resolve package root
     }
 
     static void OpenServerProjectFile()
