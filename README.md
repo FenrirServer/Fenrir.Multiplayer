@@ -2,12 +2,13 @@
 
 # Fenrir Multiplayer Library
 
-[![Tests](https://github.com/FenrirServer/Fenrir.Multiplayer/actions/workflows/test/badge.svg)](https://github.com/FenrirServer/Fenrir.Multiplayer/actions/workflows/test.yml)
-[![Deploy](https://github.com/FenrirServer/Fenrir.Multiplayer/actions/workflows/deploy/badge.svg)](https://github.com/FenrirServer/Fenrir.Multiplayer/actions/workflows/deploy.yml)
+[![Tests](https://github.com/FenrirServer/Fenrir.Multiplayer/actions/workflows/test.yml/badge.svg)](https://github.com/FenrirServer/Fenrir.Multiplayer/actions/workflows/test.yml)
+[![Deploy](https://github.com/FenrirServer/Fenrir.Multiplayer/actions/workflows/deploy.yml/badge.svg)](https://github.com/FenrirServer/Fenrir.Multiplayer/actions/workflows/deploy.yml)
+
 [![License](https://img.shields.io/github/license/FenrirServer/Fenrir.Multiplayer)](https://github.com/FenrirServer/Fenrir.Multiplayer/blob/master/LICENSE.txt)
-[![Issues](https://img.shields.io/github/issues/FenrirServer/Fenrir.Multiplayer)](https://github.com/FenrirServer/Fenrir.Multiplayer/issues)]
+[![Issues](https://img.shields.io/github/issues/FenrirServer/Fenrir.Multiplayer)](https://github.com/FenrirServer/Fenrir.Multiplayer/issues)
 [![NuGet](https://img.shields.io/nuget/v/Fenrir.Multiplayer)](https://www.nuget.org/packages/Fenrir.Multiplayer/)
-![Unity Package Manager](https://img.shields.io/npm/v/org.fenrirserver.multiplayer/latest?registry_uri=https%3A%2F%2Fupm.fenrirserver.org)]
+![Unity Package Manager](https://img.shields.io/npm/v/org.fenrirserver.multiplayer/latest?registry_uri=https%3A%2F%2Fupm.fenrirserver.org)
 
 Fenrir is a platform for building server-authoritative real-time multiplayer games with C# and .NET.
 
@@ -39,16 +40,16 @@ To generate a server project, click **Window** → **Fenrir**  → **Open Server
 Editor script will generate and open a .NET Solution in the folder next to Assets:
 
 ```
-📂**MyGame**
+📂MyGame
  ┣ 📂Assets
  ┣ 📂Packages
  ┣ 📂Library
  ┣ 📂ProjectSettings
- ┣ 📂**Server**   ← this folder is generated 
-   ┣ 📂 **MyGame.Server**   ← Server .NET Project 
-   ┣ 📂 **MyGame.Shared**   ← Server and Client Shared Library
-   ┣ 📜 **ServerApplication.sln**   ← Server solution file
-   ┗ 📜 **Dockerfile**   ← Dockerfile that defines how the docker image for your server is built
+ ┣ 📁Server                      ← Generated Server folder
+   ┣ 📂 MyGame.Server            ← Server .NET Project 
+   ┣ 📂 MyGame.Shared            ← Server and Client Shared Library
+   ┣ 📄 ServerApplication.sln    ← Server solution file
+   ┗ 📄 Dockerfile               ← Dockerfile that defines how the docker image for your server is built
 ```
 
 Once the solution file is open, you can build and run the server.
