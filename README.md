@@ -40,16 +40,16 @@ To generate a server project, click **Window** → **Fenrir**  → **Open Server
 Editor script will generate and open a .NET Solution in the folder next to Assets:
 
 ```
-📂**MyGame**
+📂MyGame
  ┣ 📂Assets
  ┣ 📂Packages
  ┣ 📂Library
  ┣ 📂ProjectSettings
- ┣ 📂**Server**   ← this folder is generated 
-   ┣ 📂 **MyGame.Server**   ← Server .NET Project 
-   ┣ 📂 **MyGame.Shared**   ← Server and Client Shared Library
-   ┣ 📜 **ServerApplication.sln**   ← Server solution file
-   ┗ 📜 **Dockerfile**   ← Dockerfile that defines how the docker image for your server is built
+ ┣ 📁Server                      ← Generated Server folder
+   ┣ 📂 MyGame.Server            ← Server .NET Project 
+   ┣ 📂 MyGame.Shared            ← Server and Client Shared Library
+   ┣ 📄 ServerApplication.sln    ← Server solution file
+   ┗ 📄 Dockerfile               ← Dockerfile that defines how the docker image for your server is built
 ```
 
 Once the solution file is open, you can build and run the server.
