@@ -552,7 +552,7 @@ await networkClient.Connect(...);
 
 Fenrir Server comes with room management out of the box.
 
-![Fenrir Multiplayer](/docs/images/ServerRoom.png)
+![Fenrir Multiplayer](/docs/images/ServerRooms.png)
 
 Rooms allows to write isolated, single-threaded gameplay logic without worrying about performance or concurrency.
 
