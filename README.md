@@ -18,9 +18,9 @@ It is optimized for real-time multiplayer and provides fast reliable UDP layer a
 
 Fenrir provides a great balance between performance and ease of development and makes it extremely quick to build multiplayer games of any genre.
 
-## Quick Start
+# Quick Start
 
-### Installation
+## Installation
 
 This package can be installed using Unity Package from `https://upm.fenrirserver.org` registry.
 
@@ -29,7 +29,7 @@ This package can be installed using Unity Package from `https://upm.fenrirserver
 1. In Unity, open **Edit** → **Project Settings** → **Package Manager** and add a **Scoped Registry** using URL: `https://upm.fenrirserver.org`
 2. Open **Window** → **Package Manager** and switch to **Packages: My Registries**. Select **Fenrir Multiplayer** and click **Install**
 
-### Server Project
+## Server Project
 
 Fenrir Multiplayer Unity Package comes with a server template that is recommended (but not required) to use. 
 
@@ -54,7 +54,9 @@ Editor script will generate and open a .NET Solution in the folder next to Asset
 
 Once the solution file is open, you can build and run the server.
 
-### Client-Server Basics
+# Documentation
+
+## Client-Server Basics
 
 Fenrir Multiplayer allows you to build server-authoritative multiplayer games with Unity and .NET. 
 
@@ -81,7 +83,7 @@ else
     Debug.Log("Failed to connect:" + connectionResponse.Reason);
 ```
 
-### Networking Basics
+## Networking Basics
 
 Fenrir Multiplayer uses basic messaging primitives: **Requests**, **Responses**, and **Events**.
 
@@ -100,13 +102,15 @@ For example, response might contain information about successful (or unsuccessfu
 Events are messages asynchoronously sent from a server to a client. 
 Events usually update client state asynchronously when client might or might not expect. For example, they may represent an incoming chat message.
 
-#### Request and Event Handlers
+## Request and Event Handlers
 
 Fenrir provides a strictly typed mechanism of defining messages such as Request, Responses and Events. This means that Requests, Responses and Events are defined as C# classes.
 Messages only represent data sent over the wire. In other words, they are **Data Transfer Objects**.
 It is programmers job to define how Requests are handled by the server (and Events are handled by the client).
 
 In order to do that, you can define a Request Handler or Event Handler.
+
+### Example Request
 
 **Example Request** (client+server shared code):
 
@@ -170,7 +174,7 @@ networkClient.Peer.SendRequest(new HelloRequest() { Name = "World" });
 // Server prints "Hello, World"
 ```
 
----
+### Example Request with Response
 
 **Example Request with Response** (client+server shared code):
 
@@ -246,7 +250,7 @@ var response = await networkClient.Peer.SendRequest<PingRequest, PingResponse>(n
 Debug.Log(response.ResponseText); // prints "Hello, World"
 ```
 
----
+### Example Event
 
 **Example Event** (client+server shared code):
 
@@ -308,7 +312,41 @@ await networkClient.Connect("http://127.0.0.1:27016");
 // After a successful connection, client prints "Hello from Mr.Server"
 ```
 
-### Serialization
+## Logging
+
+To enable advanced logging, a class that implements `Fenrir.Multiplayer.Logging.ILogger` can be passed when constructing `INetworkClient` or `INetworkServer`.
+
+In our Unity package, UnityLogger class is available that you can use:
+
+Client code:
+```csharp
+using var networkClient = new NetworkClient(new UnityLogger());
+```
+
+In the .NET server project template, we provide `FenrirLogger` that uses `Microsoft.Extensions.Logging` to log:
+
+Server code:
+
+```csharp
+using var networkServer = new NetworkServer(new FenrirLogger());
+```
+
+Alternatively, you can also use EventBasedLogger:
+
+```csharp
+void OnLogged(LogLevel level, string format, params object[] arguments)
+{
+    // log your message
+}
+
+var eventBasedLogger = new EventBasedLogger();
+eventBasedLogger.Logged = OnLogged;
+using var networkServer = new NetworkServer(eventBasedLogger);
+```
+
+## Serialization
+
+### Byte Stream Serialization
 
 By default, Fenrir Multiplayer comes with a byte stream serialization mechanism for messages and data objects.
 It is simple but powerful: it allows explicitly serializing messages into directly into a byte buffer that is used to write into a socket.
@@ -344,9 +382,6 @@ You can write simple types such as strings, integers, enums etc.
 You can also write nested types that implement IByteStreamSerializable:
 
 ```csharp
-using Fenrir.Multiplayer.Serialization;
-using Fenrir.Multiplayer.Network;
-
 class Player : IByteStreamSerializable
 {
     public string Name;
@@ -406,20 +441,121 @@ class RoundStartEvent : IEvent, IByteStreamSerializable
 }
 ```
 
+### Custom Type Serialization
 
-TODO: Type serializer binding
+You can create define serialize logic for a custom type such as Vector3 in Unity.
 
-TODO: Serialization using other libraries coming soon!
+Custom serializer must implement `ITypeSerializer<T>` interface as such:
+
+```csharp
+using UnityEngine;
+using Fenrir.Multiplayer.Serialization;
+
+class Vector3Serializer : ITypeSerializer<Vector3>
+{
+    public Vector3 Deserialize(IByteStreamReader byteStreamReader)
+    {
+        float x = byteStreamReader.ReadFloat();
+        float y = byteStreamReader.ReadFloat();
+        float z = byteStreamReader.ReadFloat();
+
+        return new Vector3(x,y,z);
+    }
+
+    public void Serialize(Vector3 data, IByteStreamWriter byteStreamWriter)
+    {
+        byteStreamWriter.Write(data.x);
+        byteStreamWriter.Write(data.y);
+        byteStreamWriter.Write(data.z);
+    }
+}
+
+// Add to the serializer
+var serializer = new NetworkSerializer();
+serializer.AddTypeSerializer<Vector3>(new Vector3Serializer());
+
+// Server
+var networkServer = new NetworkServer(new FenrirLogger(), serializer);
+
+// Client
+var networkClient = new NetworkClient(new UnityLogger(), serializer); 
+```
+
+### Using third party serialization library
+
+You can add custom serializer for all unknown types by implementing non-generic `ITypeSerializer`.
+
+This is useful when you want to use a third-party serialization library such as ProtoBuf or MessagePack.
+
+Plugin packages for those are coming soon!
+
+**Example custom serializer using `DataContractSerializer`**:
+
+Note: `DataContractSerializer` does not provide performance sufficient for most games. Provided only as an example.
+
+```csharp
+using Fenrir.Multiplayer.Serialization;
+
+class CustomSerializer : ITypeSerializer
+{
+    public void Serialize(object data, IByteStreamWriter byteStreamWriter)
+    {
+        // Write bytes into a memory stream
+        using var memoryStream = new MemoryStream();
+
+        var dataContractSerializer = new System.Runtime.Serialization.DataContractSerializer(data.GetType());
+        dataContractSerializer.WriteObject(memoryStream, data);
+
+        byte[] objectBytes = memoryStream.ToArray();
+        byteStreamWriter.WriteBytesWithLength(objectBytes);
+    }
+
+    public object Deserialize(Type type, IByteStreamReader byteStreamReader)
+    {
+        // Copy bytes from the network buffer into a memory stream
+        byte[] bytes = byteStreamReader.ReadBytesWithLength();
+        using var memoryStream = new MemoryStream(bytes);
+
+        // Deserialize memory stream into an object
+        var dataContractSerializer = new System.Runtime.Serialization.DataContractSerializer(type);
+        object data = dataContractSerializer.ReadObject(memoryStream);
+        return data;
+    }
+}
+
+[DataContract]
+class RoundStartEvent : IEvent
+{
+    [DataMember]
+    public string PlayerName;
+
+    [DataMember]
+    public int Health;
+}
+
+...
+
+// Add to the serializer
+var serializer = new NetworkSerializer();
+serializer.AddTypeSerializer(new CustomSerializer());
+
+// Server
+var networkServer = new NetworkServer(new FenrirLogger(), serializer);
+networkServer.PeerConnected += (sender, e) => e.Peer.SendEvent(new RoundStartEvent() { PlayerName = "Player", Health=100 });
+
+// Client
+var networkClient = new NetworkClient(new UnityLogger(), serializer);
+await networkClient.Connect(...);
+```
+
+## Room Management
 
 
-### Room Management
+
+## Running in Docker
 TODO
 
-
-### Running in Docker
-TODO
-
-### Installing directly via NuGet
+## Installing directly via NuGet
 
 We recommend that you use a server project template that comes with the Unity Package. If you do not wish to use it, or would like to use this library directly, you can install it using NuGet package:
 
@@ -429,12 +565,12 @@ dotnet add package Fenrir.Multiplayer
 
 Or install it using NuGet Window: [Fenrir.Multiplayer](https://www.nuget.org/packages/Fenrir.Multiplayer/)
 
-## Contributing
+# Contributing
 
 For problems with this library, please open a GitHub issue or a pull-request. 
 
 For issues with Fenrir Cloud, please contact customer support or your account manager.
 
-## License
+# License
 
 Fenrir.Multiplayer is an open source software, licensed under the terms of MIT license. See [LICENSE.txt](/LICENSE.txt) for details.
