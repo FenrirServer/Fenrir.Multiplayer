@@ -144,4 +144,11 @@ MoveResult result = await room.ExecuteAsync(() => room.MovePlayer(request, peer)
 room.Schedule(() => FinishRound(), TimeSpan.FromSeconds(10));
 ```
 
+
+## Room Virtual Methods
+
+TODO: Describe room virtual methods, peer validation. Join token. Peer ID uniqueness. Room join response (reserved error codes.)
+
+
 Next Section: [Logging](/Logging.md)
+

@@ -4,6 +4,7 @@ using Fenrir.Multiplayer.Exceptions;
 using Fenrir.Multiplayer.Logging;
 using Fenrir.Multiplayer.Network;
 using Fenrir.Multiplayer.Serialization;
+using Fenrir.Multiplayer.Utility;
 using LiteNetLib;
 using LiteNetLib.Utils;
 using System;
@@ -286,7 +287,7 @@ namespace Fenrir.Multiplayer.LiteNet
             _netManager.Start();
 
             // Start polling events
-            RunEventLoop();
+            RunEventLoop().FireAndForget(_logger);
 
             // Create connection data
             var connectionRequestDataWriter = CreateConnectionRequestDataWriter(connectionRequest.ClientId, connectionRequest.ConnectionRequestData);
@@ -297,7 +298,7 @@ namespace Fenrir.Multiplayer.LiteNet
             return _connectionTcs.Task;
         }
 
-        private async void RunEventLoop()
+        private async Task RunEventLoop()
         {
             while(IsRunning)
             {

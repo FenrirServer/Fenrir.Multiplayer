@@ -2,7 +2,7 @@
 
 This section contains Quick Start Guide for Unity Package of the Fenrir Multiplayer SDK.
 
-Previous Section: [Installation](/Installation.md)
+Previous Section: [Installation](Installation.md)
 
 ## Server Project
 
@@ -10,11 +10,11 @@ Fenrir Multiplayer Unity Package comes with a server template that is recommende
 
 To generate a server project, click **Window** → **Fenrir** → **Open Server Project**.
 
-![Server Project](/images/OpenServerProject.png)
+![Server Project](images/OpenServerProject.png)
 
 If a project server has never been generated, dialogue window will open asking to generate the package. Select **Generate**.
 
-![Generate Server Project](/images/GenerateServerProject.png)
+![Generate Server Project](images/GenerateServerProject.png)
 
 Editor script will generate and open a .NET Solution in the folder next to Assets:
 
@@ -60,4 +60,5 @@ else
     Debug.Log("Failed to connect:" + connectionResponse.Reason);
 ```
 
-Next Section: [Networking Basics](/NetworkingBasics.md)
+Next Section: [Networking Basics](NetworkingBasics.md)
+Table of Contents: [Documentation Home](DocumentationIndex.md)

@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using System;
 
 namespace Fenrir.Multiplayer.Network
@@ -49,7 +50,9 @@ namespace Fenrir.Multiplayer.Network
         public ProtocolInfo(ProtocolType protocolType, IProtocolConnectionData connectionData) : this()
         {
             ProtocolType = protocolType;
-            ConnectionData = JObject.FromObject(connectionData);
+            var serializer = new Newtonsoft.Json.JsonSerializer();
+            serializer.Converters.Add(new StringEnumConverter());
+            ConnectionData = JObject.FromObject(connectionData, serializer);
         }
     }
 }

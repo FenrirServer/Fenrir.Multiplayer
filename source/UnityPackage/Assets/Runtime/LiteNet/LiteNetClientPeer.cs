@@ -38,13 +38,15 @@ namespace Fenrir.Multiplayer.LiteNet
         private readonly int _requestTimeoutMs;
 
         /// <summary>
-        /// Default constructor
+        /// Default Constructor
         /// </summary>
-        /// <param name="peerId">Unique id of this client to server connection</param>
+        /// <param name="peerId">Peer Id</param>
         /// <param name="netPeer">LiteNet NetPeer</param>
         /// <param name="messageWriter">Message Writer</param>
         /// <param name="pendingRequestMap">Pending Request Map</param>
-        /// <param name="byteStreamWriterPool">Byte Stream Writer Object Pool</param>
+        /// <param name="typeHashMap">Type Hash Map</param>
+        /// <param name="byteStreamWriterPool">Byte Stream Writer Pool</param>
+        /// <param name="requestTimeoutMs">Request Timeout, in milliseconds</param>
         public LiteNetClientPeer(string peerId, NetPeer netPeer, MessageWriter messageWriter, PendingRequestMap pendingRequestMap, ITypeHashMap typeHashMap, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool, int requestTimeoutMs)
             : base(peerId, netPeer, messageWriter, byteStreamWriterPool)
         {

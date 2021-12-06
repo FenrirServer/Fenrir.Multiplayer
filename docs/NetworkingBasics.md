@@ -2,11 +2,11 @@
 
 This section explains Fenrir networking model.
 
-Previous Section: [Quick Start](/QuickStart.md)
+Previous Section: [Quick Start](QuickStart.md)
 
 Fenrir Multiplayer uses basic messaging primitives: **Requests**, **Responses**, and **Events**.
 
-![Request Response Event](/images/RequestResponseEvent.png)
+![Request Response Event](images/RequestResponseEvent.png)
 
 **Request**
 Very much like HTTP, requests are sent from the client to a server. **Request** can optionally have a **Response**.
@@ -231,4 +231,5 @@ await networkClient.Connect("http://127.0.0.1:27016");
 // After a successful connection, client prints "Hello from Mr.Server"
 ```
 
-Next Section: [Connection](/Connection.md)
+Next Section: [Connection](Connection.md)
+Table of Contents: [Documentation Home](DocumentationIndex.md)

@@ -1,4 +1,5 @@
 ﻿using Fenrir.Multiplayer.Logging;
+using Fenrir.Multiplayer.Utility;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -82,7 +83,12 @@ namespace Fenrir.Multiplayer.Rooms
         }
 
         /// <inheritdoc/>
-        public async void Run()
+        public void Run()
+        {
+            RunAsync().FireAndForget(_logger);
+        }
+
+        private async Task RunAsync()
         {
             if(_isDisposed)
             {
@@ -158,7 +164,12 @@ namespace Fenrir.Multiplayer.Rooms
         }
 
         /// <inheritdoc/>
-        public async void Schedule(Action action, double delayMs)
+        public void Schedule(Action action, double delayMs)
+        {
+            ScheduleAsync(action, delayMs).FireAndForget(_logger);
+        }
+        
+        async Task ScheduleAsync(Action action, double delayMs)
         {
             await Task.Delay(TimeSpan.FromMilliseconds(delayMs));
 
@@ -171,7 +182,12 @@ namespace Fenrir.Multiplayer.Rooms
         }
 
         /// <inheritdoc/>
-        public async void Schedule(Action action, TimeSpan delay)
+        public void Schedule(Action action, TimeSpan delay)
+        {
+            ScheduleAsync(action, delay).FireAndForget(_logger);
+        }
+
+        private async Task ScheduleAsync(Action action, TimeSpan delay)
         {
             await Task.Delay(delay);
 

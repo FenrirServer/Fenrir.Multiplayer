@@ -1,5 +1,6 @@
 ﻿using Fenrir.Multiplayer.Network;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -96,7 +97,7 @@ namespace Fenrir.Multiplayer.Server
             };
 
             // Create response
-            string contentsString = JsonConvert.SerializeObject(serverInfo);
+            string contentsString = JsonConvert.SerializeObject(serverInfo, new StringEnumConverter());
             byte[] contentsByte = Encoding.UTF8.GetBytes(contentsString);
 
             // Send response

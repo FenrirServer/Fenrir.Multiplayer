@@ -8,6 +8,7 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using Fenrir.Multiplayer.Utility;
 
 namespace Fenrir.Multiplayer.LiteNet
 {
@@ -199,7 +200,7 @@ namespace Fenrir.Multiplayer.LiteNet
 
                 _isRunning = true;
 
-                RunEventLoop();
+                RunEventLoop().FireAndForget(_logger);
             }
         }
 
@@ -207,7 +208,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Ticks the server
         /// </summary>
-        private async void RunEventLoop()
+        private async Task RunEventLoop()
         {
             while(_isRunning)
             {
@@ -247,16 +248,9 @@ namespace Fenrir.Multiplayer.LiteNet
 
 
         #region INetEventListener Implementation
-        async void INetEventListener.OnConnectionRequest(ConnectionRequest connectionRequest)
+        void INetEventListener.OnConnectionRequest(ConnectionRequest connectionRequest)
         {
-            try
-            {
-                await HandleConnectionRequestAsync(connectionRequest);
-            }
-            catch(Exception e)
-            {
-                _logger.Error($"Error during {nameof(INetEventListener.OnConnectionRequest)}: {e.ToString()}");
-            }
+            HandleConnectionRequestAsync(connectionRequest).FireAndForget(_logger);
         }
 
         private async Task HandleConnectionRequestAsync(ConnectionRequest connectionRequest)

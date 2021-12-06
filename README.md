@@ -26,8 +26,6 @@ Fenrir provides a great balance between performance and ease of development and 
 - [Quick Start](/docs/QuickStart.md)
 - [Networking](/docs/NetworkingBasics.md)
   - [Connection](/docs/Connection.md)
-  - [Server Info](/docs/ServerInfo.md)
-  - [Connection Request](/docs/ConnectionRequest.md)
   - [Peer Object](/docs/PeerObject.md)
   - [Reliability](/docs/Reliability.md)
 - [Serialization](/docs/Serialization.md)

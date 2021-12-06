@@ -6,8 +6,6 @@ This section contains Table of Contents for the Fenrir Multiplayer SDK documenta
 - [Quick Start](QuickStart.md)
 - [Networking](NetworkingBasics.md)
   - [Connection](Connection.md)
-  - [Server Info](ServerInfo.md)
-  - [Connection Request](ConnectionRequest.md)
   - [Peer Object](PeerObject.md)
   - [Reliability](Reliability.md)
 - [Serialization](Serialization.md)
@@ -18,3 +16,4 @@ This section contains Table of Contents for the Fenrir Multiplayer SDK documenta
 - [Docker Setup](DockerBasics.md)
 - [Thread Safety](ThreadSafety.md)
 - [Client and Server Lifecycle](Lifecycle.md)
+- [FAQ](FAQ.md)

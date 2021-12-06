@@ -101,11 +101,16 @@ namespace Fenrir.Multiplayer.Rooms
             // Invoke peer leave event
             OnPeerLeave(peer);
 
-            // If this was the last peer, terminate the room
-            if(Peers.Count == 0)
+            // Add action to the queue: check if no more peers left.
+            // This is done in case a peer is added right after this one is removed (e.g. peer is removed by OnBeforePeerJoined)
+            Execute(() =>
             {
-                Terminate();
-            }
+                // If this was the last peer, terminate the room
+                if (Peers.Count == 0)
+                {
+                    Terminate();
+                }
+            });
         }
 
         /// <summary>
@@ -223,12 +228,13 @@ namespace Fenrir.Multiplayer.Rooms
 
             Execute(() =>
             {
+                RoomJoinResponse response = OnBeforePeerJoin(peer, joinToken);
+
                 if (Peers.ContainsKey(peer.Id))
                 {
+                    tcs.SetResult(new RoomJoinResponse(false, RoomJoinResponse.ErrorCodePeerWithIdAlreadyJoined, "Peer with this ID already joined"));
                     return; // Already joined, do nothing
                 }
-
-                RoomJoinResponse response = OnBeforePeerJoin(peer, joinToken);
 
                 if (!response.Success)
                 {

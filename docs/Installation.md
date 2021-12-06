@@ -24,3 +24,4 @@ dotnet add package Fenrir.Multiplayer
 ```
 
 Next Section: [Quick Start](QuickStart.md)
+Table of Contents: [Documentation Home](DocumentationIndex.md)

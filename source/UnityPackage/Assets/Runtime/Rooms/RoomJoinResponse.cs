@@ -14,6 +14,11 @@ namespace Fenrir.Multiplayer.Rooms
         public const int ErrorCodeJoinFailed = 1;
 
         /// <summary>
+        /// Error code that indicates that Peer with this id is already joined
+        /// </summary>
+        public const int ErrorCodePeerWithIdAlreadyJoined = 2;
+
+        /// <summary>
         /// Error message that indicates that joining room failed due to invalid room id
         /// </summary>
         public const string ErrorMessageJoinFailed = "Failed to create or join a room with a given id";
