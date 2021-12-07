@@ -70,6 +70,7 @@ namespace Fenrir.Multiplayer.Rooms
         /// Invoked when new peer joins the room
         /// </summary>
         /// <param name="peer">Peer</param>
+        /// <param name="token">Room join token</param>
         protected abstract void OnPeerJoin(IServerPeer peer, string token);
 
         /// <summary>
@@ -276,6 +277,9 @@ namespace Fenrir.Multiplayer.Rooms
         #endregion
 
         #region IDisposable Implementation
+        /// <summary>
+        /// Disposes the Room. Must always be invoked to clean-up room resources.
+        /// </summary>
         public void Dispose()
         {
             if(IsRunning)

@@ -10,9 +10,9 @@ namespace Fenrir.Multiplayer
     /// Clock offset and round-trip times are based on the request/response timestamps.
     /// Round-trip time Standard deviation is used to detect and filter out outliers.
     /// Provides next recommended sync time based on the round-trip Coefficient of variation
-    /// <seealso cref="https://en.wikipedia.org/wiki/Network_Time_Protocol"/>
-    /// <seealso cref="https://en.wikipedia.org/wiki/Standard_deviation"/>
-    /// <seealso cref="https://en.wikipedia.org/wiki/Coefficient_of_variation"/>
+    /// <seealso href="https://en.wikipedia.org/wiki/Network_Time_Protocol"/>
+    /// <seealso href="https://en.wikipedia.org/wiki/Standard_deviation"/>
+    /// <seealso href="https://en.wikipedia.org/wiki/Coefficient_of_variation"/>
     /// </remarks>
     /// <example>
     /// Assuming sample recorded round-trip values: [90, 100, 110, 80] 

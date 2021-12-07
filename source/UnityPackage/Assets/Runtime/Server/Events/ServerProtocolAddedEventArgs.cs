@@ -3,7 +3,7 @@
 namespace Fenrir.Multiplayer
 {
     /// <summary>
-    /// Invoked when protocol listener is added to <seealso cref="FenrirServer"/>
+    /// Invoked when protocol listener is added to <seealso cref="NetworkServer"/>
     /// </summary>
     public class ServerProtocolAddedEventArgs : EventArgs
     {

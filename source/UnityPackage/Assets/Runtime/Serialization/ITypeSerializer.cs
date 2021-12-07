@@ -33,7 +33,6 @@ namespace Fenrir.Multiplayer
         /// <summary>
         /// Deserialize data of a given type
         /// </summary>
-        /// <param name="type">Type of data</param>
         /// <param name="byteStreamReader">Byte stream writer to read data from</param>
         /// <returns>New instance of a given type</returns>
         T Deserialize(IByteStreamReader byteStreamReader);

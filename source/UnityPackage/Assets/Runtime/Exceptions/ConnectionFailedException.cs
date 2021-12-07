@@ -23,7 +23,6 @@ namespace Fenrir.Multiplayer
         /// <param name="message">Disconnect message</param>
         /// <param name="reason">Disconnect reason</param>
         /// <param name="socketError">Socket error</param>
-        /// <param name="data">Custom data sent by the server</param>
         public ConnectionFailedException(string message, DisconnectedReason reason, SocketError socketError)
             : base(message)
         {

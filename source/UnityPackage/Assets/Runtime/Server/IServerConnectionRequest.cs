@@ -30,6 +30,9 @@ namespace Fenrir.Multiplayer
 
     public interface IServerConnectionRequest<TConnectionRequestData> : IServerConnectionRequest
     {
+        /// <summary>
+        /// Connection request data
+        /// </summary>
         TConnectionRequestData Data { get; }
     }
 }

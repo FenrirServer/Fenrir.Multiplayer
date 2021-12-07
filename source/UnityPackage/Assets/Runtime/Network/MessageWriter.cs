@@ -27,7 +27,6 @@
         /// <param name="serializer">Serializer</param>
         /// <param name="typeHashMap">Type Hash Map</param>
         /// <param name="logger">Logger</param>
-        /// <param name="byteStreamWriterPool">Object pool of Byte Stream Writers</param>
         public MessageWriter(INetworkSerializer serializer, ITypeHashMap typeHashMap, ILogger logger)
         {
             _serializer = serializer;

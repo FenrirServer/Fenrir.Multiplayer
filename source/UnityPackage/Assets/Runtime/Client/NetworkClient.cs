@@ -9,7 +9,7 @@ namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Fenrir Networking Client.
-    /// Connects to the Fenrir <seealso cref="Server.NetworkServer"/>
+    /// Connects to the Fenrir <seealso cref="NetworkServer"/>
     /// </summary>
     public class NetworkClient : INetworkClient, IClientEventListener, IDisposable
     {
@@ -351,6 +351,10 @@ namespace Fenrir.Multiplayer
 
 
         #region IDisposable Implementation
+        /// <summary>
+        /// Disposes Network Client. 
+        /// Always call Dispose() or use "using" keyword to clean-up NetworkClient resources.
+        /// </summary>
         public void Dispose()
         {
             // Dispose existing protocol connector

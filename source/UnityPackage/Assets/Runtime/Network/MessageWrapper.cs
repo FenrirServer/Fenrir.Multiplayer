@@ -92,7 +92,6 @@
         /// <param name="channel">Channel number. <seealso cref="Channel"/></param>
         /// <param name="flags">Message flags. <see cref="Flags"/></param>
         /// <param name="deliveryMethod">Delivery method. <seealso cref="DeliveryMethod"/></param>
-        /// <param name="debugInfo">Message debug Info. Contains useful information about the message.</param>
         /// <returns>New MessageWrapper that wraps given event</returns>
         public static MessageWrapper WrapEvent(IEvent data, byte channel, MessageFlags flags, MessageDeliveryMethod deliveryMethod)
         {

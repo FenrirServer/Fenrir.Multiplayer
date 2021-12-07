@@ -145,7 +145,7 @@ namespace Fenrir.Multiplayer.LiteNet
 
 
         /// <summary>
-        /// Returns debug flags if <see cref="WriteDebugInfo"/> is set to true
+        /// Returns debug flags if <see cref="IPeer.WriteDebugInfo"/> is set to true
         /// </summary>
         /// <returns>Message Flags</returns>
         private MessageFlags GetDebugFlag()

@@ -128,10 +128,13 @@ namespace Fenrir.Multiplayer.LiteNet
         }
 
         /// <summary>
-        /// Creates LiteNet Protocol Listener
+        /// Create new LiteNet Protocol Serializer
         /// </summary>
         /// <param name="serverEventListener">Server Event Listener</param>
+        /// <param name="serializer">Serializer</param>
+        /// <param name="typeHashMap">Type Hash Map</param>
         /// <param name="logger">Logger</param>
+        /// <exception cref="ArgumentNullException"></exception>
         public LiteNetProtocolListener(IServerEventListener serverEventListener, 
             INetworkSerializer serializer, 
             ITypeHashMap typeHashMap, 

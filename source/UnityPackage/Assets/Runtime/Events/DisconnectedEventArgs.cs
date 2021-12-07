@@ -23,7 +23,6 @@ namespace Fenrir.Multiplayer
         /// </summary>
         /// <param name="reason">Disconnect reason</param>
         /// <param name="socketError">Socket error</param>
-        /// <param name="data">Disconnect data</param>
         public DisconnectedEventArgs(DisconnectedReason reason, SocketError socketError)
         {
             Reason = reason;

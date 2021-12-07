@@ -33,7 +33,7 @@ namespace Fenrir.Multiplayer
 
         /// <summary>
         /// Maximum serialization depth.
-        /// If <see cref="Serializer"/>/<see cref="Deserialize(Type, IByteStreamReader)"/> calls reach this depth, <seealso cref="SerializationException"/> is thrown.
+        /// If <see cref="Deserialize"/> calls reach this depth, <seealso cref="SerializationException"/> is thrown.
         /// </summary>
         public int MaxDepth { get; set; } = 100;
 

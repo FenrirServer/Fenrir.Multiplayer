@@ -274,18 +274,6 @@ namespace Fenrir.Multiplayer
                     result.Response = ConnectionResponse.Failed("Unhandled exception in connection request handler");
                     return result;
                 }
-
-                if (!response.Success)
-                {
-                    result.Response = ConnectionResponse.Failed(response.Reason);
-                    return result;
-                }
-                else
-                {
-                    Logger.Trace("Accepted connection request from {0}, client id {1}", remoteEndPoint, clientId);
-                    result.Response = ConnectionResponse.Successful;
-                    return result;
-                }
             };
 
         }

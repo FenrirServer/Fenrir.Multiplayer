@@ -1,5 +1,9 @@
 ﻿namespace Fenrir.Multiplayer
 {
+    /// <summary>
+    /// Message delivery method.
+    /// Represents how message will be delivered over the UDP network.
+    /// </summary>
     public enum MessageDeliveryMethod : byte
     {
         /// <summary>
@@ -19,7 +23,7 @@
 
         /// <summary>
         /// Only last packet is reliable. Packets can be dropped (except the last one), won't
-        //  be duplicated, will arrive in order.
+        ///  be duplicated, will arrive in order.
         /// </summary>
         ReliableSequenced = 3,
 

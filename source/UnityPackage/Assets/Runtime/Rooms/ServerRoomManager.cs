@@ -73,7 +73,7 @@ namespace Fenrir.Multiplayer.Rooms
         /// Creates server room manager with a given room factory.
         /// Implement IServerRoomFactory interface for custom room creation
         /// </summary>
-        /// <param name="roomFactory">Room factory that creates a room of a type <seealso cref="TRoom"/></param>
+        /// <param name="roomFactory">Room factory that creates a room of a type <typeparamref name="TRoom"/></param>
         /// <param name="logger">Logger</param>
         /// <param name="server">Server</param>
         public ServerRoomManager(IServerRoomFactory<TRoom> roomFactory, ILogger logger, INetworkServer server)
@@ -91,7 +91,7 @@ namespace Fenrir.Multiplayer.Rooms
         /// Creates server room manager with a given room factory method.
         /// Pass in a callback that creates new room, e.g. new ServerRoomManager(() => new MyRoom(logger, ...))
         /// </summary>
-        /// <param name="roomFactoryMethod">Factory method that creates new room of type <seealso cref="TRoom"/></param>
+        /// <param name="roomFactoryMethod">Factory method that creates new room of type <typeparamref name="TRoom"/></param>
         /// <param name="logger">Logger</param>
         /// <param name="server">Server</param>
         public ServerRoomManager(CreateRoomHandler roomFactoryMethod, ILogger logger, INetworkServer server)

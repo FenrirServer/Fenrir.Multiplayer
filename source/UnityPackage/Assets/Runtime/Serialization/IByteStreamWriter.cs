@@ -55,7 +55,7 @@ namespace Fenrir.Multiplayer
         /// <summary>
         /// Writes IPEndPoint
         /// </summary>
-        /// <param name="value">Value</param>
+        /// <param name="endPoint">Remote EndPoint</param>
         void Write(IPEndPoint endPoint);
 
         /// <summary>
@@ -92,7 +92,7 @@ namespace Fenrir.Multiplayer
         /// <summary>
         /// Writes byte array
         /// </summary>
-        /// <param name="value">Value</param>
+        /// <param name="data">Bytes</param>
         void Write(byte[] data);
 
         /// <summary>
