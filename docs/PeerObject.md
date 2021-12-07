@@ -14,7 +14,30 @@ Previous Section: [Connection](Connection.md)
 
 ## Identifying Server Peer
 
-There are two main ways of uniquely identifying each Peer.
+There are several ways of uniquely identifying each Peer.
+
+## Connection Request Data
+
+If you set up a custom Connection Request Handler, you can validate custom Connection Request Data object and access it later using `IServerPeer.ConnectionRequestData` property:
+
+```csharp
+// Use with NetworkServer.SetConnectionRequestHandler<>
+class MyConnectionRequestData
+{
+    public string Name;
+
+    ...
+}
+
+...
+
+void HandleRequest(PlayerMoveRequest request, IServerPeer peer)
+{
+    string name = peer.ConnectionRequestData.Name; 
+}
+```
+
+See also: [Using Custom Connection Request Handler](Connection.md#custom-connection-request)
 
 ## Server Peer Data
 

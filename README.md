@@ -1,4 +1,4 @@
-![Fenrir Multiplayer](/docs/images/FenrirLogo512.png)
+![Fenrir Multiplayer](/docs/images/FenrirLogo.png)
 
 # Fenrir Multiplayer SDK
 
@@ -22,22 +22,26 @@ Fenrir provides a great balance between performance and ease of development and 
 
 **Table of Contents**:
 
-- [Installation](/docs/Installation.md)
-- [Quick Start](/docs/QuickStart.md)
-- [Networking](/docs/NetworkingBasics.md)
-  - [Connection](/docs/Connection.md)
-  - [Peer Object](/docs/PeerObject.md)
-  - [Reliability](/docs/Reliability.md)
-- [Serialization](/docs/Serialization.md)
-  - [Custom Type Serialization](/docs/CustomTypeSerialization.md)
-  - [Custom Serializer](/docs/CustomSerializer.md)
-- [Room Management](/docs/RoomManagementBasics.md)
-- [Logging](/docs/Logging.md)
-- [Docker Setup](/docs/DockerBasics.md)
-- [Thread Safety](/docs/ThreadSafety.md)
-- [Client and Server Lifecycle](/docs/Lifecycle.md)
+- [Documentation Home](DocumentationIndex.md)
+- [Installation](Installation.md)
+- [Quick Start](QuickStart.md)
+- [Networking](NetworkingBasics.md)
+  - [Connection](Connection.md)
+  - [Peer Object](PeerObject.md)
+  - [Reliability](Reliability.md)
+- [Serialization](Serialization.md)
+  - [Custom Type Serialization](CustomTypeSerialization.md)
+  - [Custom Serializer](CustomSerializer.md)
+- [Room Management](RoomManagementBasics.md)
+- [Logging](Logging.md)
+- [Docker Setup](DockerBasics.md)
+- [Thread Safety](ThreadSafety.md)
+- [Client and Server Lifecycle](Lifecycle.md)
+- [FAQ](FAQ.md)
 
-# Installation
+# Quick Start
+
+## Installing Unity Package
 
 This package can be installed using Unity Package from `https://upm.fenrirserver.org` registry.
 
@@ -46,9 +50,7 @@ This package can be installed using Unity Package from `https://upm.fenrirserver
 1. In Unity, open **Edit** → **Project Settings** → **Package Manager** and add a **Scoped Registry** using URL: `https://upm.fenrirserver.org`
 2. Open **Window** → **Package Manager** and switch to **Packages: My Registries**. Select **Fenrir Multiplayer** and click **Install**
 
-# Quick Start
-
-## Server Project
+## Generating Server Project
 
 Fenrir Multiplayer Unity Package comes with a server template that is recommended (but is not strictly required) to use.
 

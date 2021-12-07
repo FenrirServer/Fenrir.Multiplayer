@@ -32,8 +32,8 @@ namespace Fenrir.Multiplayer.Server
         /// <param name="clientId">Unique ID of the client</param>
         /// <param name="remoteEndPoint">Remote IP</param>
         /// <param name="connectionRequestDataReader">Custom connection data</param>
-        /// <returns></returns>
-        private delegate Task<ConnectionResponse> ConnectionRequestHandler(int protocolVersion, string clientId, IPEndPoint remoteEndPoint, IByteStreamReader connectionRequestDataReader);
+        /// <returns>Connection Handler Result object that contains response and additional data</returns>
+        private delegate Task<ConnectionHandlerResult> ConnectionRequestHandler(int protocolVersion, string clientId, IPEndPoint remoteEndPoint, IByteStreamReader connectionRequestDataReader);
 
         /// <summary>
         /// Type hash map
@@ -218,7 +218,14 @@ namespace Fenrir.Multiplayer.Server
         }
 
         /// <inheritdoc/>
-        public void SetConnectionRequestHandler<TConnectionRequestData>(Func<IServerConnectionRequest<TConnectionRequestData>, Task<ConnectionResponse>> handler) 
+        public void SetConnectionRequestHandler<TConnectionRequestData>(Func<IServerConnectionRequest<TConnectionRequestData>, ConnectionResponse> handler)
+            where TConnectionRequestData : class, new()
+        {
+            SetConnectionRequestHandlerAsync<TConnectionRequestData>((connectionRequestData) => Task.FromResult<ConnectionResponse>(handler(connectionRequestData)));
+        }
+
+        /// <inheritdoc/>
+        public void SetConnectionRequestHandlerAsync<TConnectionRequestData>(Func<IServerConnectionRequest<TConnectionRequestData>, Task<ConnectionResponse>> handler) 
             where TConnectionRequestData : class, new()
         {
             if(handler == null)
@@ -235,6 +242,9 @@ namespace Fenrir.Multiplayer.Server
             // Set connection request handler
             _connectionRequestHandler = async (protocolVersion, clientId, remoteEndPoint, connectionDataReader) =>
             {
+                // Result
+                ConnectionHandlerResult result = new ConnectionHandlerResult();
+
                 // If custom connection request data is present, deserialize
                 if (connectionDataReader != null && !connectionDataReader.EndOfData)
                 {
@@ -245,7 +255,8 @@ namespace Fenrir.Multiplayer.Server
                     catch (SerializationException e)
                     {
                         Logger.Debug("Rejected connection request from {0}, failed to deserialize connection data: {1}", remoteEndPoint, e);
-                        return ConnectionResponse.Failed("Bad connection request data");
+                        result.Response = ConnectionResponse.Failed("Bad connection request data");
+                        return result;
                     }
                 }
 
@@ -257,21 +268,27 @@ namespace Fenrir.Multiplayer.Server
                 try
                 {
                     response = await handler(serverConnectionRequest);
+                    result.Response = response;
+                    result.ConnectionRequestData = connectionRequestData;
+                    return result;
                 }
                 catch (Exception e)
                 {
                     Logger.Error("Unhandled exception in connection request handler : {0}", e);
-                    return ConnectionResponse.Failed("Unhandled exception in connection request handler");
+                    result.Response = ConnectionResponse.Failed("Unhandled exception in connection request handler");
+                    return result;
                 }
 
                 if (!response.Success)
                 {
-                    return ConnectionResponse.Failed(response.Reason);
+                    result.Response = ConnectionResponse.Failed(response.Reason);
+                    return result;
                 }
                 else
                 {
                     Logger.Trace("Accepted connection request from {0}, client id {1}", remoteEndPoint, clientId);
-                    return ConnectionResponse.Successful;
+                    result.Response = ConnectionResponse.Successful;
+                    return result;
                 }
             };
 
@@ -373,7 +390,7 @@ namespace Fenrir.Multiplayer.Server
         #endregion
 
         #region IServerEventListener Implementation
-        async Task<ConnectionResponse> IServerEventListener.HandleConnectionRequest(int protocolVersion, string clientId, IPEndPoint endPoint, IByteStreamReader connectionDataReader)
+        async Task<ConnectionHandlerResult> IServerEventListener.HandleConnectionRequest(int protocolVersion, string clientId, IPEndPoint endPoint, IByteStreamReader connectionDataReader)
         {
             if(_connectionRequestHandler != null)
             {
@@ -383,7 +400,7 @@ namespace Fenrir.Multiplayer.Server
             else
             {
                 // No custom request handler
-                return ConnectionResponse.Successful; 
+                return new ConnectionHandlerResult(ConnectionResponse.Successful, null); 
             }
         }
 

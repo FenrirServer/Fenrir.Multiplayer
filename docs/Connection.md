@@ -20,7 +20,7 @@ Server Info endpoint is very useful for local testing and connecting to any spec
 
 In production setups, very often the Server Info will be provided by the matchmaking server. In that case, TCP port does not need to be exposed.
 
-** TODO: Endpoint vs UDP infographic **
+![Connection Flows](images/ConnectionFlows.png)
 
 **Example connecting via http endpoint**:
 
@@ -140,6 +140,18 @@ using var networkClient = new NetworkClient();
 
 // Connect using custom data
 var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016", connectionRequest);
+```
+
+Once the peer is connected, you can also access connection request data using `IServerPeer.ConnectionRequestData` object, througuout the Peer lifecycle.
+For example, you can access it in `PeerConnected` event or any of your Request Handlers.
+
+```csharp
+networkServer.PeerConnected += (sender, e) =>
+{
+    IServerPeer peer = e.Peer;
+    var requestData = (MyConnectionRequestData)peer.ConnectionRequestData;
+    Console.WriteLine("Player connected, name = " + requestData.Name);
+};
 ```
 
 Next Section: [Peer Object](PeerObject.md)

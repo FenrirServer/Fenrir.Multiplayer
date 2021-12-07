@@ -2,6 +2,7 @@
 
 This section contains Table of Contents for the Fenrir Multiplayer SDK documentation.
 
+- [Documentation Home](DocumentationIndex.md)
 - [Installation](Installation.md)
 - [Quick Start](QuickStart.md)
 - [Networking](NetworkingBasics.md)

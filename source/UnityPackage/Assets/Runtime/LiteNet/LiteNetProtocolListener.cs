@@ -280,10 +280,10 @@ namespace Fenrir.Multiplayer.LiteNet
             }
 
             // Invoke connection request handler
-            ConnectionResponse response;
+            ConnectionHandlerResult connectionHandlerResult;
             try
             {
-                response = await _serverEventListener.HandleConnectionRequest(protocolVersion, clientId, connectionRequest.RemoteEndPoint, connectionRequestDataReader);
+                connectionHandlerResult = await _serverEventListener.HandleConnectionRequest(protocolVersion, clientId, connectionRequest.RemoteEndPoint, connectionRequestDataReader);
             }
             finally
             {
@@ -293,17 +293,17 @@ namespace Fenrir.Multiplayer.LiteNet
                 }
             }
 
-            if(response.Success)
+            if(connectionHandlerResult.Response.Success)
             {
-                AcceptConnectionRequest(connectionRequest, protocolVersion, clientId);
+                AcceptConnectionRequest(connectionRequest, protocolVersion, clientId, connectionHandlerResult.ConnectionRequestData);
             }
             else
             {
-                RejectConnectionRequest(connectionRequest, response.Reason);
+                RejectConnectionRequest(connectionRequest, connectionHandlerResult.Response.Reason);
             }
         }
 
-        private void AcceptConnectionRequest(ConnectionRequest liteNetConnectionRequest, int protocolVersion, string clientId)
+        private void AcceptConnectionRequest(ConnectionRequest liteNetConnectionRequest, int protocolVersion, string clientId, object connectionRequestData)
         {
             _logger.Trace("Accepting connection request from {0}", liteNetConnectionRequest.RemoteEndPoint);
 
@@ -311,7 +311,7 @@ namespace Fenrir.Multiplayer.LiteNet
 
             // Create server peer
             var messageWriter = new MessageWriter(_serializer, _typeHashMap, _logger);
-            netPeer.Tag = new LiteNetServerPeer(clientId, protocolVersion, netPeer, messageWriter, _byteStreamWriterPool);
+            netPeer.Tag = new LiteNetServerPeer(clientId, protocolVersion, connectionRequestData, netPeer, messageWriter, _byteStreamWriterPool);
         }
 
         private void RejectConnectionRequest(ConnectionRequest connectionRequest, string reason)

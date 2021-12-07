@@ -1,4 +1,5 @@
-﻿using Fenrir.Multiplayer.Server.Events;
+﻿using Fenrir.Multiplayer.Server;
+using Fenrir.Multiplayer.Server.Events;
 using System;
 
 namespace Fenrir.Multiplayer.Network
@@ -22,6 +23,12 @@ namespace Fenrir.Multiplayer.Network
         /// Custom peer data that can be assigned to each peer
         /// </summary>
         object PeerData { get; set; }
+
+        /// <summary>
+        /// Custom connection request data. 
+        /// Set only if custom Connection Request Handler is set on the <seealso cref="NetworkServer"/>.
+        /// </summary>
+        object ConnectionRequestData { get; }
 
         /// <summary>
         /// Notifies client of the event.

@@ -33,17 +33,25 @@ namespace Fenrir.Multiplayer.LiteNet
         public object PeerData { get; set; }
 
         /// <summary>
+        /// Connection request data
+        /// </summary>
+        public object ConnectionRequestData { get; set; }
+
+
+        /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="peerId">Unique id of the client</param>
         /// <param name="protocolVersion">Peer protocol version</param>
+        /// <param name="connectionRequestData">Custom connection request data. If no Connection Request Handler is set, always null</param>
         /// <param name="netPeer">LiteNet NetPeer</param>
         /// <param name="messageWriter">Message Writer</param>
         /// <param name="byteStreamWriterPool">Byte Stream Writer Object Pool</param>
-        public LiteNetServerPeer(string peerId, int protocolVersion, NetPeer netPeer, MessageWriter messageWriter, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool)
+        public LiteNetServerPeer(string peerId, int protocolVersion, object connectionRequestData, NetPeer netPeer, MessageWriter messageWriter, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool)
             : base(peerId, netPeer, messageWriter, byteStreamWriterPool)
         {
             ProtocolVersion = protocolVersion;
+            ConnectionRequestData = connectionRequestData;
         }
 
         /// <inheritdoc/>

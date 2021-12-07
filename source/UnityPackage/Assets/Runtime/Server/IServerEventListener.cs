@@ -8,7 +8,7 @@ namespace Fenrir.Multiplayer.Server
 {
     interface IServerEventListener
     {
-        Task<ConnectionResponse> HandleConnectionRequest(int protocolVersion, string clientId, IPEndPoint endPoint, IByteStreamReader connectionDataReader);
+        Task<ConnectionHandlerResult> HandleConnectionRequest(int protocolVersion, string clientId, IPEndPoint endPoint, IByteStreamReader connectionDataReader);
         
         void OnReceiveRequest(IServerPeer serverPeer, MessageWrapper messageWrapper);
 

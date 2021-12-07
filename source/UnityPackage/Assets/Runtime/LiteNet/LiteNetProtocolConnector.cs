@@ -211,6 +211,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Creates <see cref="LiteNetProtocolConnector"/>
         /// </summary>
+        /// <param name="clientEventListener">Client event listener</param>
         /// <param name="serializer">Serializer</param>
         /// <param name="typeHashMap">Type Hash Map</param>
         /// <param name="logger">Logger</param>

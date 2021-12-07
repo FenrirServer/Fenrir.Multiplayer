@@ -130,11 +130,49 @@ namespace Fenrir.Multiplayer.Tests
         [TestMethod, Timeout(TestTimeout)]
         public async Task NetworkClient_ConnectsToNetworkServer_WithCustomConnectionRequestHandler()
         {
+            TaskCompletionSource<CustomConnectionRequestData> peerConnectionRequestDataTcs = new TaskCompletionSource<CustomConnectionRequestData>();
+
+            using var logger = new TestLogger();
+            using var networkServer = new NetworkServer(logger);
+            networkServer.PeerConnected += (sender, e) =>
+            {
+                var requestData = (CustomConnectionRequestData)e.Peer.ConnectionRequestData;
+                peerConnectionRequestDataTcs.SetResult(requestData);
+            };
+
+            TaskCompletionSource<object> connectionRequestTcs = new TaskCompletionSource<object>();
+            networkServer.SetConnectionRequestHandler<CustomConnectionRequestData>(connectionRequest =>
+            {
+                Assert.AreEqual("test", connectionRequest.Data.Token);
+                connectionRequestTcs.SetResult(true);
+                return new ConnectionResponse(true);
+            });
+            networkServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
+
+            using var networkClient = new NetworkClient(logger);
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016", new CustomConnectionRequestData() { Token = "test" });
+
+            Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            await connectionRequestTcs.Task;
+
+            CustomConnectionRequestData peerConnectionRequestData = await peerConnectionRequestDataTcs.Task;
+
+            Assert.IsNotNull(peerConnectionRequestData);
+            Assert.AreEqual("test", peerConnectionRequestData.Token);
+        }
+
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task NetworkClient_ConnectsToNetworkServer_WithCustomConnectionRequestHandlerAsync()
+        {
             using var logger = new TestLogger();
             using var networkServer = new NetworkServer(logger);
 
             TaskCompletionSource<object> connectionRequestTcs = new TaskCompletionSource<object>();
-            networkServer.SetConnectionRequestHandler<CustomConnectionRequestData>(connectionRequest =>
+            networkServer.SetConnectionRequestHandlerAsync<CustomConnectionRequestData>(connectionRequest =>
             {
                 Assert.AreEqual("test", connectionRequest.Data.Token);
                 connectionRequestTcs.SetResult(true);
@@ -154,12 +192,12 @@ namespace Fenrir.Multiplayer.Tests
         }
 
         [TestMethod, Timeout(TestTimeout)]
-        public async Task NetworkClient_FailsToConnectToNetworkServer_WhenCustomConnectionRequestHandlerRejects()
+        public async Task NetworkClient_FailsToConnectToNetworkServer_WhenCustomConnectionRequestHandlerAsyncRejects()
         {
             using var logger = new TestLogger();
             using var networkServer = new NetworkServer(logger);
 
-            networkServer.SetConnectionRequestHandler<CustomConnectionRequestData>(connectionRequest =>
+            networkServer.SetConnectionRequestHandlerAsync<CustomConnectionRequestData>(connectionRequest =>
             {
                 Assert.AreEqual("test", connectionRequest.Data.Token);
                 return Task.FromResult(new ConnectionResponse(false, "test_reason"));
@@ -179,13 +217,13 @@ namespace Fenrir.Multiplayer.Tests
 
 
         [TestMethod, Timeout(TestTimeout)]
-        public async Task NetworkClient_FailsToConnectToNetworkServer_WhenCustomConnectionRequestHandlerThrowsException()
+        public async Task NetworkClient_FailsToConnectToNetworkServer_WhenCustomConnectionRequestHandlerAsyncThrowsException()
         {
             using var logger = new TestLogger();
             using var networkServer = new NetworkServer(logger);
 
 
-            networkServer.SetConnectionRequestHandler<CustomConnectionRequestData>(connectionRequest =>
+            networkServer.SetConnectionRequestHandlerAsync<CustomConnectionRequestData>(connectionRequest =>
             {
                 throw new InvalidOperationException("test_exception");
             });
@@ -209,7 +247,7 @@ namespace Fenrir.Multiplayer.Tests
             using var networkServer = new NetworkServer(logger);
 
 
-            networkServer.SetConnectionRequestHandler<RequestDataFailingToDeserialize>(connectionRequest =>
+            networkServer.SetConnectionRequestHandlerAsync<RequestDataFailingToDeserialize>(connectionRequest =>
             {
                 return Task.FromResult(ConnectionResponse.Successful);
             });
