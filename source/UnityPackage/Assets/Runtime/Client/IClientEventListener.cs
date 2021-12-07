@@ -1,6 +1,4 @@
-﻿using Fenrir.Multiplayer.Network;
-
-namespace Fenrir.Multiplayer.Client
+﻿namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Client event listener. 

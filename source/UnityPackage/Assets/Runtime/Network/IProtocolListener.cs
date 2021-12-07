@@ -1,4 +1,4 @@
-﻿namespace Fenrir.Multiplayer.Network
+﻿namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Represents a protocol server listener

@@ -1,9 +1,8 @@
-﻿using Fenrir.Multiplayer.Logging;
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Fenrir.Multiplayer.Utility
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Simple extension class that runs fire-and-forget Task, without losing error information.

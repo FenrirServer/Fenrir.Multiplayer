@@ -1,10 +1,7 @@
-﻿
-using Fenrir.Multiplayer.Client;
-using Fenrir.Multiplayer.Client.Events;
-using System;
+﻿using System;
 using System.Threading.Tasks;
 
-namespace Fenrir.Multiplayer.Network
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Protocol connector

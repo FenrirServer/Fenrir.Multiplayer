@@ -1,4 +1,4 @@
-﻿namespace Fenrir.Multiplayer.Logging
+﻿namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Logger interface - provides ways for Fenrir libraries

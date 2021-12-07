@@ -1,7 +1,4 @@
-﻿using Fenrir.Multiplayer.Logging;
-using Fenrir.Multiplayer.Serialization;
-
-namespace Fenrir.Multiplayer.Network
+﻿namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Network Message Writer

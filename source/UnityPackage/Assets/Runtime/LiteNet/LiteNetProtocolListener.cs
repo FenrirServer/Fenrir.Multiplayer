@@ -1,14 +1,9 @@
-﻿using Fenrir.Multiplayer.Server;
-using Fenrir.Multiplayer.Logging;
-using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Serialization;
-using LiteNetLib;
+﻿using LiteNetLib;
 using LiteNetLib.Utils;
 using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using Fenrir.Multiplayer.Utility;
 
 namespace Fenrir.Multiplayer.LiteNet
 {
@@ -74,7 +69,7 @@ namespace Fenrir.Multiplayer.LiteNet
         private volatile bool _isRunning;
 
         /// <inheritdoc/>
-        public Network.ProtocolType ProtocolType => Network.ProtocolType.LiteNet;
+        public ProtocolType ProtocolType => ProtocolType.LiteNet;
 
         /// <inheritdoc/>
         public bool IsRunning => _isRunning;

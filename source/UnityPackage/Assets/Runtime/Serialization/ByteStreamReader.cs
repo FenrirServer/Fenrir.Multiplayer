@@ -2,7 +2,7 @@
 using System.Net;
 using LiteNetLib.Utils;
 
-namespace Fenrir.Multiplayer.Serialization
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Deserializes values from a given byte stream 

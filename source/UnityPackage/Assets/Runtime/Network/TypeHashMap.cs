@@ -1,9 +1,7 @@
-﻿using Fenrir.Multiplayer.Exceptions;
-using Fenrir.Multiplayer.Utility;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
-namespace Fenrir.Multiplayer.Network
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Type hash map - calculates and stores deterministic hash code for each System.Type

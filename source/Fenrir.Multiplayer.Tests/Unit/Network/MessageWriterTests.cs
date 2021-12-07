@@ -1,9 +1,4 @@
-﻿using Fenrir.Multiplayer.LiteNet;
-using Fenrir.Multiplayer.Logging;
-using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Serialization;
-using LiteNetLib.Utils;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
 {

@@ -1,4 +1,4 @@
-﻿namespace Fenrir.Multiplayer.Network
+﻿namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Identifies IPv6 support

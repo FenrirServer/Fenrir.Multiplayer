@@ -1,7 +1,7 @@
 ﻿using LiteNetLib.Utils;
 using System.Collections.Concurrent;
 
-namespace Fenrir.Multiplayer.Network
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Object pool of NetDataWriters

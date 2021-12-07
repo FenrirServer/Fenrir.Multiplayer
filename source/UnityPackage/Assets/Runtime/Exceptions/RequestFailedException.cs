@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Fenrir.Multiplayer.Exceptions
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Indicates that server failed to handle client request

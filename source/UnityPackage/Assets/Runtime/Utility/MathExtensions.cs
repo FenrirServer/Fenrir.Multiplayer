@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Fenrir.Multiplayer.Utility
+namespace Fenrir.Multiplayer
 {
     static partial class MathExtensions
     {

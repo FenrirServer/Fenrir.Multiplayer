@@ -1,9 +1,5 @@
-﻿using Fenrir.Multiplayer.Exceptions;
-using Fenrir.Multiplayer.Network;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Fenrir.Multiplayer.Tests.Unit
 {

@@ -1,4 +1,4 @@
-﻿namespace Fenrir.Multiplayer.Network
+﻿namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Identifies Request sent from client to a server

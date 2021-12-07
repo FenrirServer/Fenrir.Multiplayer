@@ -2,7 +2,7 @@
 using Newtonsoft.Json.Linq;
 using System;
 
-namespace Fenrir.Multiplayer.Network
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Serializable structure that describes

@@ -1,4 +1,4 @@
-﻿namespace Fenrir.Multiplayer.Logging
+﻿namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Indicates level / severity of log message

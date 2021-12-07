@@ -1,7 +1,7 @@
 ﻿#if UNITY_2018_1_OR_NEWER
-namespace Fenrir.Multiplayer.Logging
+namespace Fenrir.Multiplayer
 {
-    public class UnityLogger : Fenrir.Multiplayer.Logging.ILogger
+    public class UnityLogger : Fenrir.Multiplayer.ILogger
     {
         public void Critical(string format, params object[] arguments) => UnityEngine.Debug.LogErrorFormat(format, arguments);
 

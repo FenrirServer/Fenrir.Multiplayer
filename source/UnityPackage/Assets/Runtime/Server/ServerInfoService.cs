@@ -1,14 +1,12 @@
-﻿using Fenrir.Multiplayer.Network;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using WebSocketSharp.Server;
 
-namespace Fenrir.Multiplayer.Server
+namespace Fenrir.Multiplayer
 {
 
     /// <summary>

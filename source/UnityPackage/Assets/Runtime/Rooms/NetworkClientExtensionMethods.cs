@@ -1,6 +1,4 @@
-﻿using Fenrir.Multiplayer.Client;
-using Fenrir.Multiplayer.Exceptions;
-using System;
+﻿using System;
 using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.Rooms
@@ -47,7 +45,7 @@ namespace Fenrir.Multiplayer.Rooms
 
         private static async Task<RoomJoinResponse> JoinRoomInternal(NetworkClient networkClient, string roomId, string token)
         {
-            if (networkClient.State != Network.ConnectionState.Connected)
+            if (networkClient.State != ConnectionState.Connected)
             {
                 throw new NetworkClientException("Failed to join room - not connected");
             }
@@ -63,7 +61,7 @@ namespace Fenrir.Multiplayer.Rooms
 
         private static async Task<RoomLeaveResponse> LeaveRoomInternal(NetworkClient networkClient, string roomId)
         {
-            if (networkClient.State != Network.ConnectionState.Connected)
+            if (networkClient.State != ConnectionState.Connected)
             {
                 throw new NetworkClientException("Failed to leave room - not connected");
             }

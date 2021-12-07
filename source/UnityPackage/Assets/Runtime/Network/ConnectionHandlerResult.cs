@@ -1,4 +1,4 @@
-namespace Fenrir.Multiplayer.Network
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Internal class to pass the result of user connection

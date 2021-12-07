@@ -2,7 +2,7 @@
 using System;
 using System.Net;
 
-namespace Fenrir.Multiplayer.Serialization
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Byte Stream Writer

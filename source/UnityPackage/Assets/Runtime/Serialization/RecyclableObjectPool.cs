@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 
-namespace Fenrir.Multiplayer.Serialization
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Recyclable object pool

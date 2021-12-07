@@ -1,8 +1,6 @@
-﻿using Fenrir.Multiplayer.Network;
-using System;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 
-namespace Fenrir.Multiplayer.Exceptions
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Thrown when client fails to connect to a server

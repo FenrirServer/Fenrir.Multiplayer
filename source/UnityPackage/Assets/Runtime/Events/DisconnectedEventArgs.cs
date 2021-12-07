@@ -1,8 +1,7 @@
-﻿using Fenrir.Multiplayer.Network;
-using System;
+﻿using System;
 using System.Net.Sockets;
 
-namespace Fenrir.Multiplayer.Events
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Event arguments object that contains detailed information about client disconect event

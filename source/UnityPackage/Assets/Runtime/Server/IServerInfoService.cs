@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Fenrir.Multiplayer.Server
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Server Info Service

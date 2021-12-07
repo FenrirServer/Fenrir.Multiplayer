@@ -1,4 +1,4 @@
-﻿namespace Fenrir.Multiplayer.Serialization
+﻿namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Indicates that class can be reset and re-cycled to be re-used later

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Fenrir.Multiplayer.Network
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Type of the protocol

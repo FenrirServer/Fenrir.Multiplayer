@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace Fenrir.Multiplayer.Exceptions
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Client request timed out

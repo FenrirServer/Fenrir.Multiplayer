@@ -1,8 +1,6 @@
-﻿using Fenrir.Multiplayer.Server;
-using Fenrir.Multiplayer.Server.Events;
-using System;
+﻿using System;
 
-namespace Fenrir.Multiplayer.Network
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Remote connection on the server (usually client)

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Fenrir.Multiplayer.Serialization
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Serialized data from/into a binary format, to be sent/received over the network

@@ -1,6 +1,4 @@
-﻿using Fenrir.Multiplayer.Serialization;
-
-namespace Fenrir.Multiplayer.Network
+﻿namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Sent when request handler fails on the server

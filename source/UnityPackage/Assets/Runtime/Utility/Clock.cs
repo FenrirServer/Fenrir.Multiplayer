@@ -1,12 +1,12 @@
 ﻿using System;
 
-namespace Fenrir.Multiplayer.Utility
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Network clock that allows synchronization between
     /// two peers
     /// </summary>
-    public class Clock
+    class Clock
     {
         /// <summary>
         /// Clock offset from DateTime. 

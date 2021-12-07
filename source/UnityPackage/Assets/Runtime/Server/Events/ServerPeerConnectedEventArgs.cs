@@ -1,7 +1,6 @@
-﻿using Fenrir.Multiplayer.Network;
-using System;
+﻿using System;
 
-namespace Fenrir.Multiplayer.Server.Events
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Event arguments invoked when new client disconnectes from a server

@@ -1,7 +1,4 @@
-﻿using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Serialization;
-
-namespace Fenrir.Multiplayer.Rooms
+﻿namespace Fenrir.Multiplayer.Rooms
 {
     /// <summary>
     /// Request to leave a given room

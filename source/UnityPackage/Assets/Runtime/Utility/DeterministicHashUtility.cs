@@ -1,4 +1,4 @@
-﻿namespace Fenrir.Multiplayer.Utility
+﻿namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Calculates deterministic hash for a string using fnv-1 algorithm

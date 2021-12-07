@@ -1,6 +1,4 @@
-﻿using Fenrir.Multiplayer.Network;
-
-namespace Fenrir.Multiplayer.LiteNet
+﻿namespace Fenrir.Multiplayer.LiteNet
 {
     /// <summary>
     /// Identifies data require to connect

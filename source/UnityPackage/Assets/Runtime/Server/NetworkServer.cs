@@ -1,15 +1,11 @@
 ﻿using Fenrir.Multiplayer.LiteNet;
-using Fenrir.Multiplayer.Logging;
-using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Serialization;
-using Fenrir.Multiplayer.Server.Events;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 
-namespace Fenrir.Multiplayer.Server
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Network Server

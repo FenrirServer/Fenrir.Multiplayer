@@ -1,7 +1,6 @@
-﻿using Fenrir.Multiplayer.Network;
-using System;
+﻿using System;
 
-namespace Fenrir.Multiplayer.Server.Events
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Invoked when protocol listener is added to <seealso cref="FenrirServer"/>

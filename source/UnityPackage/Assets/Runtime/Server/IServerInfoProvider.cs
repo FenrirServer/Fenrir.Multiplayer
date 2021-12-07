@@ -1,7 +1,6 @@
-﻿using Fenrir.Multiplayer.Network;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
-namespace Fenrir.Multiplayer.Server
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Provides information about Network Server

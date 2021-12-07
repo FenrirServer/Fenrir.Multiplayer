@@ -1,7 +1,4 @@
-﻿using Fenrir.Multiplayer.Logging;
-using Fenrir.Multiplayer.Server;
-
-namespace Fenrir.Multiplayer.Rooms
+﻿namespace Fenrir.Multiplayer.Rooms
 {
     /// <summary>
     /// Room Management Extension methods for Fenrir Network Server

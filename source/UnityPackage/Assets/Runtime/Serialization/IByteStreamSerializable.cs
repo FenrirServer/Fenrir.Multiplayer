@@ -1,4 +1,4 @@
-﻿namespace Fenrir.Multiplayer.Serialization
+﻿namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Allows classes that implement that interface to be serialized/deserialized by the byte stream serializer/deserializer

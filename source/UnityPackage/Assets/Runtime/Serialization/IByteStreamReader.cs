@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net;
 
-namespace Fenrir.Multiplayer.Serialization
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Deserializes values from a given byte stream 

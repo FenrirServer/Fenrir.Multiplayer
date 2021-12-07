@@ -2,7 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace Fenrir.Multiplayer.Client.Events
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Event arguments object that contains detailed information about client network error 

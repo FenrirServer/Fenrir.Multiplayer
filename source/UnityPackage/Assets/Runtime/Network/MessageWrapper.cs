@@ -1,4 +1,4 @@
-﻿namespace Fenrir.Multiplayer.Network
+﻿namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Simple structure that stores message and it's metadata

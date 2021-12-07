@@ -1,10 +1,5 @@
-﻿using Fenrir.Multiplayer.Client;
-using Fenrir.Multiplayer.LiteNet;
-using Fenrir.Multiplayer.Logging;
-using Fenrir.Multiplayer.Network;
+﻿using Fenrir.Multiplayer.LiteNet;
 using Fenrir.Multiplayer.Rooms;
-using Fenrir.Multiplayer.Serialization;
-using Fenrir.Multiplayer.Server;
 using Fenrir.Multiplayer.Tests.Fixtures;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;

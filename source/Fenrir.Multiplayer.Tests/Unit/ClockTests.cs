@@ -1,5 +1,4 @@
-﻿using Fenrir.Multiplayer.Utility;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 
 namespace Fenrir.Multiplayer.Tests.Unit

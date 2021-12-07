@@ -1,11 +1,4 @@
-﻿using Fenrir.Multiplayer.Client;
-using Fenrir.Multiplayer.Client.Events;
-using Fenrir.Multiplayer.Exceptions;
-using Fenrir.Multiplayer.Logging;
-using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Serialization;
-using Fenrir.Multiplayer.Utility;
-using LiteNetLib;
+﻿using LiteNetLib;
 using LiteNetLib.Utils;
 using System;
 using System.Net;
@@ -106,7 +99,7 @@ namespace Fenrir.Multiplayer.LiteNet
         public IClientPeer Peer => _peer;
 
         ///<inheritdoc/>
-        public Network.ProtocolType ProtocolType => Network.ProtocolType.LiteNet;
+        public ProtocolType ProtocolType => ProtocolType.LiteNet;
 
         /// <summary>
         /// Client ticks per second
@@ -122,24 +115,24 @@ namespace Fenrir.Multiplayer.LiteNet
 
 
         ///<inheritdoc/>
-        public bool IsRunning => State != Network.ConnectionState.Disconnected;
+        public bool IsRunning => State != ConnectionState.Disconnected;
 
         ///<inheritdoc/>
-        public Network.ConnectionState State
+        public ConnectionState State
         {
             get
             {
                 if (_connectionTcs == null)
                 {
-                    return Network.ConnectionState.Disconnected;
+                    return ConnectionState.Disconnected;
                 }
                 else if (!_connectionTcs.Task.IsCompleted)
                 {
-                    return Network.ConnectionState.Connecting;
+                    return ConnectionState.Connecting;
                 }
                 else
                 {
-                    return Network.ConnectionState.Connected;
+                    return ConnectionState.Connected;
                 }
             }
         }
@@ -265,7 +258,7 @@ namespace Fenrir.Multiplayer.LiteNet
         ///<inheritdoc/>
         public Task<ConnectionResponse> Connect(ClientConnectionRequest connectionRequest)
         {
-            if (State != Network.ConnectionState.Disconnected)
+            if (State != ConnectionState.Disconnected)
             {
                 throw new InvalidOperationException("Can not connect while state is " + State);
             }
@@ -320,7 +313,7 @@ namespace Fenrir.Multiplayer.LiteNet
         ///<inheritdoc/>
         public void Disconnect()
         {
-            if(State != Network.ConnectionState.Disconnected)
+            if(State != ConnectionState.Disconnected)
             {
                 _netManager.Stop();
             }
@@ -346,7 +339,7 @@ namespace Fenrir.Multiplayer.LiteNet
         #region INetEventListener Implementation
         void INetEventListener.OnPeerConnected(NetPeer peer)
         {
-            if(State != Network.ConnectionState.Connecting)
+            if(State != ConnectionState.Connecting)
             {
                 throw new InvalidOperationException("Connection succeeeded during wrong state: " + State);
             }
@@ -357,7 +350,7 @@ namespace Fenrir.Multiplayer.LiteNet
 
         void INetEventListener.OnPeerDisconnected(NetPeer peer, DisconnectInfo disconnectInfo)
         {
-            if (State == Network.ConnectionState.Disconnected)
+            if (State == ConnectionState.Disconnected)
             {
                 throw new InvalidOperationException("Received disconnected event while not connected");
             }
@@ -365,7 +358,7 @@ namespace Fenrir.Multiplayer.LiteNet
             DisconnectedReason reason = (DisconnectedReason)disconnectInfo.Reason;
             SocketError socketError = disconnectInfo.SocketErrorCode;
 
-            if (State == Network.ConnectionState.Connecting)
+            if (State == ConnectionState.Connecting)
             {
                 if (reason == DisconnectedReason.ConnectionRejected)
                 {
@@ -479,7 +472,7 @@ namespace Fenrir.Multiplayer.LiteNet
         #region IDisposable Implementation
         public void Dispose()
         {
-            if(State != Network.ConnectionState.Disconnected)
+            if(State != ConnectionState.Disconnected)
             {
                 Disconnect();
             }

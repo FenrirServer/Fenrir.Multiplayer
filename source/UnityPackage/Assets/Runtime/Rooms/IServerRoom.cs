@@ -1,5 +1,4 @@
-﻿using Fenrir.Multiplayer.Network;
-using System;
+﻿using System;
 using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.Rooms

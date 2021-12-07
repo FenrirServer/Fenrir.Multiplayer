@@ -1,9 +1,7 @@
-﻿using Fenrir.Multiplayer.Logging;
-using Fenrir.Multiplayer.Serialization;
-using System;
+﻿using System;
 using System.Runtime.Serialization;
 
-namespace Fenrir.Multiplayer.Network
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// LiteNet Message reader

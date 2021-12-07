@@ -1,4 +1,4 @@
-﻿namespace Fenrir.Multiplayer.Server
+﻿namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Represents status of the server

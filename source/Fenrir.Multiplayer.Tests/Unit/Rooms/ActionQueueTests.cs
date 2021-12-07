@@ -1,5 +1,4 @@
-﻿using Fenrir.Multiplayer.Logging;
-using Fenrir.Multiplayer.Rooms;
+﻿using Fenrir.Multiplayer.Rooms;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Threading.Tasks;

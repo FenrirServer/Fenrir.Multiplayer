@@ -1,10 +1,7 @@
-﻿using Fenrir.Multiplayer.Client.Events;
-using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Serialization;
-using System;
+﻿using System;
 using System.Threading.Tasks;
 
-namespace Fenrir.Multiplayer.Client
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Fenrir Network Client

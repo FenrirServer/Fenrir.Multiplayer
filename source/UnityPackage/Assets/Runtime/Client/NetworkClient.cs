@@ -1,16 +1,11 @@
-﻿using Fenrir.Multiplayer.Client.Events;
-using Fenrir.Multiplayer.Exceptions;
-using Fenrir.Multiplayer.LiteNet;
-using Fenrir.Multiplayer.Logging;
-using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Serialization;
+﻿using Fenrir.Multiplayer.LiteNet;
 using Newtonsoft.Json;
 using System;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 
-namespace Fenrir.Multiplayer.Client
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Fenrir Networking Client.

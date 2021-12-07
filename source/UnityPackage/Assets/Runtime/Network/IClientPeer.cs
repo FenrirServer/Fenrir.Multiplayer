@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace Fenrir.Multiplayer.Network
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Client Peer

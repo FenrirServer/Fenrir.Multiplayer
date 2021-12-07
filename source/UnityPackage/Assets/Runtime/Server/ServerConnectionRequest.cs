@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace Fenrir.Multiplayer.Server
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Server Connection Request

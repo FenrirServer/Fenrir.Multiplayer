@@ -1,7 +1,4 @@
-﻿using Fenrir.Multiplayer.Network;
-using System.Threading.Tasks;
-
-namespace Fenrir.Multiplayer.Rooms
+﻿namespace Fenrir.Multiplayer.Rooms
 {
     /// <summary>
     /// Server room factory.

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Fenrir.Multiplayer.Server.Events
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Contains event arguments invoked when server status changes

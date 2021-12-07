@@ -1,10 +1,7 @@
-﻿using Fenrir.Multiplayer.LiteNet;
-using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Serialization;
-using System.Net;
+﻿using System.Net;
 using System.Threading.Tasks;
 
-namespace Fenrir.Multiplayer.Server
+namespace Fenrir.Multiplayer
 {
     interface IServerEventListener
     {

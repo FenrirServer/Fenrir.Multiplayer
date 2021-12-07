@@ -1,10 +1,9 @@
-﻿using Fenrir.Multiplayer.Logging;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 
 namespace Fenrir.Multiplayer.Tests.Fixtures
 {
-    class TestLogger : Logging.ILogger, IDisposable
+    class TestLogger : ILogger, IDisposable
     {
         private ILoggerFactory _loggerFactory;
         private Microsoft.Extensions.Logging.ILogger _logger;

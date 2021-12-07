@@ -1,4 +1,4 @@
-﻿namespace Fenrir.Multiplayer.Logging
+﻿namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Event-based implementation for Logger.

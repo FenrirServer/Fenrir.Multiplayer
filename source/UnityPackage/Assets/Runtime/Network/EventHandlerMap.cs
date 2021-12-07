@@ -1,9 +1,7 @@
-﻿using Fenrir.Multiplayer.Exceptions;
-using Fenrir.Multiplayer.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
-namespace Fenrir.Multiplayer.Network
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Map that stores bound event handles

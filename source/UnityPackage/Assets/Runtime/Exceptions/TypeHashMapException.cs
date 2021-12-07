@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Fenrir.Multiplayer.Exceptions
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Thrown when TypeHashMap encounters an error 

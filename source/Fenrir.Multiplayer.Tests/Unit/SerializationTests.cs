@@ -1,10 +1,8 @@
-﻿using Fenrir.Multiplayer.Serialization;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
-using System.Text;
 
 namespace Fenrir.Multiplayer.Tests.Unit
 {

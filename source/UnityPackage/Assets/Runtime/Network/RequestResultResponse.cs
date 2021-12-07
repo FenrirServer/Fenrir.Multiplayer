@@ -1,6 +1,4 @@
-﻿using Fenrir.Multiplayer.Serialization;
-
-namespace Fenrir.Multiplayer.Network
+﻿namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Basic response to any request
