@@ -30,18 +30,25 @@ namespace Fenrir.Multiplayer
         private readonly RecyclableObjectPool<ByteStreamReader> _byteStreamReaderPool;
 
         /// <summary>
+        /// Symmetric encryption utility
+        /// </summary>
+        private readonly ISymmetricEncryptionUtility _symmetricEncryptionUtility;
+
+        /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="serializer">Serializer</param>
         /// <param name="typeHashMap">Type Hash Map</param>
         /// <param name="logger">Logger</param>
         /// <param name="byteStreamReaderPool">Object pool of Byte Stream Readers</param>
-        public MessageReader(INetworkSerializer serializer, ITypeHashMap typeHashMap, ILogger logger, RecyclableObjectPool<ByteStreamReader> byteStreamReaderPool)
+        /// <param name="symmetricEncryptionUtility">Symmetric Encryption Utilityu</param>
+        public MessageReader(INetworkSerializer serializer, ITypeHashMap typeHashMap, ILogger logger, RecyclableObjectPool<ByteStreamReader> byteStreamReaderPool, ISymmetricEncryptionUtility symmetricEncryptionUtility)
         {
             _serializer = serializer;
             _typeHashMap = typeHashMap;
             _logger = logger;
             _byteStreamReaderPool = byteStreamReaderPool;
+            _symmetricEncryptionUtility = symmetricEncryptionUtility;
         }
 
         /// <summary>
@@ -119,6 +126,13 @@ namespace Fenrir.Multiplayer
             }
 
             // 6. byte[] Serialized message data
+
+            // If serialized data is encrypted, decrypt in place
+            if(messageFlags.HasFlag(MessageFlags.IsEncrypted))
+            {
+                _symmetricEncryptionUtility.Decrypt(byteStreamReader.Data, byteStreamReader.Position, byteStreamReader.DataSize - byteStreamReader.Position);
+            }
+
             object messageData;
             try
             {

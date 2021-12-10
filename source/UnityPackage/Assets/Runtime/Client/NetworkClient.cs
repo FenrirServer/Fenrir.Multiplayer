@@ -55,6 +55,10 @@ namespace Fenrir.Multiplayer
         /// </summary>
         private readonly LiteNetProtocolConnector _liteNetProtocolConnector;
 
+        /// <summary>
+        /// Symmetric encryption utility
+        /// </summary>
+        private SymmetricEncryptionUtility _symmetricEncryptionUtility;
 
         /// <summary>
         /// Current protocol connector. Null if no connection attempt was made
@@ -203,7 +207,8 @@ namespace Fenrir.Multiplayer
 
             _typeHashMap = new TypeHashMap();
             _eventHandlerMap = new EventHandlerMap(logger);
-            _liteNetProtocolConnector = new LiteNetProtocolConnector(this, _serializer, _typeHashMap, _logger);
+            _symmetricEncryptionUtility = new SymmetricEncryptionUtility();
+            _liteNetProtocolConnector = new LiteNetProtocolConnector(this, _serializer, _typeHashMap, _symmetricEncryptionUtility, _logger);
         }
 
         /// <inheritdoc/>
@@ -266,7 +271,7 @@ namespace Fenrir.Multiplayer
             IProtocolConnectionData protocolData = (IProtocolConnectionData)protocolInfo.GetConnectionData(_protocolConnector.ConnectionDataType);
 
             // Connect using selected protocol
-            var connectionRequest = new ClientConnectionRequest(serverInfo.Hostname, ClientId, connectionRequestData, protocolData);
+            var connectionRequest = new ClientConnectionRequest(serverInfo.Hostname, serverInfo.PublicKey, ClientId, connectionRequestData, protocolData);
             return await _protocolConnector.Connect(connectionRequest);
         }
 
@@ -360,6 +365,9 @@ namespace Fenrir.Multiplayer
             // Dispose existing protocol connector
             _protocolConnector?.Dispose();
             _protocolConnector = null;
+
+            // Dispose encryption utility
+            _symmetricEncryptionUtility?.Dispose();
         }
         #endregion
 

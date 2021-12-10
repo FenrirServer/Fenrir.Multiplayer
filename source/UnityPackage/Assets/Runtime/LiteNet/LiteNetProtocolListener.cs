@@ -3,6 +3,7 @@ using LiteNetLib.Utils;
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.LiteNet
@@ -33,19 +34,24 @@ namespace Fenrir.Multiplayer.LiteNet
         private readonly ITypeHashMap _typeHashMap;
 
         /// <summary>
+        /// Asymmetric encryption utility
+        /// </summary>
+        private readonly IAsymmetricEncryptionUtility _asymmetricEncryptionUtility;
+
+        /// <summary>
         /// Logger
         /// </summary>
         private readonly ILogger _logger;
 
         /// <summary>
-        /// Message reader
-        /// </summary>
-        private readonly MessageReader _messageReader;
-
-        /// <summary>
         /// Object pool of NetDataWriters used to write outgoing messages
         /// </summary>
         private readonly NetDataWriterPool _netDataWriterPool;
+
+        /// <summary>
+        /// Object pool of NetDataReaders used to write outgoing messages
+        /// </summary>
+        private readonly NetDataReaderPool _netDataReaderPool;
 
         /// <summary>
         /// Pool if byte stream readers - used as temporary dispatch buffers
@@ -133,11 +139,13 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <param name="serverEventListener">Server Event Listener</param>
         /// <param name="serializer">Serializer</param>
         /// <param name="typeHashMap">Type Hash Map</param>
+        /// <param name="asymmetricEncryptionUtility">Asymmetric Encryption Utility</param>
         /// <param name="logger">Logger</param>
         /// <exception cref="ArgumentNullException"></exception>
         public LiteNetProtocolListener(IServerEventListener serverEventListener, 
             INetworkSerializer serializer, 
             ITypeHashMap typeHashMap, 
+            IAsymmetricEncryptionUtility asymmetricEncryptionUtility,
             ILogger logger)
         {
             if(serverEventListener == null)
@@ -152,6 +160,10 @@ namespace Fenrir.Multiplayer.LiteNet
             {
                 throw new ArgumentNullException(nameof(typeHashMap));
             }
+            if(asymmetricEncryptionUtility == null)
+            {
+                throw new ArgumentNullException(nameof(asymmetricEncryptionUtility));
+            }
             if (logger == null)
             {
                 throw new ArgumentNullException(nameof(logger));
@@ -160,14 +172,15 @@ namespace Fenrir.Multiplayer.LiteNet
             _serverEventListener = serverEventListener;
             _serializer = serializer;
             _typeHashMap = typeHashMap;
+            _asymmetricEncryptionUtility = asymmetricEncryptionUtility;
             _logger = logger;
 
             _byteStreamReaderPool = new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer));
             _byteStreamWriterPool = new RecyclableObjectPool<ByteStreamWriter>(() => new ByteStreamWriter(serializer));
 
-            _messageReader = new MessageReader(serializer, typeHashMap, logger, _byteStreamReaderPool);
-
             _netDataWriterPool = new NetDataWriterPool();
+            _netDataReaderPool = new NetDataReaderPool();
+
             _netManager = new NetManager(this)
             {
                 AutoRecycle = true,
@@ -248,52 +261,92 @@ namespace Fenrir.Multiplayer.LiteNet
         #region INetEventListener Implementation
         void INetEventListener.OnConnectionRequest(ConnectionRequest connectionRequest)
         {
-            HandleConnectionRequestAsync(connectionRequest).FireAndForget(_logger);
+            ProcessConnectionRequestAsync(connectionRequest).FireAndForget(_logger);
         }
 
-        private async Task HandleConnectionRequestAsync(ConnectionRequest connectionRequest)
+        private async Task ProcessConnectionRequestAsync(ConnectionRequest connectionRequest)
         {
-            // Connection request data
-            NetDataReader connectionNetDataReader = connectionRequest.Data;
+            // Create byte stream reader
+            ByteStreamReader byteStreamReader = new ByteStreamReader(connectionRequest.Data, _serializer);
 
-            int protocolVersion = connectionNetDataReader.GetInt(); // Read protocol Version
+            // Check if protocol version is available
+            if(!byteStreamReader.TryReadInt(out int protocolVersion))
+            {
+                _logger.Debug("Rejected connection request from {0}, failed to read protocol version", connectionRequest.RemoteEndPoint);
+                RejectConnectionRequest(connectionRequest, "Malformed connection request");
+                return;
+            }
+            // Check protocol version
             if (protocolVersion < _minSupportedProtocolVersion)
             {
                 _logger.Debug("Rejected connection request from {0}, protocol version {1} is less than supported protocol version {2}", connectionRequest.RemoteEndPoint, protocolVersion, _minSupportedProtocolVersion);
                 RejectConnectionRequest(connectionRequest, "Outdated protocol");
                 return;
             }
+            // Read client id
+            if (!byteStreamReader.TryReadString(out string clientId))
+            {
+                _logger.Debug("Rejected connection request from {0}, no client id", connectionRequest.RemoteEndPoint);
+                RejectConnectionRequest(connectionRequest, "Malformed connection request, no client id");
+                return;
+            }
+            // Read symmetric key encrypted with an asymmetric public key
+            if(!byteStreamReader.TryReadBytesWithLength(out byte[] encryptedSymmetricKey))
+            {
+                _logger.Debug("Rejected connection request from {0}, no encrypted symmetric key", connectionRequest.RemoteEndPoint);
+                RejectConnectionRequest(connectionRequest, "Malformed connection request, no encrypted symmetric key");
+                return;
+            }
 
-            string clientId = connectionNetDataReader.GetString(); // Read client Id
+            // Decrypt symmetric key
+            SymmetricEncryptionUtility symmetricEncryptionUtility;
+
+            try
+            {
+                var symmetricKey = _asymmetricEncryptionUtility.Decrypt(encryptedSymmetricKey);
+                symmetricEncryptionUtility = new SymmetricEncryptionUtility(symmetricKey);
+            }
+            catch (CryptographicException e)
+            {
+                _logger.Debug("Rejected connection request from {0}, failed to decrypt symmetric key: {1}", connectionRequest.RemoteEndPoint, e.ToString());
+                RejectConnectionRequest(connectionRequest, "Failed to decrypt symmetric key");
+                return;
+            }
+
+            // If more data is present, attempt to decrypt using symmetric key in place
+            if(!byteStreamReader.EndOfData)
+            {
+                try
+                {
+                    symmetricEncryptionUtility.Decrypt(byteStreamReader.Data, byteStreamReader.Position, byteStreamReader.AvailableBytes);
+                }
+                catch(Exception e)
+                {
+                    _logger.Debug("Rejected connection request from {0}, failed to decrypt connection request data: {1}", connectionRequest.RemoteEndPoint, e.ToString());
+                    RejectConnectionRequest(connectionRequest, "Failed to decrypt connection request data");
+                    return;
+                }
+            }
 
             _logger.Trace("Received connection request from {0}, client id {1}", connectionRequest.RemoteEndPoint, clientId);
 
-            // Read custom data, if present
-            ByteStreamReader connectionRequestDataReader = null;
-
-            if (!connectionNetDataReader.EndOfData)
-            {
-                connectionRequestDataReader = _byteStreamReaderPool.Get();
-                connectionRequestDataReader.SetNetDataReader(connectionRequest.Data);
-            }
-
             // Invoke connection request handler
             ConnectionHandlerResult connectionHandlerResult;
+
             try
             {
-                connectionHandlerResult = await _serverEventListener.HandleConnectionRequest(protocolVersion, clientId, connectionRequest.RemoteEndPoint, connectionRequestDataReader);
+                connectionHandlerResult = await _serverEventListener.HandleConnectionRequest(protocolVersion, clientId, connectionRequest.RemoteEndPoint, byteStreamReader);
             }
             finally
             {
-                if (connectionRequestDataReader != null)
-                {
-                    _byteStreamReaderPool.Return(connectionRequestDataReader);
-                }
+                // Clean up resources
+                byteStreamReader.SetNetDataReader(null);
+                _byteStreamReaderPool.Return(byteStreamReader);
             }
 
             if(connectionHandlerResult.Response.Success)
             {
-                AcceptConnectionRequest(connectionRequest, protocolVersion, clientId, connectionHandlerResult.ConnectionRequestData);
+                AcceptConnectionRequest(connectionRequest, protocolVersion, clientId, symmetricEncryptionUtility, connectionHandlerResult.ConnectionRequestData);
             }
             else
             {
@@ -301,15 +354,17 @@ namespace Fenrir.Multiplayer.LiteNet
             }
         }
 
-        private void AcceptConnectionRequest(ConnectionRequest liteNetConnectionRequest, int protocolVersion, string clientId, object connectionRequestData)
+        private void AcceptConnectionRequest(ConnectionRequest liteNetConnectionRequest, int protocolVersion, string clientId, SymmetricEncryptionUtility symmetricEncryptionUtility, object connectionRequestData)
         {
             _logger.Trace("Accepting connection request from {0}", liteNetConnectionRequest.RemoteEndPoint);
 
             NetPeer netPeer = liteNetConnectionRequest.Accept();
 
             // Create server peer
-            var messageWriter = new MessageWriter(_serializer, _typeHashMap, _logger);
-            netPeer.Tag = new LiteNetServerPeer(clientId, protocolVersion, connectionRequestData, netPeer, messageWriter, _byteStreamWriterPool);
+            var messageWriter = new MessageWriter(_serializer, _typeHashMap, _logger, symmetricEncryptionUtility);
+            var messageReader = new MessageReader(_serializer, _typeHashMap, _logger, _byteStreamReaderPool, symmetricEncryptionUtility);
+
+            netPeer.Tag = new LiteNetServerPeer(clientId, protocolVersion, connectionRequestData, netPeer, messageReader, messageWriter, _byteStreamWriterPool, symmetricEncryptionUtility);
         }
 
         private void RejectConnectionRequest(ConnectionRequest connectionRequest, string reason)
@@ -355,7 +410,7 @@ namespace Fenrir.Multiplayer.LiteNet
 
             try
             {
-                didReadMessage = _messageReader.TryReadMessage(byteStreamReader, out messageWrapper);
+                didReadMessage = serverPeer.TryReadMessage(byteStreamReader, out messageWrapper);
             }
             finally
             {

@@ -20,6 +20,11 @@ namespace Fenrir.Multiplayer
         string ServerId { get; set; }
 
         /// <summary>
+        /// Server Public Key
+        /// </summary>
+        string PublicKey { get; }
+
+        /// <summary>
         /// Status of the server
         /// </summary>
         ServerStatus Status { get; }

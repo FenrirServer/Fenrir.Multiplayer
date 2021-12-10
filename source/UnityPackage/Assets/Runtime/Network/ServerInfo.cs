@@ -17,6 +17,11 @@
         public string ServerId { get; set; }
 
         /// <summary>
+        /// Server Public Key
+        /// </summary>
+        public string PublicKey { get; set; }
+
+        /// <summary>
         /// List of protocols supported by this server
         /// </summary>
         public ProtocolInfo[] Protocols { get; set; } 

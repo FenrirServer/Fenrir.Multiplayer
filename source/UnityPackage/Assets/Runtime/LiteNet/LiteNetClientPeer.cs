@@ -43,9 +43,10 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <param name="pendingRequestMap">Pending Request Map</param>
         /// <param name="typeHashMap">Type Hash Map</param>
         /// <param name="byteStreamWriterPool">Byte Stream Writer Pool</param>
+        /// <param name="symmetricEncryptionUtility">Symmetric encryption utility</param>
         /// <param name="requestTimeoutMs">Request Timeout, in milliseconds</param>
-        public LiteNetClientPeer(string peerId, NetPeer netPeer, MessageWriter messageWriter, PendingRequestMap pendingRequestMap, ITypeHashMap typeHashMap, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool, int requestTimeoutMs)
-            : base(peerId, netPeer, messageWriter, byteStreamWriterPool)
+        public LiteNetClientPeer(string peerId, NetPeer netPeer, MessageWriter messageWriter, PendingRequestMap pendingRequestMap, ITypeHashMap typeHashMap, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool, ISymmetricEncryptionUtility symmetricEncryptionUtility, int requestTimeoutMs)
+            : base(peerId, netPeer, messageWriter, byteStreamWriterPool, symmetricEncryptionUtility)
         {
             _pendingRequestMap = pendingRequestMap;
             _requestTimeoutMs = requestTimeoutMs;
@@ -56,10 +57,8 @@ namespace Fenrir.Multiplayer.LiteNet
         public void SendRequest<TRequest>(TRequest request, byte channel = 0, MessageDeliveryMethod deliveryMethod = MessageDeliveryMethod.ReliableOrdered) 
             where TRequest : IRequest
         {
-            // By default, all reliable messages are encrypted
-            bool encrypted = deliveryMethod == MessageDeliveryMethod.ReliableOrdered || deliveryMethod == MessageDeliveryMethod.ReliableUnordered;
-
-            SendRequest(request, encrypted, channel, deliveryMethod);
+            // By default, all requests are encrypted
+            SendRequest(request, true, channel, deliveryMethod);
         }
 
         /// <inheritdoc/>

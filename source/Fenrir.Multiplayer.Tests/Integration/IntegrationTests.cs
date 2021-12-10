@@ -68,6 +68,7 @@ namespace Fenrir.Multiplayer.Tests
             {
                 Hostname = "127.0.0.1",
                 ServerId = "test_id",
+                PublicKey = networkServer.PublicKey,
                 Protocols = new ProtocolInfo[]
                 {
                     new ProtocolInfo(ProtocolType.LiteNet, new LiteNetProtocolConnectionData(27018))

@@ -24,6 +24,16 @@ namespace Fenrir.Multiplayer
         bool EndOfData { get; }
 
         /// <summary>
+        /// Raw Data array
+        /// </summary>
+        byte[] Data { get; }
+
+        /// <summary>
+        /// Size of the data array
+        /// </summary>
+        int DataSize { get; }
+
+        /// <summary>
         /// Number of bytes available in the stream
         /// </summary>
         int AvailableBytes { get; }

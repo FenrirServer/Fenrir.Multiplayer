@@ -34,6 +34,10 @@ namespace Fenrir.Multiplayer.LiteNet
         /// </summary>
         public object ConnectionRequestData { get; set; }
 
+        /// <summary>
+        /// Message reader
+        /// </summary>
+        private MessageReader MessageReader { get; set; }
 
         /// <summary>
         /// Default constructor
@@ -42,13 +46,16 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <param name="protocolVersion">Peer protocol version</param>
         /// <param name="connectionRequestData">Custom connection request data. If no Connection Request Handler is set, always null</param>
         /// <param name="netPeer">LiteNet NetPeer</param>
+        /// <param name="messageReader">Message Reader</param>
         /// <param name="messageWriter">Message Writer</param>
         /// <param name="byteStreamWriterPool">Byte Stream Writer Object Pool</param>
-        public LiteNetServerPeer(string peerId, int protocolVersion, object connectionRequestData, NetPeer netPeer, MessageWriter messageWriter, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool)
-            : base(peerId, netPeer, messageWriter, byteStreamWriterPool)
+        /// <param name="symmetricEncryptionUtility">Symmetric encryption utility</param>
+        public LiteNetServerPeer(string peerId, int protocolVersion, object connectionRequestData, NetPeer netPeer, MessageReader messageReader, MessageWriter messageWriter, RecyclableObjectPool<ByteStreamWriter> byteStreamWriterPool, ISymmetricEncryptionUtility symmetricEncryptionUtility)
+            : base(peerId, netPeer, messageWriter, byteStreamWriterPool, symmetricEncryptionUtility)
         {
             ProtocolVersion = protocolVersion;
             ConnectionRequestData = connectionRequestData;
+            MessageReader = messageReader;
         }
 
         /// <inheritdoc/>
@@ -96,6 +103,17 @@ namespace Fenrir.Multiplayer.LiteNet
         }
 
         /// <summary>
+        /// Read message
+        /// </summary>
+        /// <param name="byteStreamReader">Byte Stream reader</param>
+        /// <param name="message">Message</param>
+        /// <returns>True if message can be read</returns>
+        public bool TryReadMessage(ByteStreamReader byteStreamReader, out MessageWrapper message)
+        {
+            return MessageReader.TryReadMessage(byteStreamReader, out message);
+        }
+
+        /// <summary>
         /// Sets latency
         /// </summary>
         /// <param name="latency">Latency</param>
@@ -109,6 +127,7 @@ namespace Fenrir.Multiplayer.LiteNet
         public void Disconnect()
         {
             NetPeer.Disconnect();
+            SymmetricEncryptionUtility.Dispose();
         }
 
         /// <summary>

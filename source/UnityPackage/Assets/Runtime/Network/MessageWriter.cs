@@ -1,4 +1,6 @@
-﻿namespace Fenrir.Multiplayer
+﻿using System;
+
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Network Message Writer
@@ -17,6 +19,11 @@
         private readonly ITypeHashMap _typeHashMap;
 
         /// <summary>
+        /// Symmetric encryption utility
+        /// </summary>
+        private readonly ISymmetricEncryptionUtility _symmetricEncryptionUtility;
+
+        /// <summary>
         /// Logger
         /// </summary>
         private readonly ILogger _logger;
@@ -27,11 +34,13 @@
         /// <param name="serializer">Serializer</param>
         /// <param name="typeHashMap">Type Hash Map</param>
         /// <param name="logger">Logger</param>
-        public MessageWriter(INetworkSerializer serializer, ITypeHashMap typeHashMap, ILogger logger)
+        /// <param name="symmetricEncryptionUtility">Symmetric encryption utility</param>
+        public MessageWriter(INetworkSerializer serializer, ITypeHashMap typeHashMap, ILogger logger, ISymmetricEncryptionUtility symmetricEncryptionUtility)
         {
             _serializer = serializer;
             _typeHashMap = typeHashMap;
             _logger = logger;
+            _symmetricEncryptionUtility = symmetricEncryptionUtility;
         }
 
         /// <summary>
@@ -72,8 +81,16 @@
                 byteStreamWriter.Write(messageWrapper.GetDebugInfo());
             }
 
+            int encryptionStartIndex = byteStreamWriter.Length;
+
             // 6. byte[] Serialized message
             _serializer.Serialize(messageWrapper.MessageData, byteStreamWriter); // Serialize into remaining bytes
+
+            // Encrypt data in place
+            if (messageWrapper.Flags.HasFlag(MessageFlags.IsEncrypted))
+            {
+                _symmetricEncryptionUtility.Encrypt(byteStreamWriter.Bytes, encryptionStartIndex, byteStreamWriter.Length - encryptionStartIndex);
+            }
         }
     }
 }

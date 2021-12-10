@@ -3,6 +3,7 @@ using LiteNetLib.Utils;
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 namespace Fenrir.Multiplayer.LiteNet
@@ -35,6 +36,11 @@ namespace Fenrir.Multiplayer.LiteNet
         private readonly ITypeHashMap _typeHashMap;
 
         /// <summary>
+        /// Symmetric encryption utility
+        /// </summary>
+        private readonly ISymmetricEncryptionUtility _symmetricEncryptionUtility;
+
+        /// <summary>
         /// Serializer
         /// </summary>
         private readonly INetworkSerializer _serializer;
@@ -51,7 +57,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// Message reader, used to dispatch incoming messages
         /// </summary>
         private readonly MessageReader _messageReader;
-        
+
         /// <summary>
         /// Message writer, used to wrap outgoing messages
         /// </summary>
@@ -74,11 +80,6 @@ namespace Fenrir.Multiplayer.LiteNet
         /// Byte stream readers are used to convert bytes from socket into messages, then returned to the pool.
         /// </summary>
         private readonly RecyclableObjectPool<ByteStreamReader> _byteStreamReaderPool;
-
-        /// <summary>
-        /// LiteNet Data Writer to write outgoing data
-        /// </summary>
-        private readonly NetDataWriter _netDataWriter;
 
         /// <summary>
         /// Holds current connection request
@@ -207,10 +208,12 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <param name="clientEventListener">Client event listener</param>
         /// <param name="serializer">Serializer</param>
         /// <param name="typeHashMap">Type Hash Map</param>
+        /// <param name="symmetricEncryptionUtility">Symmetric Encryption Utility</param>
         /// <param name="logger">Logger</param>
-        public LiteNetProtocolConnector(IClientEventListener clientEventListener, 
-            INetworkSerializer serializer, 
-            ITypeHashMap typeHashMap, 
+        public LiteNetProtocolConnector(IClientEventListener clientEventListener,
+            INetworkSerializer serializer,
+            ITypeHashMap typeHashMap,
+            ISymmetricEncryptionUtility symmetricEncryptionUtility,
             ILogger logger)
         {
             if (clientEventListener == null)
@@ -225,6 +228,10 @@ namespace Fenrir.Multiplayer.LiteNet
             {
                 throw new ArgumentNullException(nameof(typeHashMap));
             }
+            if (symmetricEncryptionUtility == null)
+            {
+                throw new ArgumentNullException(nameof(symmetricEncryptionUtility));
+            }
             if (logger == null)
             {
                 throw new ArgumentNullException(nameof(logger));
@@ -233,6 +240,7 @@ namespace Fenrir.Multiplayer.LiteNet
             _clientEventListener = clientEventListener;
             _serializer = serializer;
             _typeHashMap = typeHashMap;
+            _symmetricEncryptionUtility = symmetricEncryptionUtility;
             _logger = logger;
 
 
@@ -241,10 +249,8 @@ namespace Fenrir.Multiplayer.LiteNet
             _byteStreamWriterPool = new RecyclableObjectPool<ByteStreamWriter>(() => new ByteStreamWriter(_serializer));
             _byteStreamReaderPool = new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(_serializer));
 
-            _messageReader = new MessageReader(_serializer, _typeHashMap, _logger, _byteStreamReaderPool);
-            _messageWriter = new MessageWriter(_serializer, _typeHashMap, _logger);
-
-            _netDataWriter = new NetDataWriter();
+            _messageReader = new MessageReader(_serializer, _typeHashMap, _logger, _byteStreamReaderPool, _symmetricEncryptionUtility);
+            _messageWriter = new MessageWriter(_serializer, _typeHashMap, _logger, _symmetricEncryptionUtility);
 
             _netManager = new NetManager(this)
             {
@@ -284,7 +290,7 @@ namespace Fenrir.Multiplayer.LiteNet
             RunEventLoop().FireAndForget(_logger);
 
             // Create connection data
-            var connectionRequestDataWriter = CreateConnectionRequestDataWriter(connectionRequest.ClientId, connectionRequest.ConnectionRequestData);
+            var connectionRequestDataWriter = CreateConnectionRequestDataWriter(connectionRequest.ClientId, connectionRequest.ServerPublicKey, connectionRequest.ConnectionRequestData);
 
             // Connect
             _netManager.Connect(connectionRequest.Hostname, protocolConnectionData.Port, connectionRequestDataWriter);
@@ -294,13 +300,13 @@ namespace Fenrir.Multiplayer.LiteNet
 
         private async Task RunEventLoop()
         {
-            while(IsRunning)
+            while (IsRunning)
             {
                 try
                 {
                     _netManager.PollEvents();
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     _logger.Error("Error during server tick: " + e);
                 }
@@ -313,7 +319,7 @@ namespace Fenrir.Multiplayer.LiteNet
         ///<inheritdoc/>
         public void Disconnect()
         {
-            if(State != ConnectionState.Disconnected)
+            if (State != ConnectionState.Disconnected)
             {
                 _netManager.Stop();
             }
@@ -321,19 +327,50 @@ namespace Fenrir.Multiplayer.LiteNet
             _peer = null;
         }
 
-        private NetDataWriter CreateConnectionRequestDataWriter(string clientId, object connectionRequestData = null)
+        private NetDataWriter CreateConnectionRequestDataWriter(string clientId, string serverPublicKey, object connectionRequestData = null)
         {
-            _netDataWriter.Reset();
-            _netDataWriter.Put(_protocolVersion); // Protocol Version
-            _netDataWriter.Put(clientId); // Client Id
+            // Encrypt connection request
+            byte[] encryptedSymmetricKey = GetEncryptedSymmetricKey(serverPublicKey);
+
+            var netDataWriter = new NetDataWriter();
+            netDataWriter.Put(_protocolVersion); // Protocol Version
+            netDataWriter.Put(clientId);
+            netDataWriter.PutBytesWithLength(encryptedSymmetricKey);
 
             if (connectionRequestData != null)
             {
+                int encryptedDataStartIndex = netDataWriter.Length;
+
                 // Client data deserialized
-                _serializer.Serialize(connectionRequestData, new ByteStreamWriter(_netDataWriter, _serializer));
+                _serializer.Serialize(connectionRequestData, new ByteStreamWriter(netDataWriter, _serializer));
+
+                // Encrypt connection request data in place
+                _symmetricEncryptionUtility.Encrypt(netDataWriter.Data, encryptedDataStartIndex, netDataWriter.Length - encryptedDataStartIndex);
             }
 
-            return _netDataWriter;
+            return netDataWriter;
+        }
+
+
+        private byte[] GetEncryptedSymmetricKey(string serverPublicKey)
+        {
+            // Encrypt with public key
+            using (var asymmetricEncryptionUtility = new AsymmetricEncryptionUtility(serverPublicKey))
+            {
+                byte[] encryptedBytes;
+
+                try
+                {
+                    encryptedBytes = asymmetricEncryptionUtility.Encrypt(_symmetricEncryptionUtility.SymmetricKey);
+                }
+                catch (CryptographicException)
+                {
+                    _logger.Error("Failed to encrypt outgoing connection request with server public key: " + serverPublicKey);
+                    throw;
+                }
+
+                return encryptedBytes;
+            }
         }
 
         #region INetEventListener Implementation
@@ -344,7 +381,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 throw new InvalidOperationException("Connection succeeeded during wrong state: " + State);
             }
 
-            _peer = new LiteNetClientPeer(_connectionRequest.ClientId, peer, _messageWriter, _pendingRequestMap, _typeHashMap, _byteStreamWriterPool, RequestTimeoutMs);
+            _peer = new LiteNetClientPeer(_connectionRequest.ClientId, peer, _messageWriter, _pendingRequestMap, _typeHashMap, _byteStreamWriterPool, _symmetricEncryptionUtility, RequestTimeoutMs);
             _connectionTcs.SetResult(ConnectionResponse.Successful);
         }
 

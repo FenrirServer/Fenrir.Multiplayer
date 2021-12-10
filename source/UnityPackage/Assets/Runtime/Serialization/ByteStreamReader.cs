@@ -24,6 +24,12 @@ namespace Fenrir.Multiplayer
         public bool EndOfData => NetDataReader.EndOfData;
 
         /// <inheritdoc/>
+        public byte[] Data => NetDataReader.RawData;
+
+        /// <inheritdoc/>
+        public int DataSize => NetDataReader.RawDataSize;
+
+        /// <inheritdoc/>
         public int AvailableBytes => NetDataReader.AvailableBytes;
 
         /// <summary>

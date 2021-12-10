@@ -88,6 +88,7 @@ namespace Fenrir.Multiplayer
             var serverInfo = new ServerInfo()
             {
                 ServerId = _networkServerInfoProvider.ServerId,
+                PublicKey = _networkServerInfoProvider.PublicKey,
                 Hostname = _networkServerInfoProvider.Hostname,
                 Protocols = _networkServerInfoProvider.Listeners.Select(
                     listener => new ProtocolInfo(listener.ProtocolType, listener.GetConnectionData())

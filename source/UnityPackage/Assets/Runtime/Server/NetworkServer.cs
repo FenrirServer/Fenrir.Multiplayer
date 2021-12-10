@@ -42,6 +42,11 @@ namespace Fenrir.Multiplayer
         private readonly RequestHandlerMap _requestHandlerMap;
 
         /// <summary>
+        /// Assymetric encryption utility
+        /// </summary>
+        private readonly AsymmetricEncryptionUtility _asymmetricEncryptionUtility;
+
+        /// <summary>
         /// Logger
         /// </summary>
         public ILogger Logger { get; private set; }
@@ -101,6 +106,11 @@ namespace Fenrir.Multiplayer
         /// <inheritdoc/>
         public bool IsRunning => Status == ServerStatus.Running;
 
+        /// <summary>
+        /// Public Key
+        /// </summary>
+        public string PublicKey => _asymmetricEncryptionUtility.PublicKey;
+
 
         /// <summary>
         /// Server status
@@ -121,6 +131,7 @@ namespace Fenrir.Multiplayer
         /// Stores custom connection request handler if set up
         /// </summary>
         private ConnectionRequestHandler _connectionRequestHandler = null;
+
 
         /// <summary>
         /// Creates Network Server
@@ -153,9 +164,10 @@ namespace Fenrir.Multiplayer
 
             _typeHashMap = new TypeHashMap();
             _requestHandlerMap = new RequestHandlerMap(Logger);
+            _asymmetricEncryptionUtility = new AsymmetricEncryptionUtility();
 
             // Setup protocols
-            _liteNetListener = new LiteNetProtocolListener(this, Serializer, _typeHashMap, Logger);
+            _liteNetListener = new LiteNetProtocolListener(this, Serializer, _typeHashMap, _asymmetricEncryptionUtility, Logger);
 
             // Setup info service
             _serverInfoService = new ServerInfoService(this);
@@ -366,16 +378,24 @@ namespace Fenrir.Multiplayer
         /// <inheritdoc/>
         public void Dispose()
         {
+            // Stop the server
             if (Status == ServerStatus.Running || Status == ServerStatus.Starting)
             {
                 Stop();
             }
+
+            // Clear the encryption utility
+            _asymmetricEncryptionUtility.Dispose();
         }
         #endregion
 
         #region IServerEventListener Implementation
         async Task<ConnectionHandlerResult> IServerEventListener.HandleConnectionRequest(int protocolVersion, string clientId, IPEndPoint endPoint, IByteStreamReader connectionDataReader)
         {
+            // Read Fenrir specific connection request data
+
+
+            // Read custom data
             if(_connectionRequestHandler != null)
             {
                 // Invoke custom request handler

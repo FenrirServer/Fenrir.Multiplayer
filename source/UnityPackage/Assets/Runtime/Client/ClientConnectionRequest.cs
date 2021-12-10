@@ -12,6 +12,11 @@
         public string Hostname { get; private set; }
 
         /// <summary>
+        /// Server public key
+        /// </summary>
+        public string ServerPublicKey { get; private set; }
+
+        /// <summary>
         /// Unique id of the client
         /// </summary>
         public string ClientId { get; private set; }
@@ -30,12 +35,14 @@
         /// Creates client connection request
         /// </summary>
         /// <param name="hostname">Hostname</param>
+        /// <param name="serverPublicKey">Server public key</param>
         /// <param name="clientId">Unique Client Id</param>
         /// <param name="connectionRequestData">Connection Request Data</param>
         /// <param name="protocolConnectionData">Protocol Connection Data</param>
-        public ClientConnectionRequest(string hostname, string clientId, object connectionRequestData, IProtocolConnectionData protocolConnectionData)
+        public ClientConnectionRequest(string hostname, string serverPublicKey, string clientId, object connectionRequestData, IProtocolConnectionData protocolConnectionData)
         {
             Hostname = hostname;
+            ServerPublicKey = serverPublicKey;
             ClientId = clientId;
             ConnectionRequestData = connectionRequestData;
             ProtocolConnectionData = protocolConnectionData;

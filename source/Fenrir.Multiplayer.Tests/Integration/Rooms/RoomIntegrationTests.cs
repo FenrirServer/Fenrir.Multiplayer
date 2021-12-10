@@ -29,6 +29,7 @@ namespace Fenrir.Multiplayer.Tests.Integration.Rooms
             {
                 Hostname = "127.0.0.1",
                 ServerId = "test_id",
+                PublicKey = networkServer.PublicKey,
                 Protocols = new ProtocolInfo[]
                 {
                     new ProtocolInfo(ProtocolType.LiteNet, new LiteNetProtocolConnectionData(27018))
@@ -76,6 +77,7 @@ namespace Fenrir.Multiplayer.Tests.Integration.Rooms
             {
                 Hostname = "127.0.0.1",
                 ServerId = "test_id",
+                PublicKey = networkServer.PublicKey,
                 Protocols = new ProtocolInfo[]
                 {
                     new ProtocolInfo(ProtocolType.LiteNet, new LiteNetProtocolConnectionData(27018))
@@ -131,6 +133,7 @@ namespace Fenrir.Multiplayer.Tests.Integration.Rooms
             {
                 Hostname = "127.0.0.1",
                 ServerId = "test_id",
+                PublicKey = networkServer.PublicKey,
                 Protocols = new ProtocolInfo[]
                 {
                     new ProtocolInfo(ProtocolType.LiteNet, new LiteNetProtocolConnectionData(27018))
@@ -183,6 +186,7 @@ namespace Fenrir.Multiplayer.Tests.Integration.Rooms
             {
                 Hostname = "127.0.0.1",
                 ServerId = "test_id",
+                PublicKey = networkServer.PublicKey,
                 Protocols = new ProtocolInfo[]
                 {
                     new ProtocolInfo(ProtocolType.LiteNet, new LiteNetProtocolConnectionData(27018))
@@ -240,6 +244,7 @@ namespace Fenrir.Multiplayer.Tests.Integration.Rooms
             {
                 Hostname = "127.0.0.1",
                 ServerId = "test_id",
+                PublicKey = networkServer.PublicKey,
                 Protocols = new ProtocolInfo[]
                 {
                     new ProtocolInfo(ProtocolType.LiteNet, new LiteNetProtocolConnectionData(27018))
