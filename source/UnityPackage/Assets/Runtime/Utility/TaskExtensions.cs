@@ -7,7 +7,7 @@ namespace Fenrir.Multiplayer
     /// <summary>
     /// Simple extension class that runs fire-and-forget Task, without losing error information.
     /// </summary>
-    static class TaskExtensions
+    public static class TaskExtensions
     {
         /// <summary>
         /// Runs the task and does not await it.

@@ -31,7 +31,7 @@ namespace Fenrir.Multiplayer
     /// Deviation from avg: 150-95=55
     /// 55 > ~11.18 * 2 (deviation is more than twice the standard deviation e.g. exceeds the outlier threshold)
     /// </example>
-    class ClockSynchronizer
+    public class ClockSynchronizer
     {
         /// <summary>
         /// How many round-trip values to store maximum
@@ -39,7 +39,7 @@ namespace Fenrir.Multiplayer
         public int RoundTripsMaxSampleSize { get; set; } = 25;
 
         /// <summary>
-        /// How manu time offset values to store maximum
+        /// How many time offset values to store maximum
         /// </summary>
         public int TimeOffsetsMaxSampleSize { get; set; } = 25;
 
@@ -73,6 +73,11 @@ namespace Fenrir.Multiplayer
                 return _lastSyncTime + TimeSpan.FromTicks(syncDelayClamped);
             }
         }
+
+        /// <summary>
+        /// Last sync tume
+        /// </summary>
+        public DateTime LastSyncTime => _lastSyncTime;
 
         /// <summary>
         /// Average round trip time between server and client
@@ -156,7 +161,7 @@ namespace Fenrir.Multiplayer
                 // Remove from the sum of squared deviations
                 long oldestRoundTripDeviation = oldestRoundTrip - roundTripTimePrevAvg;
                 long oldestRoundTripDeviationSquared = oldestRoundTripDeviation * oldestRoundTripDeviation;
-                _roundTripSumSquaredDeviations -= (oldestRoundTripDeviationSquared * oldestRoundTripDeviationSquared);
+                _roundTripSumSquaredDeviations -= oldestRoundTripDeviationSquared;
             }
 
             // Calculate new round-trip value

@@ -142,7 +142,7 @@ namespace Fenrir.Multiplayer.Rooms
         /// room resources.
         /// </summary>
         /// <param name="action">Callback</param>
-        protected void Execute(Action action)
+        public void Execute(Action action)
         {
             _actionQueue.Enqueue(action);
         }

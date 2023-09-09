@@ -2,7 +2,7 @@
 
 namespace Fenrir.Multiplayer
 {
-    static class TimeSpanExtensions
+    public static class TimeSpanExtensions
     {
         /// <summary>
         /// Moves value towards the target
