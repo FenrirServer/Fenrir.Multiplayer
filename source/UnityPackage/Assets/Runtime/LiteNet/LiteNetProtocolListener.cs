@@ -1,6 +1,7 @@
 ﻿using LiteNetLib;
 using LiteNetLib.Utils;
 using System;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -99,12 +100,28 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Server ticks per second
         /// </summary>
-        public int TickRateHz { get; private set; }
+        public int TickRate { get; set; } = 100;
+
+        /// <summary>
+        /// If set to true, events are polled automatically based on the <see cref="TickRate"/>
+        /// If set to false, <see cref="TickRate"/> is ignored and you have to call PollEvents()
+        /// </summary>
+        public bool AutoPollEvents { get; set; } = true;
+
+        /// <summary>
+        /// If true, <see cref="TickRate"/> is ignored and events are invoked
+        /// immediately outside of a single thread
+        /// </summary>
+        public bool UnsyncedEvents
+        {
+            get => _netManager.UnsyncedEvents;
+            set => _netManager.UnsyncedEvents = value;
+        }
 
         /// <summary>
         /// IPv6 Support mode
         /// </summary>
-        public IPv6ProtocolMode IPv6ProtocolMode => (IPv6ProtocolMode)_netManager.IPv6Enabled;
+        public bool IPv6Enabled => _netManager.IPv6Enabled;
 
         /// <inheritdoc/>
         public int DisconnectTimeout
@@ -126,6 +143,13 @@ namespace Fenrir.Multiplayer.LiteNet
             get => _netManager.PingInterval;
             set => _netManager.PingInterval = value;
         }
+
+        /// <summary>
+        /// In LiteNet, when UnsyncedEvents is on, calling ConnectionRequest.Accept() 
+        /// could trigger INetEventListener.OnPeerConnected or other events before we had a chance to set a tag
+        /// or even identify the NetPeer somehow
+        /// </summary>
+        private ConcurrentDictionary<NetPeer, TaskCompletionSource<LiteNetServerPeer>> _pendingConnections = new ConcurrentDictionary<NetPeer, TaskCompletionSource<LiteNetServerPeer>>();
 
         /// <summary>
         /// Create new LiteNet Protocol Serializer
@@ -171,7 +195,7 @@ namespace Fenrir.Multiplayer.LiteNet
             _netManager = new NetManager(this)
             {
                 AutoRecycle = true,
-                IPv6Enabled = IPv6Mode.DualMode,
+                IPv6Enabled = true,
             };
         }
 
@@ -183,14 +207,12 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <param name="bindIPv6">IPv6 to listen to</param>
         /// <param name="bindPort">Port to listen</param>
         /// <param name="publicPort">Override port value. Use if your public port does not match bind port, e.g. when using docker port override</param>
-        /// <param name="tickRateHz">Network event poll rate</param>
-        public void Start(string bindIPv4 = "0.0.0.0", string bindIPv6 = "::", ushort bindPort = 27016, ushort? publicPort = null, int tickRateHz = 66)
+        public void Start(string bindIPv4 = "0.0.0.0", string bindIPv6 = "::", ushort bindPort = 27016, ushort? publicPort = null)
         {
             BindIPv4 = bindIPv4;
             BindIPv6 = bindIPv6;
             BindPort = bindPort;
             PublicPort = publicPort;
-            TickRateHz = tickRateHz;
 
             if (!_isRunning)
             {
@@ -198,7 +220,27 @@ namespace Fenrir.Multiplayer.LiteNet
 
                 _isRunning = true;
 
-                RunEventLoop().FireAndForget(_logger);
+                if (!UnsyncedEvents && AutoPollEvents)
+                {
+                    RunEventLoop().FireAndForget(_logger);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Manually polls network events
+        /// </summary>
+        public void PollEvents()
+        {
+            try
+            {
+                _netManager.TriggerUpdate();
+                _netManager.PollEvents();
+                _netManager.TriggerUpdate();
+            }
+            catch (Exception e)
+            {
+                _logger?.Error("Error during server tick: " + e);
             }
         }
 
@@ -210,16 +252,8 @@ namespace Fenrir.Multiplayer.LiteNet
         {
             while(_isRunning)
             {
-                try
-                {
-                    _netManager.PollEvents();
-                }
-                catch (Exception e)
-                {
-                    _logger?.Error("Error during server tick: " + e);
-                }
-
-                float delaySeconds = 1f / TickRateHz;
+                PollEvents();
+                float delaySeconds = 1f / TickRate;
                 await Task.Delay((int)(delaySeconds * 1000f));
             }
         }
@@ -240,10 +274,9 @@ namespace Fenrir.Multiplayer.LiteNet
         {
             return new LiteNetProtocolConnectionData(
                 PublicPort ?? BindPort,
-                IPv6ProtocolMode
+                IPv6Enabled
             );
         }
-
 
         #region INetEventListener Implementation
         void INetEventListener.OnConnectionRequest(ConnectionRequest connectionRequest)
@@ -303,13 +336,17 @@ namespace Fenrir.Multiplayer.LiteNet
 
         private void AcceptConnectionRequest(ConnectionRequest liteNetConnectionRequest, int protocolVersion, string clientId, object connectionRequestData)
         {
-            _logger.Trace("Accepting connection request from {0}", liteNetConnectionRequest.RemoteEndPoint);
+            _logger.Info("Accepting connection request from {0}", liteNetConnectionRequest.RemoteEndPoint);
 
             NetPeer netPeer = liteNetConnectionRequest.Accept();
 
+            TaskCompletionSource<LiteNetServerPeer> connectionTcs = _pendingConnections.GetOrAdd(netPeer, new TaskCompletionSource<LiteNetServerPeer>());
+
             // Create server peer
             var messageWriter = new MessageWriter(_serializer, _typeHashMap, _logger);
-            netPeer.Tag = new LiteNetServerPeer(clientId, protocolVersion, connectionRequestData, netPeer, messageWriter, _byteStreamWriterPool);
+            var serverPeer = new LiteNetServerPeer(clientId, protocolVersion, connectionRequestData, netPeer, messageWriter, _byteStreamWriterPool);
+
+            connectionTcs.SetResult(serverPeer);
         }
 
         private void RejectConnectionRequest(ConnectionRequest connectionRequest, string reason)
@@ -334,16 +371,17 @@ namespace Fenrir.Multiplayer.LiteNet
         }
 
 
-        void INetEventListener.OnNetworkReceive(NetPeer netPeer, NetPacketReader netPacketReader, DeliveryMethod deliveryMethod)
+        void INetEventListener.OnNetworkReceive(NetPeer netPeer, NetPacketReader netPacketReader, byte channelNumber, DeliveryMethod deliveryMethod)
+        {
+            HandleNetworkReceive(netPeer, netPacketReader, channelNumber, deliveryMethod).FireAndForget(_logger);
+        }
+
+        private async Task HandleNetworkReceive(NetPeer netPeer, NetPacketReader netPacketReader, byte channelNumber, DeliveryMethod deliveryMethod)
         {
             // Get LiteNet peer
-            if(netPeer.Tag == null)
-            {
-                _logger.Warning("Received message from an uninitialized peer: {0}", netPeer.EndPoint);
-                return;
-            }
+            TaskCompletionSource<LiteNetServerPeer> connectionTcs = _pendingConnections.GetOrAdd(netPeer, new TaskCompletionSource<LiteNetServerPeer>());
 
-            var serverPeer = (LiteNetServerPeer)netPeer.Tag;
+            var serverPeer = await connectionTcs.Task;
 
             // Read message
             MessageWrapper messageWrapper;
@@ -387,6 +425,7 @@ namespace Fenrir.Multiplayer.LiteNet
             {
                 _logger.Warning("Unsupported message type {0} received from {1}", messageWrapper.MessageType, netPeer.EndPoint);
             }
+
         }
 
         void INetEventListener.OnNetworkReceiveUnconnected(IPEndPoint remoteEndPoint, NetPacketReader reader, UnconnectedMessageType messageType)
@@ -396,32 +435,46 @@ namespace Fenrir.Multiplayer.LiteNet
 
         void INetEventListener.OnPeerConnected(NetPeer netPeer)
         {
-            if(netPeer.Tag == null)
-            {
-                _logger.Error("Peer connected before connection was accepted: " + netPeer.EndPoint);
-                return;
-            }
+            HandlePeerConnected(netPeer).FireAndForget(_logger);
+        }
+
+        private async Task HandlePeerConnected(NetPeer netPeer)
+        {
+            // Get LiteNet peer
+            TaskCompletionSource<LiteNetServerPeer> connectionTcs = _pendingConnections.GetOrAdd(netPeer, new TaskCompletionSource<LiteNetServerPeer>());
+
+            var serverPeer = await connectionTcs.Task;
 
             _logger.Trace("Peer connected: {0}", netPeer.EndPoint);
-
-            var serverPeer = (LiteNetServerPeer)netPeer.Tag;
 
             // Notify server
             _serverEventListener.OnPeerConnected(serverPeer);
         }
+        
 
         void INetEventListener.OnPeerDisconnected(NetPeer netPeer, DisconnectInfo disconnectInfo)
         {
-            if(netPeer.Tag != null) 
-            {
-                LiteNetServerPeer serverPeer = (LiteNetServerPeer)netPeer.Tag;
+            HandlePeerDisconnected(netPeer, disconnectInfo).FireAndForget(_logger);
+        }
 
+        private async Task HandlePeerDisconnected(NetPeer netPeer, DisconnectInfo disconnectInfo)
+        {
+            // Get LiteNet peer
+            TaskCompletionSource<LiteNetServerPeer> connectionTcs = _pendingConnections.GetOrAdd(netPeer, new TaskCompletionSource<LiteNetServerPeer>());
+
+            LiteNetServerPeer serverPeer = await connectionTcs.Task;
+
+            if (serverPeer != null)
+            {
                 // Notify peer
                 serverPeer.NotifyDisconnected();
 
                 // Notify server
                 _serverEventListener.OnPeerDisconnected(serverPeer);
             }
+
+            // Remove from the dictionary
+            _pendingConnections.TryRemove(netPeer, out var _);
 
             _logger.Trace("Peer disconnected: {0}", netPeer.EndPoint);
         }

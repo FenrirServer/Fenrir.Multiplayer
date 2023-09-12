@@ -104,7 +104,23 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Client ticks per second
         /// </summary>
-        public int TickRate { get; set; } = 60;
+        public int TickRate { get; set; } = 100;
+
+        /// <summary>
+        /// If set to true, events are polled automatically based on the <see cref="TickRate"/>
+        /// If set to false, <see cref="TickRate"/> is ignored and you have to call PollEvents()
+        /// </summary>
+        public bool AutoPollEvents { get; set; } = true;
+
+        /// <summary>
+        /// If true, <see cref="TickRate"/> is ignored and events are invoked
+        /// immediately outside of a single thread
+        /// </summary>
+        public bool UnsyncedEvents
+        {
+            get => _netManager.UnsyncedEvents;
+            set => _netManager.UnsyncedEvents = value;
+        }
 
         /// <summary>
         /// Server request timeout
@@ -112,7 +128,6 @@ namespace Fenrir.Multiplayer.LiteNet
         /// If SendRequest() takes longer than this value, <seealso cref="RequestTimeoutException"/> is thrown.
         /// </summary>
         public int RequestTimeoutMs { get; set; } = 5000;
-
 
         ///<inheritdoc/>
         public bool IsRunning => State != ConnectionState.Disconnected;
@@ -248,7 +263,7 @@ namespace Fenrir.Multiplayer.LiteNet
 
             _netManager = new NetManager(this)
             {
-                AutoRecycle = true,
+                AutoRecycle = true
             };
 
             // Add default types
@@ -281,7 +296,10 @@ namespace Fenrir.Multiplayer.LiteNet
             _netManager.Start();
 
             // Start polling events
-            RunEventLoop().FireAndForget(_logger);
+            if (!UnsyncedEvents && AutoPollEvents)
+            {
+                RunEventLoop().FireAndForget(_logger);
+            }
 
             // Create connection data
             var connectionRequestDataWriter = CreateConnectionRequestDataWriter(connectionRequest.ClientId, connectionRequest.ConnectionRequestData);
@@ -292,19 +310,25 @@ namespace Fenrir.Multiplayer.LiteNet
             return _connectionTcs.Task;
         }
 
+        public void PollEvents()
+        {
+            try
+            {
+                _netManager.TriggerUpdate();
+                _netManager.PollEvents();
+                _netManager.TriggerUpdate();
+            }
+            catch (Exception e)
+            {
+                _logger.Error("Error during server tick: " + e);
+            }
+        }
+
         private async Task RunEventLoop()
         {
             while(IsRunning)
             {
-                try
-                {
-                    _netManager.PollEvents();
-                }
-                catch(Exception e)
-                {
-                    _logger.Error("Error during server tick: " + e);
-                }
-
+                PollEvents();
                 float delaySeconds = 1f / TickRate;
                 await Task.Delay((int)(delaySeconds * 1000f));
             }
@@ -394,7 +418,7 @@ namespace Fenrir.Multiplayer.LiteNet
             NetworkError?.Invoke(this, new ClientNetworkErrorEventArgs(endPoint, socketError));
         }
 
-        void INetEventListener.OnNetworkReceive(NetPeer netPeer, NetPacketReader netPacketReader, DeliveryMethod deliveryMethod)
+        void INetEventListener.OnNetworkReceive(NetPeer netPeer, NetPacketReader netPacketReader, byte channelNumber, DeliveryMethod deliveryMethod)
         {
             // Read message
             MessageWrapper messageWrapper;

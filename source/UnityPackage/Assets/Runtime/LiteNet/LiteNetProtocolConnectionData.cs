@@ -14,7 +14,7 @@
         /// <summary>
         /// IPv6 Mode
         /// </summary>
-        public IPv6ProtocolMode IPv6Mode { get; set; }
+        public bool IPv6Enabled { get; set; }
 
         /// <summary>
         /// Default constructor
@@ -31,18 +31,18 @@
             : this()
         {
             Port = port;
-            IPv6Mode = IPv6ProtocolMode.Disabled;
+            IPv6Enabled = false;
         }
 
         /// <summary>
         /// Creates Lite Net Protocol Connection Data with a given port and ipv6 mode
         /// </summary>
         /// <param name="port">Public Port</param>
-        /// <param name="iPv6Mode">IPv6 mode</param>
-        public LiteNetProtocolConnectionData(ushort port, IPv6ProtocolMode iPv6Mode)
+        /// <param name="iPv6Enabled">Enable or Disable IPv6 Support</param>
+        public LiteNetProtocolConnectionData(ushort port, bool iPv6Enabled)
             : this(port)
         {
-            IPv6Mode = iPv6Mode;
+            IPv6Enabled = iPv6Enabled;
         }
     }
 }

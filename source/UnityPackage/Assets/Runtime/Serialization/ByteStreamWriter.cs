@@ -171,7 +171,7 @@ namespace Fenrir.Multiplayer
         public void WriteArray(string[] value, int maxLength) => NetDataWriter.PutArray(value, maxLength);
 
         ///<inheritdoc/>
-        public void WriteBytesWithLength(byte[] data, int offset, int length) => NetDataWriter.PutBytesWithLength(data, offset, length);
+        public void WriteBytesWithLength(byte[] data, int offset, ushort length) => NetDataWriter.PutBytesWithLength(data, offset, length);
 
         ///<inheritdoc/>
         public void WriteBytesWithLength(byte[] data) => NetDataWriter.PutBytesWithLength(data);
@@ -180,7 +180,7 @@ namespace Fenrir.Multiplayer
         public void WriteSBytesWithLength(sbyte[] data) => NetDataWriter.PutSBytesWithLength(data);
 
         ///<inheritdoc/>
-        public void WriteSBytesWithLength(sbyte[] data, int offset, int length) => NetDataWriter.PutSBytesWithLength(data, offset, length);
+        public void WriteSBytesWithLength(sbyte[] data, int offset, ushort length) => NetDataWriter.PutSBytesWithLength(data, offset, length);
 
     }
 }

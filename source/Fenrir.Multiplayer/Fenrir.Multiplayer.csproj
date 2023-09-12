@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="LiteNetLib" Version="0.9.4" />
+    <PackageReference Include="LiteNetLib" Version="1.1.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="WebSocketSharp-netstandard" Version="1.0.1" />
   </ItemGroup>
@@ -21,6 +21,10 @@
 	
   <ItemGroup>
     <Compile Include="..\UnityPackage\Assets\Runtime\**\*.cs" />
+  </ItemGroup>
+	
+  <ItemGroup>
+    <Compile Remove="..\UnityPackage\Assets\Runtime\Network\IPv6ProtocolMode.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -20,7 +20,7 @@ namespace Fenrir.Multiplayer.Tests
             var protocolListenerMock = new Mock<IProtocolListener>();
             protocolListenerMock.Setup(listener => listener.ProtocolType).Returns(ProtocolType.LiteNet);
             protocolListenerMock.Setup(listener => listener.GetConnectionData())
-                .Returns(new LiteNetProtocolConnectionData() { Port = 27018, IPv6Mode = IPv6ProtocolMode.DualMode });
+                .Returns(new LiteNetProtocolConnectionData() { Port = 27018, IPv6Enabled = true });
 
             var networkServerMock = new Mock<IServerInfoProvider>();
             networkServerMock.Setup(server => server.Status).Returns(ServerStatus.Running);

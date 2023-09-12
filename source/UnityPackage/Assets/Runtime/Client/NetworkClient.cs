@@ -97,10 +97,29 @@ namespace Fenrir.Multiplayer
         /// <summary>
         /// Network update rate, times per second
         /// </summary>
-        public int UpdateRateHz
+        public int TickRate
         {
-            get => (int)(1000f / _liteNetProtocolConnector.UpdateTimeMs);
-            set => _liteNetProtocolConnector.UpdateTimeMs = (int)(1000f / value);
+            get => _liteNetProtocolConnector.TickRate;
+            set => _liteNetProtocolConnector.TickRate = value;
+        }
+
+        /// <summary>
+        /// If set to true, events are polled automatically.
+        /// If set to false, you must call PollEvents manually
+        /// </summary>
+        public bool AutoPollEvents
+        {
+            get => _liteNetProtocolConnector.AutoPollEvents;
+            set => _liteNetProtocolConnector.AutoPollEvents = value;
+        }
+
+        /// <summary>
+        /// If set to true, <see cref="TickRate"/> is ignored and requests handlers are invoked from multiple threads
+        /// </summary>
+        public bool UnsyncedEvents
+        {
+            get => _liteNetProtocolConnector.UnsyncedEvents;
+            set => _liteNetProtocolConnector.UnsyncedEvents = value;
         }
 
         /// <summary>
@@ -297,6 +316,14 @@ namespace Fenrir.Multiplayer
             {
                 _protocolConnector?.Disconnect();
             }
+        }
+
+        /// <summary>
+        /// Polls network events manually (must be called if <see cref="AutoPollEvents"/> is false)
+        /// </summary>
+        public void PollEvents()
+        {
+            _liteNetProtocolConnector?.PollEvents();
         }
 
         /// <inheritdoc/>

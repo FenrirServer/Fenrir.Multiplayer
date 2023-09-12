@@ -82,7 +82,30 @@ namespace Fenrir.Multiplayer
         /// <summary>
         /// Server ticks per second
         /// </summary>
-        public int TickRate { get; set; } = 66;
+        public int TickRate
+        {
+            get => _liteNetListener.TickRate;
+            set => _liteNetListener.TickRate = value;
+        }
+
+        /// <summary>
+        /// If set to true, events are polled automatically.
+        /// If set to false, you must call PollEvents manually
+        /// </summary>
+        public bool AutoPollEvents
+        {
+            get => _liteNetListener.AutoPollEvents;
+            set => _liteNetListener.AutoPollEvents = value;
+        }
+
+        /// <summary>
+        /// If set to true, <see cref="TickRate"/> is ignored and requests handlers are invoked from multiple threads
+        /// </summary>
+        public bool UnsyncedEvents
+        {
+            get => _liteNetListener.UnsyncedEvents;
+            set => _liteNetListener.UnsyncedEvents = value;
+        }
 
 
         /// <inheritdoc/>
@@ -177,7 +200,7 @@ namespace Fenrir.Multiplayer
             _serverInfoService.Start(BindPort);
 
             // Start LiteNet Protocol listener
-            _liteNetListener.Start(BindIPv4, BindIPv6, BindPort, PublicPort, TickRate);
+            _liteNetListener.Start(BindIPv4, BindIPv6, BindPort, PublicPort);
 
             SetStatus(ServerStatus.Running);
         }
@@ -211,6 +234,15 @@ namespace Fenrir.Multiplayer
             _status = status;
 
             StatusChanged?.Invoke(this, new ServerStatusChangedEventArgs(status));
+        }
+
+
+        /// <summary>
+        /// Polls network events manually (must be called if <see cref="AutoPollEvents"/> is false)
+        /// </summary>
+        public void PollEvents()
+        {
+            _liteNetListener?.PollEvents();
         }
 
         /// <inheritdoc/>

@@ -253,9 +253,6 @@ namespace Fenrir.Multiplayer
         public void SetSource(byte[] source) => NetDataReader.SetSource(source);
 
         /// <inheritdoc/>
-        public void SetSource(byte[] source, int offset) => NetDataReader.SetSource(source, offset);
-
-        /// <inheritdoc/>
         public void SetSource(byte[] source, int offset, int maxSize) => NetDataReader.SetSource(source, offset, maxSize);
 
         /// <inheritdoc/>

@@ -216,7 +216,7 @@ namespace Fenrir.Multiplayer
         /// <param name="data">Value</param>
         /// <param name="offset">Offset</param>
         /// <param name="length">Length</param>
-        void WriteBytesWithLength(byte[] data, int offset, int length);
+        void WriteBytesWithLength(byte[] data, int offset, ushort length);
 
         /// <summary>
         /// Writes array of bytes preceding with length
@@ -236,6 +236,6 @@ namespace Fenrir.Multiplayer
         /// <param name="data">Value</param>
         /// <param name="offset">Offset</param>
         /// <param name="length">Length</param>
-        void WriteSBytesWithLength(sbyte[] data, int offset, int length);
+        void WriteSBytesWithLength(sbyte[] data, int offset, ushort length);
     }
 }
