@@ -18,22 +18,22 @@ namespace Fenrir.Multiplayer
         /// <summary>
         /// Time in UTC
         /// </summary>
-        public DateTime UtcNow => _startTimeUtc.AddTicks(_stopWatch.ElapsedTicks) + Offset;
+        public DateTime UtcNow => _startTimeUtc.Add(_stopWatch.Elapsed) + Offset;
 
         /// <summary>
         /// Time in UTC without offset
         /// </summary>
-        public DateTime UtcNowRaw => _startTimeUtc.AddTicks(_stopWatch.ElapsedTicks);
+        public DateTime UtcNowRaw => _startTimeUtc.Add(_stopWatch.Elapsed);
 
         /// <summary>
         /// Local time now
         /// </summary>
-        public DateTime Now => _startTime.AddTicks(_stopWatch.ElapsedTicks) + Offset;
+        public DateTime Now => _startTime.Add(_stopWatch.Elapsed) + Offset;
 
         /// <summary>
         /// Local time now
         /// </summary>
-        public DateTime NowRaw => _startTime.AddTicks(_stopWatch.ElapsedTicks);
+        public DateTime NowRaw => _startTime.Add(_stopWatch.Elapsed);
 
         /// <summary>
         /// Starting time
