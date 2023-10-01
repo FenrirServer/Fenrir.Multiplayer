@@ -85,6 +85,11 @@ namespace Fenrir.Multiplayer
         public TimeSpan AvgRoundTripTime => _roundTrips.Count == 0 ? TimeSpan.Zero : TimeSpan.FromTicks(_roundTripSum / _roundTrips.Count);
 
         /// <summary>
+        /// Round trip time standard deviation, also known as a network Jitter
+        /// </summary>
+        public TimeSpan RoundTripTimeStandardDeviation => TimeSpan.FromTicks(_roundTripStandardDeviation);
+
+        /// <summary>
         /// Lower bound threshold for a round-trip outlier detection.
         /// This value is a multiplier for the standard deviation
         /// E.g. if standard deviation is +-15ms, and threshold is 2f,
