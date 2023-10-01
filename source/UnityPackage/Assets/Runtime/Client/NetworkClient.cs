@@ -177,6 +177,15 @@ namespace Fenrir.Multiplayer
             set => _liteNetProtocolConnector.SimulationMaxLatency = value;
         }
 
+        /// <summary>
+        /// Average round trip time, ms
+        /// </summary>
+        public int RoundTripTime => _liteNetProtocolConnector.RoundTripTime;
+
+        /// <summary>
+        /// MTU, bytes
+        /// </summary>
+        public int Mtu => _liteNetProtocolConnector.Mtu;
 
         /// <summary>
         /// Creates new Network Client

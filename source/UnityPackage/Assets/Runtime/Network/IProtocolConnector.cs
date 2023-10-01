@@ -92,6 +92,16 @@ namespace Fenrir.Multiplayer
         int SimulationMaxLatency { get; set; }
 
         /// <summary>
+        /// Average round trip time
+        /// </summary>
+        int RoundTripTime { get; }
+
+        /// <summary>
+        /// MTU
+        /// </summary>
+        int Mtu { get; }
+
+        /// <summary>
         /// Connects using protocol-specific implementation
         /// </summary>
         /// <param name="connectionRequest">Connection Request</param>

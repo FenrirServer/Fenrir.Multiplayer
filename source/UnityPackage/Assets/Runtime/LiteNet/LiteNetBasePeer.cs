@@ -34,6 +34,16 @@ namespace Fenrir.Multiplayer.LiteNet
         public EndPoint EndPoint => NetPeer.EndPoint;
 
         /// <summary>
+        /// Average Round trip time
+        /// </summary>
+        public int RoundTripTime => NetPeer?.RoundTripTime ?? 0;
+
+        /// <summary>
+        /// MTU
+        /// </summary>
+        public int Mtu => NetPeer?.Mtu ?? 0;
+
+        /// <summary>
         /// If set to true, outgoing messages will contain debug info.
         /// Setting this to true affects performance and should be disabled in production builds.
         /// </summary>

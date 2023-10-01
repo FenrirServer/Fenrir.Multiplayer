@@ -211,6 +211,12 @@ namespace Fenrir.Multiplayer.LiteNet
             set => _netManager.SimulationMaxLatency = value;
         }
 
+        ///<inheritdoc/>
+        public int RoundTripTime => _peer?.RoundTripTime ?? 0;
+
+        ///<inheritdoc/>
+        public int Mtu => _peer?.Mtu ?? 0;
+
         /// <summary>
         /// TaskCompletionSource that represents connection task
         /// </summary>
