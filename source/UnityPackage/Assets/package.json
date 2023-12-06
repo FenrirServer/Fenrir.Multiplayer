@@ -3,7 +3,7 @@
     "displayName": "Fenrir Multiplayer",
     "description": "Library for building multiplayer games with using Fenrir Multiplayer Platform",
     "license": "MIT",
-    "version": "1.0.16",
+    "version": "1.0.17",
     "author": {
         "name": "Fenrir",
         "email": "info@fenrirserver.com",
