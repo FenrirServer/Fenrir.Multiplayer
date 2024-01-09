@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Converters;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using System;
 
@@ -13,11 +14,13 @@ namespace Fenrir.Multiplayer
         /// <summary>
         /// Type of the supported protocol
         /// </summary>
+        [JsonProperty("protocol_type")]
         public ProtocolType ProtocolType { get; set; }
 
         /// <summary>
         /// Protocol-specific connection data
         /// </summary>
+        [JsonProperty("connection_data")]
         public JObject ConnectionData { get; set; }
 
         /// <summary>

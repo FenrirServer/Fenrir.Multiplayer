@@ -1,4 +1,6 @@
-﻿namespace Fenrir.Multiplayer.LiteNet
+﻿using Newtonsoft.Json;
+
+namespace Fenrir.Multiplayer.LiteNet
 {
     /// <summary>
     /// Identifies data require to connect
@@ -9,11 +11,13 @@
         /// <summary>
         /// Public port that client is supposed to use
         /// </summary>
+        [JsonProperty("port")]
         public ushort Port { get; set; }
 
         /// <summary>
         /// IPv6 Mode
         /// </summary>
+        [JsonProperty("ipv6_enabled")]
         public bool IPv6Enabled { get; set; }
 
         /// <summary>
