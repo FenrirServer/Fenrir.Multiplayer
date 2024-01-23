@@ -17,7 +17,7 @@ Plugin packages for those are coming soon!
 Note: `DataContractSerializer` does not provide performance sufficient for most games. Provided only as an example.
 
 ```csharp
-using Fenrir.Multiplayer.Serialization;
+using Fenrir.Multiplayer;
 
 class CustomSerializer : ITypeSerializer
 {

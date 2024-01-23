@@ -25,7 +25,7 @@ Each room has a unique id and is **created when first user joins**, and is **des
 **Basic room example:**
 
 ```csharp
-using Fenrir.Multiplayer.Network;
+using Fenrir.Multiplayer;
 using Fenrir.Multiplayer.Rooms;
 
 class MyRoom : ServerRoom
@@ -54,7 +54,7 @@ class MyRoom : ServerRoom
 In order to use the room management, you can use the extension method:
 
 ```csharp
-using Fenrir.Multiplayer.Server;
+using Fenrir.Multiplayer;
 using Fenrir.Multiplayer.Rooms;
 
 ...
@@ -74,7 +74,7 @@ networkServer.AddRooms(CreateMyRoom);
 **Client Room Management:**
 
 ```csharp
-using Fenrir.Multiplayer.Client;
+using Fenrir.Multiplayer;
 using Fenrir.Multiplayer.Rooms;
 
 ...

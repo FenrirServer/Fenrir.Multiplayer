@@ -12,7 +12,7 @@ Custom serializer must implement `ITypeSerializer<T>` interface as such:
 
 ```csharp
 using UnityEngine;
-using Fenrir.Multiplayer.Serialization;
+using Fenrir.Multiplayer;
 
 class Vector3Serializer : ITypeSerializer<Vector3>
 {

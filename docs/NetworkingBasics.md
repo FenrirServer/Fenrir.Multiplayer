@@ -34,8 +34,7 @@ In order to do that, you can define a Request Handler or Event Handler.
 **Example Request** (client+server shared code):
 
 ```csharp
-using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Serialization;
+using Fenrir.Multiplayer;
 
 class HelloRequest : IRequest, IByteStreamSerializable
 {
@@ -58,8 +57,7 @@ class HelloRequest : IRequest, IByteStreamSerializable
 **Example server Request handler** (server code)
 
 ```csharp
-using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Server;
+using Fenrir.Multiplayer;
 
 // Request Handler
 class HelloRequestHandler : IRequestHandler<HelloRequest>
@@ -81,8 +79,7 @@ networkServer.Start();
 **Example client sending a Request** (client code):
 
 ```csharp
-using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Client;
+using Fenrir.Multiplayer;
 
 using var networkClient = new NetworkClient();
 var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
@@ -98,8 +95,7 @@ networkClient.Peer.SendRequest(new HelloRequest() { Name = "World" });
 **Example Request with Response** (client+server shared code):
 
 ```csharp
-using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Serialization;
+using Fenrir.Multiplayer;
 
 class PingResponse : IResponse, IByteStreamSerializable
 {
@@ -135,8 +131,7 @@ class PingRequest : IRequest<PingResponse>, IByteStreamSerializable
 **Example server Request handler with Response** (server code):
 
 ```csharp
-using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Server;
+using Fenrir.Multiplayer;
 
 // Request Handler
 class PingRequestHandler : IRequestHandler<PingRequest, PingResponse>
@@ -158,8 +153,7 @@ networkServer.Start();
 **Example client sending a Request with a Response** (client code):
 
 ```csharp
-using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Client;
+using Fenrir.Multiplayer;
 
 using var networkClient = new NetworkClient();
 await networkClient.Connect("http://127.0.0.1:27016");
@@ -174,8 +168,7 @@ Debug.Log(response.ResponseText); // prints "Hello, World"
 **Example Event** (client+server shared code):
 
 ```csharp
-using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Serialization;
+using Fenrir.Multiplayer;
 
 class PingEvent : IEvent, IByteStreamSerializable
 {
@@ -196,8 +189,7 @@ class PingEvent : IEvent, IByteStreamSerializable
 **Example server sending Event** (server code):
 
 ```csharp
-using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Server;
+using Fenrir.Multiplayer;
 
 using var networkServer = new NetworkServer();
 networkServer.PeerConnected += (sender, e) =>
@@ -211,8 +203,7 @@ networkServer.Start();
 **Example client Event Handler** (client code):
 
 ```csharp
-using Fenrir.Multiplayer.Network;
-using Fenrir.Multiplayer.Client;
+using Fenrir.Multiplayer;
 
 class PingEventHandler : IEventHandler<PingEvent>
 {

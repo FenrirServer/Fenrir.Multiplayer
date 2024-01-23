@@ -12,8 +12,7 @@ It is simple but powerful: it allows explicitly serializing messages into direct
 In order to use byte stream serializables, your messages should implement `IByteStreamSerializable`:
 
 ```csharp
-using Fenrir.Multiplayer.Serialization;
-using Fenrir.Multiplayer.Network;
+using Fenrir.Multiplayer;
 
 class MyEvent : IEvent, IByteStreamSerializable
 {
