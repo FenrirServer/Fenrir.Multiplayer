@@ -22,22 +22,22 @@ Fenrir provides a great balance between performance and ease of development and 
 
 **Table of Contents**:
 
-- [Documentation Home](DocumentationIndex.md)
-- [Installation](Installation.md)
-- [Quick Start](QuickStart.md)
-- [Networking](NetworkingBasics.md)
-  - [Connection](Connection.md)
-  - [Peer Object](PeerObject.md)
-  - [Reliability](Reliability.md)
-- [Serialization](Serialization.md)
-  - [Custom Type Serialization](CustomTypeSerialization.md)
-  - [Custom Serializer](CustomSerializer.md)
-- [Room Management](RoomManagementBasics.md)
-- [Logging](Logging.md)
-- [Docker Setup](DockerBasics.md)
-- [Thread Safety](ThreadSafety.md)
-- [Client and Server Lifecycle](Lifecycle.md)
-- [FAQ](FAQ.md)
+- [Documentation Home](docs/DocumentationIndex.md)
+- [Installation](docs/Installation.md)
+- [Quick Start](docs/QuickStart.md)
+- [Networking](docs/NetworkingBasics.md)
+  - [Connection](docs/Connection.md)
+  - [Peer Object](docs/PeerObject.md)
+  - [Reliability](docs/Reliability.md)
+- [Serialization](docs/Serialization.md)
+  - [Custom Type Serialization](docs/CustomTypeSerialization.md)
+  - [Custom Serializer](docs/CustomSerializer.md)
+- [Room Management](docs/RoomManagementBasics.md)
+- [Logging](docs/Logging.md)
+- [Docker Setup](docs/DockerBasics.md)
+- [Thread Safety](docs/ThreadSafety.md)
+- [Client and Server Lifecycle](docs/Lifecycle.md)
+- [FAQ](docs/FAQ.md)
 
 # Quick Start
 
@@ -105,6 +105,10 @@ if(connectionResponse.Success)
 else
     Debug.Log("Failed to connect:" + connectionResponse.Reason);
 ```
+
+# Reference Project
+
+Please check out [TicTacToe](https://github.com/FenrirServer/Examples-TicTacToe/) repository for more examples!
 
 # Contributing
 
