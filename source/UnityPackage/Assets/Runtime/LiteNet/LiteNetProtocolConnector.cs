@@ -349,6 +349,8 @@ namespace Fenrir.Multiplayer.LiteNet
             }
 
             _peer = null;
+            _connectionTcs = null;
+            Disconnected?.Invoke(this, new ClientDisconnectedEventArgs( DisconnectedReason.DisconnectPeerCalled, SocketError.Success));
         }
 
         private NetDataWriter CreateConnectionRequestDataWriter(string clientId, object connectionRequestData = null)
@@ -446,7 +448,7 @@ namespace Fenrir.Multiplayer.LiteNet
 
             if (!didReadMessage)
             {
-                _logger.Warning("Failed to read message of length {0} from {1}", totalBytes, netPeer.EndPoint);
+                _logger.Warning("Failed to read message of length {0} from {1}", totalBytes, netPeer);
                 return;
             }
 
@@ -457,7 +459,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 IEvent evt = messageWrapper.MessageData as IEvent;
                 if(evt == null) // Someone is trying to tampter the protocol
                 {
-                    _logger.Warning("Empty event received from {0}", netPeer.EndPoint);
+                    _logger.Warning("Empty event received from {0}", netPeer);
                     return;
                 }
 
@@ -470,7 +472,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 IResponse response = messageWrapper.MessageData as IResponse;
                 if (response == null) // Someone is trying to mess with the protocol
                 {
-                    _logger.Warning("Empty response received from {0}", netPeer.EndPoint);
+                    _logger.Warning("Empty response received from {0}", netPeer);
                     return;
                 }
 
@@ -479,7 +481,7 @@ namespace Fenrir.Multiplayer.LiteNet
             }
             else
             {
-                _logger.Warning("Unsupported message type {0} received from {1}", messageWrapper.MessageType, netPeer.EndPoint);
+                _logger.Warning("Unsupported message type {0} received from {1}", messageWrapper.MessageType, netPeer);
             }
         }
 

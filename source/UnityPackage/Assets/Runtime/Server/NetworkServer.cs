@@ -146,6 +146,11 @@ namespace Fenrir.Multiplayer
         private ConnectionRequestHandler _connectionRequestHandler = null;
 
         /// <summary>
+        /// Connected peers
+        /// </summary>
+        public IEnumerable<IServerPeer> Peers => _liteNetListener.Peers;
+
+        /// <summary>
         /// Creates Network Server
         /// </summary>
         public NetworkServer()

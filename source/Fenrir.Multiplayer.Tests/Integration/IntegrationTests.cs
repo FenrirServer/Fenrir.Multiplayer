@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -79,7 +80,40 @@ namespace Fenrir.Multiplayer.Tests
             Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
         }
 
-        
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task NetworkClient_ReconnectsToNetworkServer()
+        {
+            using var logger = new TestLogger();
+            using var networkServer = new NetworkServer(logger) { BindPort = 27018 };
+            networkServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
+
+            using var networkClient = new NetworkClient(logger);
+            var serverInfo = new ServerInfo()
+            {
+                Hostname = "127.0.0.1",
+                ServerId = "test_id",
+                Protocols = new ProtocolInfo[]
+                {
+                    new ProtocolInfo(ProtocolType.LiteNet, new LiteNetProtocolConnectionData(27018))
+                }
+            };
+
+            await networkClient.Connect(serverInfo);
+
+            Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
+
+            networkClient.Disconnect();
+
+            Assert.AreEqual(ConnectionState.Disconnected, networkClient.State, "client is still connected");
+
+            await networkClient.Connect(serverInfo);
+
+            Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
+        }
+
+
         [TestMethod, Timeout(TestTimeout)]
         public async Task NetworkClient_ConnectsToNetworkServer_WithServerInfoService()
         {
@@ -544,6 +578,169 @@ namespace Fenrir.Multiplayer.Tests
 
             Assert.AreEqual(testEvent.Value, "event_test");
         }
+
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task NetworkServer_Peers_IncludesConnectedPeer()
+        {
+            using var logger = new TestLogger();
+            using var networkServer = new NetworkServer(logger);
+
+            networkServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
+
+            using var networkClient = new NetworkClient(logger);
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
+
+            Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+
+            Assert.AreEqual(1, networkServer.Peers.Count());
+        }
+
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task NetworkServer_Peers_IncludesAcceptedPeer()
+        {
+            using var logger = new TestLogger();
+            using var networkServer = new NetworkServer(logger);
+            networkServer.SetConnectionRequestHandler<CustomConnectionRequestData>(connectionRequest =>
+            {
+                Assert.AreEqual("test", connectionRequest.Data.Token);
+                return new ConnectionResponse(true);
+            });
+
+            networkServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
+
+            using var networkClient = new NetworkClient(logger);
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016", new CustomConnectionRequestData() { Token = "test" });
+
+            Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            Assert.AreEqual(1, networkServer.Peers.Count());
+        }
+
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task NetworkServer_Peers_IncludesAsyncAcceptedPeer()
+        {
+            using var logger = new TestLogger();
+            using var networkServer = new NetworkServer(logger);
+
+            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+
+            networkServer.SetConnectionRequestHandlerAsync<CustomConnectionRequestData>(async connectionRequest =>
+            {
+                Assert.AreEqual("test", connectionRequest.Data.Token);
+                await Task.Delay(20);
+                tcs.SetResult(true);
+                return new ConnectionResponse(true);
+            });
+
+            networkServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
+
+            using var networkClient = new NetworkClient(logger);
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016", new CustomConnectionRequestData() { Token = "test" });
+
+            await tcs.Task;
+            await Task.Delay(20);
+
+            Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            Assert.AreEqual(1, networkServer.Peers.Count());
+        }
+
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task NetworkServer_Peers_DoesNotIncludeRejectedPeer()
+        {
+            using var logger = new TestLogger();
+            using var networkServer = new NetworkServer(logger);
+            networkServer.SetConnectionRequestHandler<CustomConnectionRequestData>(connectionRequest =>
+            {
+                return ConnectionResponse.Failed("test");
+            });
+
+            networkServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
+
+            using var networkClient = new NetworkClient(logger);
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016", new CustomConnectionRequestData() { Token = "test" });
+
+            Assert.AreEqual(ConnectionState.Disconnected, networkClient.State, "client is connected");
+            Assert.IsFalse(connectionResponse.Success, "connection was not rejected");
+
+            Assert.AreEqual(0, networkServer.Peers.Count());
+        }
+
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task NetworkServer_Peers_DoesNotIncludeAsyncRejectedPeer()
+        {
+            using var logger = new TestLogger();
+            using var networkServer = new NetworkServer(logger);
+
+            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+
+            networkServer.SetConnectionRequestHandlerAsync<CustomConnectionRequestData>(async connectionRequest =>
+            {
+                Assert.AreEqual("test", connectionRequest.Data.Token);
+                await Task.Delay(20);
+                tcs.SetResult(true);
+                return ConnectionResponse.Failed("test");
+            });
+
+            networkServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
+
+            using var networkClient = new NetworkClient(logger);
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016", new CustomConnectionRequestData() { Token = "test" });
+
+            await tcs.Task;
+            await Task.Delay(20);
+
+            Assert.AreEqual(ConnectionState.Disconnected, networkClient.State, "client is connected");
+            Assert.IsFalse(connectionResponse.Success, "connection was not rejected");
+
+            Assert.AreEqual(0, networkServer.Peers.Count());
+        }
+
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task NetworkServer_Peers_DoesNotIncludeDisconnectedPeer()
+        {
+            using var logger = new TestLogger();
+
+            var tcs = new TaskCompletionSource<bool>();
+
+            using var networkServer = new NetworkServer(logger);
+            networkServer.PeerDisconnected += (sender, e) => tcs.SetResult(true);
+
+            networkServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
+
+            using var networkClient = new NetworkClient(logger);
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
+
+            Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            Assert.AreEqual(1, networkServer.Peers.Count());
+
+            networkClient.Disconnect();
+
+            await tcs.Task;
+
+            Assert.AreEqual(ConnectionState.Disconnected, networkClient.State, "client is still connected");
+
+            Assert.AreEqual(0, networkServer.Peers.Count());
+        }
+
 
         #region Fixtures
         class CustomConnectionRequestData : IByteStreamSerializable

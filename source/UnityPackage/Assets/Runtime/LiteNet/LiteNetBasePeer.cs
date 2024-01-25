@@ -31,7 +31,7 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <summary>
         /// Remote Endpoint
         /// </summary>
-        public EndPoint EndPoint => NetPeer.EndPoint;
+        public EndPoint EndPoint => NetPeer;
 
         /// <summary>
         /// Average Round trip time

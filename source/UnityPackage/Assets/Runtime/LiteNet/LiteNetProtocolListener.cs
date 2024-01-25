@@ -1,7 +1,10 @@
 ﻿using LiteNetLib;
 using LiteNetLib.Utils;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -143,6 +146,9 @@ namespace Fenrir.Multiplayer.LiteNet
             get => _netManager.PingInterval;
             set => _netManager.PingInterval = value;
         }
+
+        /// <inheritdoc/>
+        public IEnumerable<IServerPeer> Peers => _pendingConnections.Values.Where(tcs => tcs.Task.Status == TaskStatus.RanToCompletion && tcs.Task.Result != null).Select(tcs => (IServerPeer)tcs.Task.Result);
 
         /// <summary>
         /// In LiteNet, when UnsyncedEvents is on, calling ConnectionRequest.Accept() 
@@ -403,7 +409,7 @@ namespace Fenrir.Multiplayer.LiteNet
 
             if (!didReadMessage)
             {
-                _logger.Warning("Failed to read message of length {0} from {1}", totalBytes, netPeer.EndPoint);
+                _logger.Warning("Failed to read message of length {0} from {1}", totalBytes, netPeer);
                 return;
             }
 
@@ -414,7 +420,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 IRequest request = messageWrapper.MessageData as IRequest;
                 if (request == null) // Someone is trying to mess with the protocol
                 {
-                    _logger.Warning("Empty request received from {0}", netPeer.EndPoint);
+                    _logger.Warning("Empty request received from {0}", netPeer);
                     return;
                 }
 
@@ -423,7 +429,7 @@ namespace Fenrir.Multiplayer.LiteNet
             }
             else
             {
-                _logger.Warning("Unsupported message type {0} received from {1}", messageWrapper.MessageType, netPeer.EndPoint);
+                _logger.Warning("Unsupported message type {0} received from {1}", messageWrapper.MessageType, netPeer);
             }
 
         }
@@ -445,7 +451,7 @@ namespace Fenrir.Multiplayer.LiteNet
 
             var serverPeer = await connectionTcs.Task;
 
-            _logger.Trace("Peer connected: {0}", netPeer.EndPoint);
+            _logger.Trace("Peer connected: {0}", netPeer);
 
             // Notify server
             _serverEventListener.OnPeerConnected(serverPeer);
@@ -460,7 +466,12 @@ namespace Fenrir.Multiplayer.LiteNet
         private async Task HandlePeerDisconnected(NetPeer netPeer, DisconnectInfo disconnectInfo)
         {
             // Get LiteNet peer
-            TaskCompletionSource<LiteNetServerPeer> connectionTcs = _pendingConnections.GetOrAdd(netPeer, new TaskCompletionSource<LiteNetServerPeer>());
+            if(!_pendingConnections.TryRemove(netPeer, out var connectionTcs))
+            {
+                // How can this ever happen?
+                _logger.Error("Failed to remove connection for peer, not connected: {0}", netPeer);
+                return;
+            }
 
             LiteNetServerPeer serverPeer = await connectionTcs.Task;
 
@@ -473,10 +484,7 @@ namespace Fenrir.Multiplayer.LiteNet
                 _serverEventListener.OnPeerDisconnected(serverPeer);
             }
 
-            // Remove from the dictionary
-            _pendingConnections.TryRemove(netPeer, out var _);
-
-            _logger.Trace("Peer disconnected: {0}", netPeer.EndPoint);
+            _logger.Trace("Peer disconnected: {0}", netPeer);
         }
 
         void INetEventListener.OnNetworkLatencyUpdate(NetPeer netPeer, int latency)

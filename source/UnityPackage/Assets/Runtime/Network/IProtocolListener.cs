@@ -1,4 +1,6 @@
-﻿namespace Fenrir.Multiplayer
+﻿using System.Collections.Generic;
+
+namespace Fenrir.Multiplayer
 {
     /// <summary>
     /// Represents a protocol server listener
@@ -19,5 +21,10 @@
         /// Returns protocol connection data, required to pass by the client when connecting using this protocol
         /// </summary>
         IProtocolConnectionData GetConnectionData();
+
+        /// <summary>
+        /// Connected peers
+        /// </summary>
+        IEnumerable<IServerPeer> Peers { get; }
     }
 }
