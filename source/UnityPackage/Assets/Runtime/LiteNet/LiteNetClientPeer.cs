@@ -66,11 +66,10 @@ namespace Fenrir.Multiplayer.LiteNet
         public void SendRequest<TRequest>(TRequest request, bool encrypted, byte channel = 0, MessageDeliveryMethod deliveryMethod = MessageDeliveryMethod.ReliableOrdered)
             where TRequest : IRequest
         {
-            short requestId = 0; // Requests with no response, do not require a unique id
             MessageFlags flags = encrypted ? MessageFlags.IsEncrypted : MessageFlags.None;
             flags |= GetDebugFlag();
 
-            MessageWrapper messageWrapper = MessageWrapper.WrapRequest(request, requestId, channel, flags, deliveryMethod);
+            MessageWrapper messageWrapper = MessageWrapper.WrapRequest(request, channel, flags, deliveryMethod);
             Send(messageWrapper);
         }
 
@@ -86,7 +85,7 @@ namespace Fenrir.Multiplayer.LiteNet
             short requestId = GetNextRequestId();
 
             MessageDeliveryMethod deliveryMethod = ordered ? MessageDeliveryMethod.ReliableOrdered : MessageDeliveryMethod.ReliableUnordered; // Requests that require a response are always reliable
-            MessageFlags flags = MessageFlags.HasRequestId;
+            MessageFlags flags = MessageFlags.None;
             if (encrypted)
             {
                 flags |= MessageFlags.IsEncrypted;
@@ -97,7 +96,7 @@ namespace Fenrir.Multiplayer.LiteNet
             }
             flags |= GetDebugFlag();
 
-            MessageWrapper messageWrapper = MessageWrapper.WrapRequest(request, requestId, channel, flags, deliveryMethod);
+            MessageWrapper messageWrapper = MessageWrapper.WrapRequestWithResponse(request, requestId, channel, flags, deliveryMethod);
 
             // Add request awaiter to a response map
             Task<MessageWrapper> task = _pendingRequestMap.OnSendRequest(messageWrapper);

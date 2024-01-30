@@ -79,7 +79,7 @@ namespace Fenrir.Multiplayer.LiteNet
         {
             MessageDeliveryMethod deliveryMethod = ordered ? MessageDeliveryMethod.ReliableOrdered : MessageDeliveryMethod.ReliableUnordered; // Responses are always reliable
 
-            MessageFlags flags = MessageFlags.HasRequestId; // Responses always have request id
+            MessageFlags flags = MessageFlags.None;
             if(encrypted)
             {
                 flags |= MessageFlags.IsEncrypted;

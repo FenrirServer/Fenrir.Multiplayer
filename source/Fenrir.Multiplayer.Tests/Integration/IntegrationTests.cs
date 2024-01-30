@@ -550,6 +550,60 @@ namespace Fenrir.Multiplayer.Tests
         }
 
         [TestMethod, Timeout(TestTimeout)]
+        public async Task NetworkClient_SendRequest_CanSendMessageThatImplementsEventRequestResponse()
+        {
+            using var logger = new TestLogger();
+            using var networkServer = new NetworkServer(logger);
+
+            TaskCompletionSource<TestMessage> requestTcs = new TaskCompletionSource<TestMessage>();
+            networkServer.AddRequestHandler(new TcsRequestHandler<TestMessage>(requestTcs));
+
+            networkServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
+
+            using var networkClient = new NetworkClient(logger);
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
+
+            Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is connected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            networkClient.Peer.SendRequest(new TestMessage() { Value = "test_value" });
+
+            TestMessage request = await requestTcs.Task;
+
+            Assert.AreEqual(request.Value, "test_value");
+        }
+
+
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task NetworkClient_SendRequestResponse_CanSendMessageThatImplementsEventRequestResponse()
+        {
+            using var logger = new TestLogger();
+            using var networkServer = new NetworkServer(logger);
+
+            networkServer.AddRequestHandlerAsync(new TestAsyncRequestResponseHandler<TestMessage, TestMessage>(request =>
+            {
+                Assert.AreEqual("test", request.Value);
+                return Task.FromResult(new TestMessage() { Value = request.Value });
+            }));
+
+            networkServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
+
+            using var networkClient = new NetworkClient(logger);
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
+
+            Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            var response = await networkClient.Peer.SendRequest<TestMessage, TestMessage>(new TestMessage() { Value = "test" });
+
+            Assert.AreEqual(response.Value, "test");
+        }
+
+        [TestMethod, Timeout(TestTimeout)]
         public async Task NetworkServer_SendEvent_SendsEvent()
         {
             using var logger = new TestLogger();
@@ -577,6 +631,37 @@ namespace Fenrir.Multiplayer.Tests
             var testEvent = await tcs.Task;
 
             Assert.AreEqual(testEvent.Value, "event_test");
+        }
+
+
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task NetworkServer_SendEvent_CanSendMessageThatImplementsEventRequestResponse()
+        {
+            using var logger = new TestLogger();
+            using var networkServer = new NetworkServer(logger);
+
+            networkServer.PeerConnected += (sender, e) =>
+            {
+                e.Peer.SendEvent(new TestMessage() { Value = "test" });
+            };
+            networkServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
+
+            TaskCompletionSource<TestMessage> tcs = new TaskCompletionSource<TestMessage>();
+
+            using var networkClient = new NetworkClient(logger);
+            var eventHandler = new TestEventHandler<TestMessage>(tcs);
+            networkClient.AddEventHandler<TestMessage>(eventHandler);
+
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
+
+            Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            var testEvent = await tcs.Task;
+
+            Assert.AreEqual(testEvent.Value, "test");
         }
 
         [TestMethod, Timeout(TestTimeout)]
@@ -868,6 +953,21 @@ namespace Fenrir.Multiplayer.Tests
         }
 
         class TestEvent : IEvent, IByteStreamSerializable
+        {
+            public string Value;
+
+            public void Deserialize(IByteStreamReader reader)
+            {
+                Value = reader.ReadString();
+            }
+
+            public void Serialize(IByteStreamWriter writer)
+            {
+                writer.Write(Value);
+            }
+        }
+
+        class TestMessage : IEvent, IRequest, IRequest<TestMessage>, IResponse, IByteStreamSerializable
         {
             public string Value;
 

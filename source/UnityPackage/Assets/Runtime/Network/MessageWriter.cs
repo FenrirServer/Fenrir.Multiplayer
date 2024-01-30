@@ -44,14 +44,17 @@
             // TODO: Encryption
 
             // Message format: 
-            // 1. [1 byte flags]
+            // 1. [1 byte message type + flags]
             // 2. [8 bytes long message type hash]
             // 3. [1 byte channel number]
             // 4. [2 bytes short requestId] - optional, if flags has HasRequestId
             // 5. [N bytes serialized message]
 
-            // 1. byte Message flags
-            byteStreamWriter.Write((byte)messageWrapper.Flags);
+            // 1. byte Message type + flags
+            byte typeAndFlagsCombined = (byte)messageWrapper.MessageType;
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined << 5);
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined | (byte)messageWrapper.Flags);
+            byteStreamWriter.Write(typeAndFlagsCombined);
 
             // 2. ulong Message type hash
             ulong messageTypeHash = _typeHashMap.GetTypeHash(messageWrapper.MessageData.GetType());
@@ -61,7 +64,7 @@
             byteStreamWriter.Write(messageWrapper.Channel);
 
             // 4. short Request id
-            if (messageWrapper.Flags.HasFlag(MessageFlags.HasRequestId))
+            if (messageWrapper.MessageType == MessageType.RequestWithResponse || messageWrapper.MessageType == MessageType.Response)
             {
                 byteStreamWriter.Write(messageWrapper.RequestId);
             }

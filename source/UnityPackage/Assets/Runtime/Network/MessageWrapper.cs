@@ -6,13 +6,13 @@
     internal struct MessageWrapper
     {
         /// <summary>
-        /// Type of the message: Event, Request or Response
+        /// Type of the message: Raw, Event, Request or Response
         /// </summary>
         public MessageType MessageType;
 
         /// <summary>
         /// Message data object. 
-        /// If <see cref="MessageType"/> is <see cref="MessageType.Request"/>, should be <see cref="IRequest"/>.
+        /// If <see cref="MessageType"/> is <see cref="MessageType.Request"/> or <see cref="MessageType.RequestWithResponse"/>, should be <see cref="IRequest"/>.
         /// If <see cref="MessageType"/> is <see cref="MessageType.Response"/>, should be <see cref="IResponse"/>.
         /// If <see cref="MessageType"/> is <see cref="MessageType.Event"/>, should be <see cref="IEvent"/>.
         /// </summary>
@@ -102,14 +102,27 @@
         /// Credates message wrapper for a request
         /// </summary>
         /// <param name="data">Request data. <seealso cref="MessageData"/></param>
+        /// <param name="channel">Channel number. <seealso cref="Channel"/></param>
+        /// <param name="flags">Message flags. <see cref="Flags"/></param>
+        /// <param name="deliveryMethod">Delivery method. <seealso cref="DeliveryMethod"/></param>
+        /// <returns>New MessageWrapper that wraps given request</returns>
+        public static MessageWrapper WrapRequest(IRequest data, byte channel, MessageFlags flags, MessageDeliveryMethod deliveryMethod)
+        {
+            return new MessageWrapper(MessageType.Request, data, 0, channel, flags, deliveryMethod, null);
+        }
+
+        /// <summary>
+        /// Credates message wrapper for a request with response
+        /// </summary>
+        /// <param name="data">Request data. <seealso cref="MessageData"/></param>
         /// <param name="requestId">Request id. <seealso cref="RequestId"/></param>
         /// <param name="channel">Channel number. <seealso cref="Channel"/></param>
         /// <param name="flags">Message flags. <see cref="Flags"/></param>
         /// <param name="deliveryMethod">Delivery method. <seealso cref="DeliveryMethod"/></param>
         /// <returns>New MessageWrapper that wraps given request</returns>
-        public static MessageWrapper WrapRequest(IRequest data, short requestId, byte channel, MessageFlags flags, MessageDeliveryMethod deliveryMethod)
+        public static MessageWrapper WrapRequestWithResponse(IRequest data, short requestId, byte channel, MessageFlags flags, MessageDeliveryMethod deliveryMethod)
         {
-            return new MessageWrapper(MessageType.Request, data, requestId, channel, flags, deliveryMethod, null);
+            return new MessageWrapper(MessageType.RequestWithResponse, data, requestId, channel, flags, deliveryMethod, null);
         }
 
         /// <summary>

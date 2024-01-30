@@ -414,7 +414,7 @@ namespace Fenrir.Multiplayer.LiteNet
             }
 
             // Dispatch message
-            if (messageWrapper.MessageType == MessageType.Request)
+            if (messageWrapper.MessageType == MessageType.Request || messageWrapper.MessageType == MessageType.RequestWithResponse)
             {
                 // Request
                 IRequest request = messageWrapper.MessageData as IRequest;

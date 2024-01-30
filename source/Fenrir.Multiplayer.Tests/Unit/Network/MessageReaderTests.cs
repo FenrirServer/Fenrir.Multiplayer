@@ -6,7 +6,7 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
     public class MessageReaderTests
     {
         // Message format: 
-        // 1. [1 byte flags]
+        // 1. [1 byte message type + flags]
         // 2. [8 bytes long message type hash]
         // 3. [1 byte channel number]
         // 4. [2 bytes short requestId] - optional, if flags has HasRequestId
@@ -22,7 +22,11 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
 
             // Write test data
             var byteStreamWriter = new ByteStreamWriter(serializer);
-            byteStreamWriter.Write((byte)MessageFlags.IsEncrypted); // byte flags
+
+            byte typeAndFlagsCombined = (byte)MessageType.Event;
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined << 5);
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined | (byte)MessageFlags.IsEncrypted);
+            byteStreamWriter.Write(typeAndFlagsCombined); // byte type + flags
             byteStreamWriter.Write(typeHashMap.GetTypeHash<TestEvent>()); // ulong type hash
             byteStreamWriter.Write((byte)123); // byte Channel number
             serializer.Serialize(new TestEvent() { Value = "test" }, byteStreamWriter); // byte[] data
@@ -37,7 +41,6 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
             Assert.AreEqual("test", ((TestEvent)messageWrapper.MessageData).Value);
             Assert.AreEqual(123, messageWrapper.Channel);
             Assert.IsTrue(messageWrapper.Flags.HasFlag(MessageFlags.IsEncrypted));
-            Assert.IsFalse(messageWrapper.Flags.HasFlag(MessageFlags.HasRequestId));
         }
 
         [TestMethod]
@@ -49,7 +52,10 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
 
             // Write test data
             var byteStreamWriter = new ByteStreamWriter(serializer);
-            byteStreamWriter.Write((byte)MessageFlags.IsEncrypted); // byte flags
+            byte typeAndFlagsCombined = (byte)MessageType.Event;
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined << 5);
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined | (byte)MessageFlags.IsEncrypted);
+            byteStreamWriter.Write(typeAndFlagsCombined); // byte type + flags
             byteStreamWriter.Write(typeHashMap.GetTypeHash<TestEmptyEvent>()); // ulong type hash
             byteStreamWriter.Write((byte)123); // byte Channel number
             serializer.Serialize(new TestEmptyEvent(), byteStreamWriter); // byte[] data
@@ -63,7 +69,6 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
             Assert.IsInstanceOfType(messageWrapper.MessageData, typeof(TestEmptyEvent));
             Assert.AreEqual(123, messageWrapper.Channel);
             Assert.IsTrue(messageWrapper.Flags.HasFlag(MessageFlags.IsEncrypted));
-            Assert.IsFalse(messageWrapper.Flags.HasFlag(MessageFlags.HasRequestId));
         }
 
         [TestMethod]
@@ -75,7 +80,39 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
 
             // Write test data
             var byteStreamWriter = new ByteStreamWriter(serializer);
-            byteStreamWriter.Write((byte)(MessageFlags.IsEncrypted | MessageFlags.HasRequestId)); // byte flags
+            byte typeAndFlagsCombined = (byte)MessageType.Request;
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined << 5);
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined | (byte)MessageFlags.IsEncrypted);
+            byteStreamWriter.Write(typeAndFlagsCombined); // byte type + flags
+            byteStreamWriter.Write(typeHashMap.GetTypeHash<TestRequest>()); // [ulong] type hash
+            byteStreamWriter.Write((byte)123); // byte Channel number
+            serializer.Serialize(new TestRequest() { Value = "test" }, byteStreamWriter); // data
+
+            // Read message
+            var byteStreamReader = new ByteStreamReader(byteStreamWriter, serializer);
+            bool result = messageReader.TryReadMessage(byteStreamReader, out MessageWrapper messageWrapper);
+
+            Assert.IsTrue(result);
+            Assert.AreEqual(MessageType.Request, messageWrapper.MessageType);
+            Assert.AreEqual(123, messageWrapper.Channel);
+            Assert.AreEqual(true, messageWrapper.Flags.HasFlag(MessageFlags.IsEncrypted));
+            Assert.IsInstanceOfType(messageWrapper.MessageData, typeof(TestRequest));
+            Assert.AreEqual("test", ((TestRequest)messageWrapper.MessageData).Value);
+        }
+
+        [TestMethod]
+        public void MessageReader_TryReadMessage_ReadsRequestWithResponse()
+        {
+            var typeHashMap = new TypeHashMap();
+            var serializer = new NetworkSerializer();
+            var messageReader = new MessageReader(serializer, typeHashMap, new EventBasedLogger(), new RecyclableObjectPool<ByteStreamReader>(() => new ByteStreamReader(serializer)));
+
+            // Write test data
+            var byteStreamWriter = new ByteStreamWriter(serializer);
+            byte typeAndFlagsCombined = (byte)MessageType.RequestWithResponse;
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined << 5);
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined | (byte)MessageFlags.IsEncrypted);
+            byteStreamWriter.Write(typeAndFlagsCombined); // byte type + flags
             byteStreamWriter.Write(typeHashMap.GetTypeHash<TestRequest>()); // [ulong] type hash
             byteStreamWriter.Write((byte)123); // byte Channel number
             byteStreamWriter.Write((short)456); // short Request id
@@ -86,11 +123,10 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
             bool result = messageReader.TryReadMessage(byteStreamReader, out MessageWrapper messageWrapper);
 
             Assert.IsTrue(result);
-            Assert.AreEqual(MessageType.Request, messageWrapper.MessageType);
+            Assert.AreEqual(MessageType.RequestWithResponse, messageWrapper.MessageType);
             Assert.AreEqual(123, messageWrapper.Channel);
             Assert.AreEqual(456, messageWrapper.RequestId);
             Assert.AreEqual(true, messageWrapper.Flags.HasFlag(MessageFlags.IsEncrypted));
-            Assert.AreEqual(true, messageWrapper.Flags.HasFlag(MessageFlags.HasRequestId));
             Assert.IsInstanceOfType(messageWrapper.MessageData, typeof(TestRequest));
             Assert.AreEqual("test", ((TestRequest)messageWrapper.MessageData).Value);
         }
@@ -104,7 +140,10 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
 
             // Write test data
             var byteStreamWriter = new ByteStreamWriter(serializer);
-            byteStreamWriter.Write((byte)(MessageFlags.IsEncrypted | MessageFlags.HasRequestId)); // byte flags
+            byte typeAndFlagsCombined = (byte)MessageType.Response;
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined << 5);
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined | (byte)MessageFlags.IsEncrypted);
+            byteStreamWriter.Write(typeAndFlagsCombined); // byte type + flags
             byteStreamWriter.Write(typeHashMap.GetTypeHash<TestResponse>()); // [ulong] type hash
             byteStreamWriter.Write((byte)123); // byte Channel number
             byteStreamWriter.Write((short)456); // short Request id
@@ -119,7 +158,6 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
             Assert.AreEqual(123, messageWrapper.Channel);
             Assert.AreEqual(456, messageWrapper.RequestId);
             Assert.AreEqual(true, messageWrapper.Flags.HasFlag(MessageFlags.IsEncrypted));
-            Assert.AreEqual(true, messageWrapper.Flags.HasFlag(MessageFlags.HasRequestId));
             Assert.IsInstanceOfType(messageWrapper.MessageData, typeof(TestResponse));
             Assert.AreEqual("test", ((TestResponse)messageWrapper.MessageData).Value);
         }
@@ -150,7 +188,10 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
 
             // Write test data
             var byteStreamWriter = new ByteStreamWriter(serializer);
-            byteStreamWriter.Write((byte)(MessageFlags.IsEncrypted | MessageFlags.HasRequestId)); // byte flags
+            byte typeAndFlagsCombined = (byte)MessageType.Event;
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined << 5);
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined | (byte)MessageFlags.IsEncrypted);
+            byteStreamWriter.Write(typeAndFlagsCombined); // byte type + flags
             // no message type hash
 
             var byteStreamReader = new ByteStreamReader(byteStreamWriter, serializer);
@@ -167,7 +208,10 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
 
             // Write test data
             var byteStreamWriter = new ByteStreamWriter(serializer);
-            byteStreamWriter.Write((byte)(MessageFlags.IsEncrypted | MessageFlags.HasRequestId)); // byte flags
+            byte typeAndFlagsCombined = (byte)MessageType.Event;
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined << 5);
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined | (byte)MessageFlags.IsEncrypted);
+            byteStreamWriter.Write(typeAndFlagsCombined); // byte type + flags
             byteStreamWriter.Write((ulong)123123); // invalid message type hash
 
             var byteStreamReader = new ByteStreamReader(byteStreamWriter, serializer);
@@ -184,7 +228,10 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
 
             // Write test data
             var byteStreamWriter = new ByteStreamWriter(serializer);
-            byteStreamWriter.Write((byte)(MessageFlags.IsEncrypted | MessageFlags.HasRequestId));
+            byte typeAndFlagsCombined = (byte)MessageType.Event;
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined << 5);
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined | (byte)MessageFlags.IsEncrypted);
+            byteStreamWriter.Write(typeAndFlagsCombined); // byte type + flags
             byteStreamWriter.Write((ulong)typeHashMap.GetTypeHash<TestResponse>());
             // missing channel number byte
 
@@ -202,7 +249,10 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
 
             // Write test data
             var byteStreamWriter = new ByteStreamWriter(serializer);
-            byteStreamWriter.Write((byte)(MessageFlags.IsEncrypted | MessageFlags.HasRequestId));
+            byte typeAndFlagsCombined = (byte)MessageType.Request;
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined << 5);
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined | (byte)MessageFlags.IsEncrypted);
+            byteStreamWriter.Write(typeAndFlagsCombined); // byte type + flags
             byteStreamWriter.Write((ulong)typeHashMap.GetTypeHash<TestResponse>());
             byteStreamWriter.Write((byte)123);
             // missing request id short, while HasRequestId flag is set
@@ -221,7 +271,10 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
 
             // Write test data
             var byteStreamWriter = new ByteStreamWriter(serializer);
-            byteStreamWriter.Write((byte)(MessageFlags.IsEncrypted | MessageFlags.IsDebug)); // byte flags
+            byte typeAndFlagsCombined = (byte)MessageType.Event;
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined << 5);
+            typeAndFlagsCombined = (byte)(typeAndFlagsCombined | (byte)(MessageFlags.IsEncrypted | MessageFlags.IsDebug));
+            byteStreamWriter.Write(typeAndFlagsCombined); // byte type + flags
             byteStreamWriter.Write(typeHashMap.GetTypeHash<TestEvent>()); // ulong type hash
             byteStreamWriter.Write((byte)123); // byte Channel number
             byteStreamWriter.Write("test_debug_info_string");
@@ -237,7 +290,6 @@ namespace Fenrir.Multiplayer.Tests.Unit.LiteNetProtocol
             Assert.AreEqual("test", ((TestEvent)messageWrapper.MessageData).Value);
             Assert.AreEqual(123, messageWrapper.Channel);
             Assert.IsTrue(messageWrapper.Flags.HasFlag(MessageFlags.IsEncrypted));
-            Assert.IsFalse(messageWrapper.Flags.HasFlag(MessageFlags.HasRequestId));
             Assert.IsTrue(messageWrapper.Flags.HasFlag(MessageFlags.IsDebug));
             Assert.AreEqual("test_debug_info_string", messageWrapper.DebugInfo);
         }
