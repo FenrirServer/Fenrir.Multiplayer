@@ -69,12 +69,17 @@ namespace Fenrir.Multiplayer
         public string BindIPv6 { get; set; } = "::";
 
         /// <summary>
-        /// Port at which listener should be bound
+        /// TCP port at which a Server Info servers is bound
+        /// </summary>
+        public ushort ServerInfoPort { get; set; } = 27016;
+
+        /// <summary>
+        /// UDP port at which a network listener is bound
         /// </summary>
         public ushort BindPort { get; set; } = 27016;
 
         /// <summary>
-        /// Public port. Overrides listen <seealso cref="BindPort"/> when reporting to the client
+        /// Public port. Overrides <seealso cref="BindPort"/> when reporting to the client
         /// Override this port if container maps <seealso cref="BindPort"/> to something else
         /// </summary>
         public ushort? PublicPort { get; set; } = null;
@@ -202,7 +207,7 @@ namespace Fenrir.Multiplayer
             SetStatus(ServerStatus.Starting);
 
             // Start server info service
-            _serverInfoService.Start(BindPort);
+            _serverInfoService.Start(ServerInfoPort);
 
             // Start LiteNet Protocol listener
             _liteNetListener.Start(BindIPv4, BindIPv6, BindPort, PublicPort);
