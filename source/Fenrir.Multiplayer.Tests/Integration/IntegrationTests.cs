@@ -118,13 +118,13 @@ namespace Fenrir.Multiplayer.Tests
         public async Task NetworkClient_ConnectsToNetworkServer_WithServerInfoService()
         {
             using var logger = new TestLogger();
-            using var networkServer = new NetworkServer(logger) { BindPort = 27018 };
+            using var networkServer = new NetworkServer(logger) { BindPort = 27018, ServerInfoPort = 27019 };
             networkServer.Start();
 
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
             using var networkClient = new NetworkClient(logger);
-            await networkClient.Connect("http://127.0.0.1:27018");
+            await networkClient.Connect("http://127.0.0.1:27019");
 
             Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
         }
@@ -135,7 +135,7 @@ namespace Fenrir.Multiplayer.Tests
             TaskCompletionSource<IServerPeer> serverConnectionTcs = new TaskCompletionSource<IServerPeer>();
 
             using var logger = new TestLogger();
-            using var networkServer = new NetworkServer(logger) { BindPort = 27018 };
+            using var networkServer = new NetworkServer(logger) { BindPort = 27018, ServerInfoPort = 27019 };
 
             networkServer.PeerConnected += (sender, e) =>
             {
@@ -147,7 +147,7 @@ namespace Fenrir.Multiplayer.Tests
             Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
 
             using var networkClient = new NetworkClient(logger) { ClientId = "test_id" };
-            await networkClient.Connect("http://127.0.0.1:27018");
+            await networkClient.Connect("http://127.0.0.1:27019");
             var serverPeer = await serverConnectionTcs.Task;
 
             Assert.IsNotNull(serverPeer);
