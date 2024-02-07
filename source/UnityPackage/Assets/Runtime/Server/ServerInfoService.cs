@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -55,7 +56,8 @@ namespace Fenrir.Multiplayer
             if (!IsRunning)
             {
                 _httpServer = new HttpServer(Port);
-                _httpServer.OnGet += OnHttpServerGet;
+                _httpServer.OnHead += OnHttpServerRequest;
+                _httpServer.OnGet += OnHttpServerRequest;
                 _httpServer.Start();
             }
         }
@@ -72,7 +74,7 @@ namespace Fenrir.Multiplayer
             }
         }
 
-        private void OnHttpServerGet(object sender, HttpRequestEventArgs e)
+        private void OnHttpServerRequest(object sender, HttpRequestEventArgs e)
         {
             var response = e.Response;
 
