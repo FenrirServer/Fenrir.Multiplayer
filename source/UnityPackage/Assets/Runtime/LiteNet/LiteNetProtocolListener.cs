@@ -150,6 +150,9 @@ namespace Fenrir.Multiplayer.LiteNet
         /// <inheritdoc/>
         public IEnumerable<IServerPeer> Peers => _pendingConnections.Values.Where(tcs => tcs.Task.Status == TaskStatus.RanToCompletion && tcs.Task.Result != null).Select(tcs => (IServerPeer)tcs.Task.Result);
 
+        /// <inheritdoc/>
+        public int NumPeers => _pendingConnections.Count;
+
         /// <summary>
         /// In LiteNet, when UnsyncedEvents is on, calling ConnectionRequest.Accept() 
         /// could trigger INetEventListener.OnPeerConnected or other events before we had a chance to set a tag

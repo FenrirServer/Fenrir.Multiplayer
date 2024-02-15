@@ -24,6 +24,12 @@ namespace Fenrir.Multiplayer
         /// List of protocols supported by this server
         /// </summary>
         [JsonProperty("protocols")]
-        public ProtocolInfo[] Protocols { get; set; } 
+        public ProtocolInfo[] Protocols { get; set; }
+
+        /// <summary>
+        /// Number of players connected to this specific instance
+        /// </summary>
+        [JsonProperty("ccu")]
+        public int Ccu { get; set; }
     }
 }

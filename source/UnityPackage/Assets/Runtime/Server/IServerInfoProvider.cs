@@ -33,5 +33,10 @@ namespace Fenrir.Multiplayer
         /// Listeners available on this server
         /// </summary>
         IEnumerable<IProtocolListener> Listeners { get; }
+
+        /// <summary>
+        /// Number of players connected to this specific instance
+        /// </summary>
+        int Ccu { get; }
     }
 }

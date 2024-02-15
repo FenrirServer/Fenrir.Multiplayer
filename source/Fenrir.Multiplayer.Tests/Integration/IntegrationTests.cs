@@ -826,6 +826,65 @@ namespace Fenrir.Multiplayer.Tests
             Assert.AreEqual(0, networkServer.Peers.Count());
         }
 
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task NetworkServer_ServerInfo_ReturnsCcu()
+        {
+            using var logger = new TestLogger();
+            using var networkServer = new NetworkServer(logger) { BindPort = 27018 };
+            networkServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
+
+            using var networkClient = new NetworkClient(logger);
+            var serverInfo = new ServerInfo()
+            {
+                Hostname = "127.0.0.1",
+                Protocols = new ProtocolInfo[]
+                {
+                    new ProtocolInfo(ProtocolType.LiteNet, new LiteNetProtocolConnectionData(27018))
+                }
+            };
+
+            await networkClient.Connect(serverInfo);
+
+            Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is not connected");
+
+            // Send request to server info
+            var httpClient = new HttpClient();
+            var result = await httpClient.GetAsync(new Uri($"http://127.0.0.1:{networkServer.ServerInfoPort}/"));
+
+            Assert.IsTrue(result.IsSuccessStatusCode, $"bad status code from {nameof(ServerInfoService)}: {result.StatusCode}");
+            string response = await result.Content.ReadAsStringAsync();
+            Assert.IsNotNull(response, "response is null");
+            Assert.IsFalse(response == string.Empty, "empty response");
+
+            // Deserialize
+            ServerInfo returnedServerInfo = JsonConvert.DeserializeObject<ServerInfo>(response);
+
+            // One Connection
+            Assert.AreEqual(1, returnedServerInfo.Ccu);
+
+            // Disconnect
+            networkClient.Disconnect();
+
+            await Task.Delay(100);
+
+            // Send request to server info
+            httpClient = new HttpClient();
+            result = await httpClient.GetAsync(new Uri($"http://127.0.0.1:{networkServer.ServerInfoPort}/"));
+
+            Assert.IsTrue(result.IsSuccessStatusCode, $"bad status code from {nameof(ServerInfoService)}: {result.StatusCode}");
+            response = await result.Content.ReadAsStringAsync();
+            Assert.IsNotNull(response, "response is null");
+            Assert.IsFalse(response == string.Empty, "empty response");
+
+            // Deserialize
+            ServerInfo returnedServerInfo2 = JsonConvert.DeserializeObject<ServerInfo>(response);
+
+            // One Connection
+            Assert.AreEqual(0, returnedServerInfo2.Ccu);
+        }
+
 
         #region Fixtures
         class CustomConnectionRequestData : IByteStreamSerializable

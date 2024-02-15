@@ -26,5 +26,10 @@ namespace Fenrir.Multiplayer
         /// Connected peers
         /// </summary>
         IEnumerable<IServerPeer> Peers { get; }
+
+        /// <summary>
+        /// Number of connected peers
+        /// </summary>
+        int NumPeers { get; }
     }
 }

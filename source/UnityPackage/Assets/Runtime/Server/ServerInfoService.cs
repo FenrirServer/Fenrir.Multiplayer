@@ -93,7 +93,8 @@ namespace Fenrir.Multiplayer
                 Hostname = _networkServerInfoProvider.Hostname,
                 Protocols = _networkServerInfoProvider.Listeners.Select(
                     listener => new ProtocolInfo(listener.ProtocolType, listener.GetConnectionData())
-                ).ToArray()
+                ).ToArray(),
+                Ccu = _networkServerInfoProvider.Ccu,
             };
 
             // Create response

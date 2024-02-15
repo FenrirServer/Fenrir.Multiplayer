@@ -1,6 +1,7 @@
 ﻿using Fenrir.Multiplayer.LiteNet;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
@@ -122,6 +123,10 @@ namespace Fenrir.Multiplayer
                 //yield return _webSocketListener;
             }
         }
+
+
+        /// <inheritdoc/>
+        public int Ccu => _liteNetListener.NumPeers;
 
         /// <inheritdoc/>
         public ServerStatus Status => _status;
