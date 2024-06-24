@@ -140,7 +140,7 @@ namespace Fenrir.Multiplayer
         /// <returns>Deterministic type hash</returns>
         private ulong CalculateTypeHash(Type type)
         {
-            return DeterministicHashUtility.CalculateHash(type.FullName);
+            return DeterministicHashUtility.CalculateHash(type.ToString());
         }
     }
 }

@@ -1,3 +1,4 @@
+extern alias External;
 using Fenrir.Multiplayer.LiteNet;
 using Fenrir.Multiplayer.Tests.Fixtures;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -6,7 +7,10 @@ using Newtonsoft.Json;
 using System;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using TestExternalClass2 = External::Fenrir.Multiplayer.Tests.TestExternalClass;
+
 
 namespace Fenrir.Multiplayer.Tests
 {
@@ -317,6 +321,62 @@ namespace Fenrir.Multiplayer.Tests
             TestRequest request = await requestTcs.Task;
 
             Assert.AreEqual(request.Value, "test_value");
+        }
+
+
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task NetworkClient_SendRequest_SendsGenericRequest()
+        {
+            using var logger = new TestLogger();
+            using var networkServer = new NetworkServer(logger);
+
+            TaskCompletionSource<TestGenericValueTypeRequest<TestStruct>> requestTcs = new TaskCompletionSource<TestGenericValueTypeRequest<TestStruct>>();
+            networkServer.AddRequestHandler(new TcsRequestHandler<TestGenericValueTypeRequest<TestStruct>>(requestTcs));
+
+            networkServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
+
+            using var networkClient = new NetworkClient(logger);
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
+
+            Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is connected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            networkClient.Peer.SendRequest(new TestGenericValueTypeRequest<TestStruct>() { Data = new TestStruct() { Value = "test_value" } });
+
+            TestGenericValueTypeRequest<TestStruct> request = await requestTcs.Task;
+
+            Assert.AreEqual(request.Data.Value, "test_value");
+        }
+
+
+        [TestMethod, Timeout(TestTimeout)]
+        public async Task NetworkClient_SendRequest_SendsGenericRequest_WithExtenralAssemblyType()
+        {
+            // This test checks if requests still work if client and server use the same type, defined in two different assemblies (e.g. Client.csproj and Server.csproj)
+
+            using var logger = new TestLogger();
+            using var networkServer = new NetworkServer(logger);
+
+            TaskCompletionSource<TestGenericTypeRequest<TestExternalClass>> requestTcs = new TaskCompletionSource<TestGenericTypeRequest<TestExternalClass>>();
+            networkServer.AddRequestHandler(new TcsRequestHandler<TestGenericTypeRequest<TestExternalClass>>(requestTcs));
+
+            networkServer.Start();
+
+            Assert.AreEqual(ServerStatus.Running, networkServer.Status, "server is not running");
+
+            using var networkClient = new NetworkClient(logger);
+            var connectionResponse = await networkClient.Connect("http://127.0.0.1:27016");
+
+            Assert.AreEqual(ConnectionState.Connected, networkClient.State, "client is connected");
+            Assert.IsTrue(connectionResponse.Success, "connection rejected");
+
+            networkClient.Peer.SendRequest(new TestGenericTypeRequest<TestExternalClass2>() { Data = new TestExternalClass2() { Value = "test_value" } });
+
+            TestGenericTypeRequest<TestExternalClass> request = await requestTcs.Task;
+
+            Assert.AreEqual(request.Data.Value, "test_value");
         }
 
         [TestMethod, Timeout(TestTimeout)]
@@ -929,6 +989,58 @@ namespace Fenrir.Multiplayer.Tests
                 writer.Write(Value);
             }
         }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        struct TestStruct : IByteStreamSerializable
+        {
+            public string Value;
+
+            public void Deserialize(IByteStreamReader reader)
+            {
+                Value = reader.ReadString();
+            }
+
+            public void Serialize(IByteStreamWriter writer)
+            {
+                writer.Write(Value);
+            }
+        }
+
+        class TestGenericTypeRequest<T> : IRequest, IByteStreamSerializable
+            where T : IByteStreamSerializable, new()
+        {
+            public T Data;
+
+            public void Deserialize(IByteStreamReader reader)
+            {
+                Data = new T();
+                Data.Deserialize(reader);
+            }
+
+            public void Serialize(IByteStreamWriter writer)
+            {
+                Data.Serialize(writer);
+            }
+        }
+
+
+        class TestGenericValueTypeRequest<T> : IRequest, IByteStreamSerializable
+            where T : struct, IByteStreamSerializable
+        {
+            public T Data;
+
+            public void Deserialize(IByteStreamReader reader)
+            {
+                Data = new T();
+                Data.Deserialize(reader);
+            }
+
+            public void Serialize(IByteStreamWriter writer)
+            {
+                Data.Serialize(writer);
+            }
+        }
+
 
         class TestResponse : IResponse, IByteStreamSerializable
         {

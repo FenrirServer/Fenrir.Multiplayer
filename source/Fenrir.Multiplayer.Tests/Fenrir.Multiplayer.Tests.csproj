@@ -15,7 +15,14 @@
     <PackageReference Include="coverlet.collector" Version="1.2.0" />
   </ItemGroup>
 
+
   <ItemGroup>
+	  <Compile Include="..\Fenrir.Multiplayer.Tests.External\*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+	  <ProjectReference Include="..\Fenrir.Multiplayer.Tests.External\Fenrir.Multiplayer.Tests.External.csproj" >
+		  <Aliases>External</Aliases>
+	  </ProjectReference>
     <ProjectReference Include="..\Fenrir.Multiplayer\Fenrir.Multiplayer.csproj" />
   </ItemGroup>
 
