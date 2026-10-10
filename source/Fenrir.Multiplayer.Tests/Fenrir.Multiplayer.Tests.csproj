@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
@@ -20,7 +20,7 @@
 	  <Compile Include="..\Fenrir.Multiplayer.Tests.External\*.cs" />
   </ItemGroup>
   <ItemGroup>
-	  <ProjectReference Include="..\Fenrir.Multiplayer.Tests.External\Fenrir.Multiplayer.Tests.External.csproj" >
+	  <ProjectReference Include="..\Fenrir.Multiplayer.Tests.External\Fenrir.Multiplayer.Tests.External.csproj">
 		  <Aliases>External</Aliases>
 	  </ProjectReference>
     <ProjectReference Include="..\Fenrir.Multiplayer\Fenrir.Multiplayer.csproj" />
