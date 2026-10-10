@@ -50,6 +50,13 @@ namespace Fenrir.Multiplayer
             where TRequest : IRequest;
 
         /// <summary>
+        /// Removes request handler of a given request type
+        /// </summary>
+        /// <typeparam name="TRequest">Type of request</typeparam>
+        void RemoveRequestHandler<TRequest>()
+            where TRequest : IRequest;
+
+        /// <summary>
         /// Adds request handler for a given request and response type
         /// </summary>
         /// <typeparam name="TRequest">Type of request</typeparam>
@@ -60,12 +67,30 @@ namespace Fenrir.Multiplayer
             where TResponse : IResponse;
 
         /// <summary>
+        /// Removes request handler for a given request and response type
+        /// </summary>
+        /// <typeparam name="TRequest">Type of request</typeparam>
+        /// <typeparam name="TResponse">Type of response</typeparam>
+        void RemoveRequestHandler<TRequest, TResponse>()
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse;
+
+        /// <summary>
         /// Adds asynchronous request handler for a given request and response type
         /// </summary>
         /// <typeparam name="TRequest">Type of request</typeparam>
         /// <typeparam name="TResponse">Type of response</typeparam>
         /// <param name="requestHandler">Request handler</param>
         void AddRequestHandlerAsync<TRequest, TResponse>(IRequestHandlerAsync<TRequest, TResponse> requestHandler)
+            where TRequest : IRequest<TResponse>
+            where TResponse : IResponse;
+
+        /// <summary>
+        /// Removes asynchronous request handler for a given request and response type
+        /// </summary>
+        /// <typeparam name="TRequest">Type of request</typeparam>
+        /// <typeparam name="TResponse">Type of response</typeparam>
+        void RemoveRequestHandlerAsync<TRequest, TResponse>()
             where TRequest : IRequest<TResponse>
             where TResponse : IResponse;
 
