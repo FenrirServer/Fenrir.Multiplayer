@@ -45,6 +45,11 @@ namespace Fenrir.Multiplayer
         INetworkSerializer Serializer { get; }
 
         /// <summary>
+        /// Average round trip time, ms
+        /// </summary>
+        int RoundTripTime { get; }
+
+        /// <summary>
         /// Connects using Server Info URI
         /// Server Info URI will be queried to obtain server data
         /// </summary>
